@@ -10,82 +10,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #f7e9cf; /* Creamy background from logo */
-            color: #5D4037; /* Dark brown text from logo */
-        }
-
-        .font-brand {
-            font-family: 'Nunito', sans-serif;
-        }
-
-        .card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; transform: scale(1) translateY(0); }
-            to { opacity: 0; transform: scale(0.95) translateY(-10px); }
-        }
-
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-
-        .animate-shake {
-            animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
-        }
-
-        .card-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        .card-fade-out { animation: fadeOut 0.2s ease-in forwards; }
-
-        .category-btn.active {
-            background-color: #E59F48; /* Orange from logo */
-            color: #ffffff;
-            font-weight: bold;
-        }
-
-        .brand-accent-bg { background-color: #E59F48; }
-        .brand-accent-bg-hover:hover { background-color: #D48E3A; }
-        .brand-accent-text { color: #E59F48; }
-        .brand-accent-border { border-color: #E59F48; }
-        .brand-accent-ring:focus {
-            --tw-ring-color: #E59F48;
-        }
-
-        .brand-secondary-bg { background-color: #F0EAD6; }
-        .brand-secondary-bg-hover:hover { background-color: #E5DBC5; }
-
-        .brand-category-text { color: #556B2F; } /* Green from logo */
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body class="antialiased">
 
     <!-- Password Modal / Welcome Screen -->
     <div id="password-modal" class="fixed inset-0 bg-[#f7e9cf] flex items-center justify-center z-50 transition-opacity duration-500">
         <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-2xl text-center w-full max-w-md m-4">
-            <img src="scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-24 h-24 mx-auto mb-4">
+            <div class="w-44 h-44 rounded-full bg-[#f7e9cf] p-1 mx-auto mb-6 flex items-center justify-center" style="border: 4px solid #81503f;">
+                <img src="scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-28 h-28">
+            </div>
             <h1 class="font-brand text-3xl md:text-4xl font-black text-stone-800">Scarsdale Services Directory</h1>
             <p class="text-md text-stone-600 mt-1 mb-6 italic">powered by the Scarsdale Buzz 🐝 community</p>
 
             <form id="password-form">
                  <label for="password-input" class="sr-only">Password</label>
-                <input type="password" id="password-input" class="w-full p-3 border-2 border-stone-300 rounded-lg text-lg text-center brand-accent-ring focus:ring-2 focus:border-transparent transition" placeholder="Enter Password" autofocus>
+                <input type="text" id="password-input" class="w-full p-3 border-2 border-stone-300 rounded-lg text-lg text-center brand-accent-ring focus:ring-2 focus:border-transparent transition" placeholder="Enter Password (from Buzz FB Page)" autofocus>
                 <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Incorrect password. Please try again.</p>
                 <button type="submit" class="w-full brand-accent-bg text-white font-bold py-3 px-4 rounded-lg mt-6 brand-accent-bg-hover transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Enter</button>
             </form>
@@ -118,7 +58,7 @@
         </div>
 
         <!-- Service Listings -->
-        <main id="serviceList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <main id="serviceList" class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Service cards will be injected here by JavaScript -->
         </main>
         
@@ -130,225 +70,7 @@
 
     </div>
 
-    <script>
-        const serviceData = [
-            {
-                businessName: "Buzzworthy Electric",
-                firstName: "Barry",
-                lastName: "Benson",
-                phone: "914-555-1234",
-                category: "Electrician",
-                lastRecommended: "2025-07-15",
-                recommendations: 12
-            },
-            {
-                businessName: "The Honey Drip Plumbers",
-                firstName: "Melissa",
-                lastName: "Flores",
-                phone: "914-555-5678",
-                category: "Plumber",
-                lastRecommended: "2025-08-01",
-                recommendations: 21
-            },
-            {
-                businessName: "Hive Handyman Services",
-                firstName: "Adam",
-                lastName: "Flayman",
-                phone: "914-555-9876",
-                category: "Handyman",
-                lastRecommended: "2025-06-20",
-                recommendations: 8
-            },
-            {
-                businessName: "Queen Bee Painters",
-                firstName: "Beatrice",
-                lastName: "Hatcher",
-                phone: "914-555-4321",
-                category: "Painter",
-                lastRecommended: "2025-07-28",
-                recommendations: 15
-            },
-            {
-                businessName: "Stinger Security",
-                firstName: "Horneto",
-                lastName: "Verde",
-                phone: "914-555-1122",
-                category: "Security",
-                lastRecommended: "2025-05-10",
-                recommendations: 5
-            },
-            {
-                businessName: "Comb Construction",
-                firstName: "Wally",
-                lastName: "Wasp",
-                phone: "914-555-3344",
-                category: "Contractor",
-                lastRecommended: "2025-08-05",
-                recommendations: 18
-            },
-            {
-                businessName: "A-Plus Plumbing",
-                firstName: "Alex",
-                lastName: "Pipe",
-                phone: "914-555-5555",
-                category: "Plumber",
-                lastRecommended: "2025-04-22",
-                recommendations: 7
-            },
-            {
-                businessName: "Power Up Electrical",
-                firstName: "Walter",
-                lastName: "White",
-                phone: "914-555-6677",
-                category: "Electrician",
-                lastRecommended: "2025-08-08",
-                recommendations: 32
-            },
-            {
-                businessName: "The Fix-It Hive",
-                firstName: "Manny",
-                lastName: "Tools",
-                phone: "914-555-8899",
-                category: "Handyman",
-                lastRecommended: "2025-07-01",
-                recommendations: 3
-            }
-        ];
-
-        // --- ELEMENT SELECTORS ---
-        const passwordModal = document.getElementById('password-modal');
-        const passwordForm = document.getElementById('password-form');
-        const passwordInput = document.getElementById('password-input');
-        const passwordError = document.getElementById('password-error');
-        const mainContent = document.getElementById('main-content');
-        
-        const serviceList = document.getElementById('serviceList');
-        const searchInput = document.getElementById('searchInput');
-        const categoryFilters = document.getElementById('categoryFilters');
-        const noResults = document.getElementById('noResults');
-        let activeCategory = 'All';
-
-
-        // --- RENDER FUNCTIONS ---
-        const renderServices = (services) => {
-            serviceList.innerHTML = '';
-            if (services.length === 0) {
-                noResults.classList.remove('hidden');
-            } else {
-                noResults.classList.add('hidden');
-            }
-            services.forEach(service => {
-                const card = document.createElement('div');
-                card.className = 'card card-fade-in bg-white rounded-xl shadow-md overflow-hidden p-6 border-t-4 brand-accent-border';
-                
-                card.innerHTML = `
-                    <div class="flex items-start justify-between">
-                        <div class="w-2/3">
-                            <div class="uppercase tracking-wide text-sm brand-category-text font-bold">${service.category}</div>
-                            <p class="text-2xl font-bold text-stone-800 mt-1">${service.businessName}</p>
-                        </div>
-                        <div class="text-right">
-                             <div class="text-3xl font-black brand-accent-text">${service.recommendations}</div>
-                             <div class="text-xs text-stone-500 leading-tight">recs</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 border-t pt-4">
-                        <p class="text-stone-700"><span class="font-bold">Contact:</span> ${service.firstName} ${service.lastName}</p>
-                        <p class="text-stone-700"><span class="font-bold">Phone:</span> <a href="tel:${service.phone}" class="text-blue-600 hover:underline">${service.phone}</a></p>
-                        <p class="text-xs text-stone-500 mt-2">Last recommended on ${new Date(service.lastRecommended).toLocaleDateString()}</p>
-                    </div>
-                `;
-                serviceList.appendChild(card);
-            });
-        };
-
-        const renderCategoryButtons = () => {
-            const categories = ['All', ...new Set(serviceData.map(s => s.category).sort())];
-            categoryFilters.innerHTML = '';
-            categories.forEach(category => {
-                const button = document.createElement('button');
-                button.textContent = category;
-                button.className = `category-btn px-4 py-2 rounded-full text-sm font-semibold transition brand-secondary-bg-hover ${activeCategory === category ? 'active' : 'brand-secondary-bg text-stone-700'}`;
-                button.dataset.category = category;
-                categoryFilters.appendChild(button);
-            });
-        };
-        
-        // --- EVENT HANDLERS & LOGIC ---
-
-        const filterAndRender = () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            let filteredServices = serviceData;
-            if (activeCategory !== 'All') {
-                filteredServices = filteredServices.filter(service => service.category === activeCategory);
-            }
-            if (searchTerm) {
-                filteredServices = filteredServices.filter(service => 
-                    service.businessName.toLowerCase().includes(searchTerm) ||
-                    service.firstName.toLowerCase().includes(searchTerm) ||
-                    service.lastName.toLowerCase().includes(searchTerm) ||
-                    service.category.toLowerCase().includes(searchTerm)
-                );
-            }
-            filteredServices.sort((a, b) => b.recommendations - a.recommendations);
-            renderServices(filteredServices);
-        };
-
-        searchInput.addEventListener('input', filterAndRender);
-        
-        categoryFilters.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'BUTTON') return;
-            const newCategory = e.target.dataset.category;
-            if (newCategory === activeCategory) return;
-            activeCategory = newCategory;
-            renderCategoryButtons();
-            const existingCards = serviceList.querySelectorAll('.card');
-            existingCards.forEach(card => {
-                card.classList.remove('card-fade-in');
-                card.classList.add('card-fade-out');
-            });
-            setTimeout(() => {
-                filterAndRender();
-            }, 200);
-        });
-
-        // --- PASSWORD PROTECTION ---
-        passwordForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const enteredPassword = passwordInput.value;
-            const correctPassword = 'raiders';
-
-            if (enteredPassword === correctPassword) {
-                // Correct password: Fade out modal and show content
-                passwordError.classList.add('hidden');
-                passwordModal.style.opacity = '0';
-                
-                setTimeout(() => {
-                    passwordModal.classList.add('hidden');
-                    mainContent.classList.remove('hidden');
-                    mainContent.classList.add('card-fade-in');
-
-                    // Initialize the app now that content is visible
-                    renderCategoryButtons();
-                    filterAndRender();
-                }, 500); // Match transition duration
-
-            } else {
-                // Incorrect password: Show error and shake modal
-                passwordError.classList.remove('hidden');
-                passwordInput.value = '';
-                passwordInput.focus();
-                
-                const modalContent = passwordForm.parentElement;
-                modalContent.classList.add('animate-shake');
-                setTimeout(() => {
-                    modalContent.classList.remove('animate-shake');
-                }, 600);
-            }
-        });
-
-    </script>
+    <script src="data.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
-
