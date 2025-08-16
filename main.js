@@ -73,15 +73,230 @@ const renderServices = (services) => {
 };
 
 const renderCategoryButtons = () => {
-    const categories = ['All', ...new Set(serviceData.map(s => s.category).sort())];
+    // Calculate total recommendations per category
+    const categoryTotals = {};
+    serviceData.forEach(service => {
+        if (!categoryTotals[service.category]) {
+            categoryTotals[service.category] = 0;
+        }
+        categoryTotals[service.category] += service.recommendations;
+    });
+
+    // Sort categories by total recommendations (descending)
+    const sortedCategories = Object.keys(categoryTotals)
+        .sort((a, b) => categoryTotals[b] - categoryTotals[a]);
+    
+    // Get top 5 categories plus 'All'
+    const topCategories = ['All', ...sortedCategories.slice(0, 5)];
+    const overflowCategories = sortedCategories.slice(5);
+    
+    // Check if active category is in overflow
+    const isActiveInOverflow = overflowCategories.includes(activeCategory);
+    
     categoryFilters.innerHTML = '';
-    categories.forEach(category => {
+    
+    // Render top categories (always show all top categories)
+    topCategories.forEach(category => {
         const button = document.createElement('button');
         button.textContent = category;
         button.className = `category-btn px-4 py-2 rounded-full text-sm font-semibold transition brand-secondary-bg-hover ${activeCategory === category ? 'active' : 'brand-secondary-bg text-stone-700'}`;
         button.dataset.category = category;
         categoryFilters.appendChild(button);
     });
+    
+    // Handle overflow categories
+    if (overflowCategories.length > 0) {
+        if (isActiveInOverflow) {
+            // Show active overflow category as dropdown trigger
+            const activeOverflowButton = document.createElement('button');
+            activeOverflowButton.innerHTML = `${activeCategory} <svg class="w-3 h-3 ml-1 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>`;
+            activeOverflowButton.className = 'category-btn px-4 py-2 rounded-full text-sm font-semibold transition brand-secondary-bg-hover active flex items-center';
+            activeOverflowButton.id = 'active-overflow-btn';
+            categoryFilters.appendChild(activeOverflowButton);
+            
+            // Add click handler to show overflow dialog
+            activeOverflowButton.addEventListener('click', () => {
+                showOverflowDialog(overflowCategories, categoryTotals);
+            });
+        } else {
+            // Show regular overflow button
+            const overflowButton = document.createElement('button');
+            overflowButton.textContent = `+${overflowCategories.length} More`;
+            overflowButton.className = 'category-btn px-4 py-2 rounded-full text-sm font-semibold transition brand-secondary-bg-hover brand-secondary-bg text-stone-700 relative';
+            overflowButton.id = 'overflow-btn';
+            categoryFilters.appendChild(overflowButton);
+            
+            // Add click handler for overflow button
+            overflowButton.addEventListener('click', () => {
+                showOverflowDialog(overflowCategories, categoryTotals);
+            });
+        }
+    }
+};
+
+// --- OVERFLOW DIALOG FUNCTIONS ---
+const showOverflowDialog = (overflowCategories, categoryTotals) => {
+    // Create modal backdrop
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    modal.id = 'overflow-modal';
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'bg-white rounded-xl shadow-2xl max-w-md w-full max-h-96 overflow-hidden';
+    
+    // Modal header
+    const header = document.createElement('div');
+    header.className = 'p-6 border-b border-stone-200';
+    header.innerHTML = `
+        <div class="flex justify-between items-center">
+            <h3 class="text-xl font-bold text-stone-800">More Categories</h3>
+            <button id="close-overflow" class="text-stone-400 hover:text-stone-600 text-2xl font-bold">&times;</button>
+        </div>
+    `;
+    
+    // Modal body with scrollable category list
+    const body = document.createElement('div');
+    body.className = 'p-6 max-h-80 overflow-y-auto';
+    
+    const categoryList = document.createElement('div');
+    categoryList.className = 'space-y-4';
+    
+    // Group overflow categories by their category groups
+    const groupedCategories = {};
+    const ungroupedCategories = [];
+    
+    // Organize categories into groups
+    overflowCategories.forEach(category => {
+        let foundGroup = false;
+        for (const [groupName, categories] of Object.entries(categoryGroups)) {
+            if (categories.includes(category)) {
+                if (!groupedCategories[groupName]) {
+                    groupedCategories[groupName] = [];
+                }
+                groupedCategories[groupName].push(category);
+                foundGroup = true;
+                break;
+            }
+        }
+        if (!foundGroup) {
+            ungroupedCategories.push(category);
+        }
+    });
+    
+    // Render grouped categories
+    Object.entries(groupedCategories).forEach(([groupName, categories]) => {
+        // Group header
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'text-sm font-bold text-stone-500 uppercase tracking-wide mb-2';
+        groupHeader.textContent = groupName;
+        categoryList.appendChild(groupHeader);
+        
+        // Group categories
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'space-y-2 mb-4';
+        
+        categories.forEach(category => {
+            const categoryItem = document.createElement('button');
+            categoryItem.className = `w-full text-left p-3 rounded-lg hover:bg-stone-50 transition flex justify-between items-center ${activeCategory === category ? 'bg-amber-50 border-2 border-amber-200' : 'border border-stone-200'}`;
+            categoryItem.innerHTML = `
+                <span class="font-semibold text-stone-700">${category}</span>
+                <span class="text-sm text-stone-500">${categoryTotals[category]} recs</span>
+            `;
+            categoryItem.addEventListener('click', () => {
+                activeCategory = category;
+                renderCategoryButtons();
+                
+                // Start fade out animation
+                serviceList.classList.remove('fade-in');
+                serviceList.classList.add('fade-out');
+                
+                // Wait for fade-out, then update content and fade in
+                setTimeout(() => {
+                    filterAndRender();
+                    
+                    // Fade back in
+                    serviceList.classList.remove('fade-out');
+                    serviceList.classList.add('fade-in');
+                }, 250);
+                
+                // Close modal
+                document.body.removeChild(modal);
+            });
+            groupContainer.appendChild(categoryItem);
+        });
+        
+        categoryList.appendChild(groupContainer);
+    });
+    
+    // Render ungrouped categories if any
+    if (ungroupedCategories.length > 0) {
+        const ungroupedHeader = document.createElement('div');
+        ungroupedHeader.className = 'text-sm font-bold text-stone-500 uppercase tracking-wide mb-2';
+        ungroupedHeader.textContent = 'Other';
+        categoryList.appendChild(ungroupedHeader);
+        
+        const ungroupedContainer = document.createElement('div');
+        ungroupedContainer.className = 'space-y-2';
+        
+        ungroupedCategories.forEach(category => {
+            const categoryItem = document.createElement('button');
+            categoryItem.className = `w-full text-left p-3 rounded-lg hover:bg-stone-50 transition flex justify-between items-center ${activeCategory === category ? 'bg-amber-50 border-2 border-amber-200' : 'border border-stone-200'}`;
+            categoryItem.innerHTML = `
+                <span class="font-semibold text-stone-700">${category}</span>
+                <span class="text-sm text-stone-500">${categoryTotals[category]} recs</span>
+            `;
+            categoryItem.addEventListener('click', () => {
+                activeCategory = category;
+                renderCategoryButtons();
+                
+                // Start fade out animation
+                serviceList.classList.remove('fade-in');
+                serviceList.classList.add('fade-out');
+                
+                // Wait for fade-out, then update content and fade in
+                setTimeout(() => {
+                    filterAndRender();
+                    
+                    // Fade back in
+                    serviceList.classList.remove('fade-out');
+                    serviceList.classList.add('fade-in');
+                }, 250);
+                
+                // Close modal
+                document.body.removeChild(modal);
+            });
+            ungroupedContainer.appendChild(categoryItem);
+        });
+        
+        categoryList.appendChild(ungroupedContainer);
+    }
+    
+    body.appendChild(categoryList);
+    modalContent.appendChild(header);
+    modalContent.appendChild(body);
+    modal.appendChild(modalContent);
+    
+    // Add close functionality
+    const closeBtn = modal.querySelector('#close-overflow');
+    closeBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+    
+    // Add to DOM
+    document.body.appendChild(modal);
+    
+    // Add fade-in animation
+    setTimeout(() => {
+        modal.style.opacity = '1';
+    }, 10);
 };
 
 // --- EVENT HANDLERS & LOGIC ---
@@ -130,6 +345,9 @@ searchInput.addEventListener('input', () => {
 
 categoryFilters.addEventListener('click', (e) => {
     if (e.target.tagName !== 'BUTTON') return;
+    // Skip if this is the overflow button or active overflow button
+    if (e.target.id === 'overflow-btn' || e.target.id === 'active-overflow-btn') return;
+    
     const newCategory = e.target.dataset.category;
     if (newCategory === activeCategory) return;
 

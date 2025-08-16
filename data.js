@@ -163,3 +163,33 @@ const serviceData = [
         recommendations: 3
     }
 ];
+
+// Category groups for organizing the overflow menu
+const categoryGroups = {
+    "Home Services": [
+        "Electrician",
+        "Plumber", 
+        "Handyman",
+        "Carpenter",
+        "Painter",
+        "Roofer",
+        "Contractor"
+    ],
+    "Outdoor & Property": [
+        "Landscaper"
+    ],
+    "Personal & Family": [
+        "Dog Walker",
+        "Tutor"
+    ],
+    "Health & Wellness": [
+        "Nutritionist"
+    ],
+    "Technology & Security": [
+        "IT Support",
+        "Security"
+    ],
+    "Organization & Lifestyle": [
+        "Home Organizer"
+    ]
+};

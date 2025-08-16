@@ -80,3 +80,18 @@ body {
     outline: 2px solid #E59F48;
     outline-offset: 2px;
 }
+
+/* Overflow modal styling */
+#overflow-modal {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#overflow-modal .bg-white {
+    transform: scale(0.95);
+    transition: transform 0.3s ease-in-out;
+}
+
+#overflow-modal[style*="opacity: 1"] .bg-white {
+    transform: scale(1);
+}
