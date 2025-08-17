@@ -10,6 +10,131 @@ const categoryFilters = document.getElementById('categoryFilters');
 const noResults = document.getElementById('noResults');
 let activeCategory = 'All';
 
+// --- FIREBASE INIT ---
+// Expect window.firebaseConfig to be defined in firebase-config.js
+let db;
+try {
+    if (window.firebaseConfig && firebase?.apps?.length === 0) {
+        firebase.initializeApp(window.firebaseConfig);
+    } else if (window.firebaseConfig && !firebase?.apps?.length) {
+        firebase.initializeApp(window.firebaseConfig);
+    }
+    // Enable offline persistence (best effort)
+    if (firebase?.firestore) {
+        firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => {});
+        db = firebase.firestore();
+        // Try to load category group mapping from Firestore config early
+        // (safe no-op if the document doesn't exist yet)
+        loadCategoryGroupsConfig();
+    }
+} catch (_) {
+    // No-op if Firebase not available; page will still render but without data
+}
+
+// --- RUNTIME DATA (from Firestore) ---
+let serviceData = [];
+
+// Category groups for organizing the overflow menu (used only in overflow modal)
+// Fallback map; will be replaced by Firestore config if available.
+const defaultCategoryGroups = {
+    "Home Services": [
+        "Electrician",
+        "Plumber",
+        "Handyman",
+        "Carpenter",
+        "Painter",
+        "Roofer",
+        "Contractor"
+    ],
+    "Outdoor & Property": [
+        "Landscaper"
+    ],
+    "Personal & Family": [
+        "Dog Walker",
+        "Tutor"
+    ],
+    "Health & Wellness": [
+        "Nutritionist"
+    ],
+    "Technology & Security": [
+        "IT Support",
+        "Security"
+    ],
+    "Organization & Lifestyle": [
+        "Home Organizer"
+    ]
+};
+let categoryGroups = defaultCategoryGroups;
+let categoriesList = [];
+
+async function loadCategoryGroupsConfig() {
+    if (!db) return;
+    try {
+        const doc = await db.collection('config').doc('categoryGroups').get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data && data.groups && typeof data.groups === 'object') {
+                categoryGroups = data.groups;
+                // Re-render category UI with updated groups
+                renderCategoryButtons();
+                filterAndRender();
+            }
+        }
+    } catch (e) {
+        // Silent fallback to default
+        console.warn('Could not load categoryGroups from Firestore; using fallback');
+    }
+}
+
+// Load authoritative categories list from Firestore config
+async function loadCategoriesConfig() {
+    if (!db) return;
+    try {
+        const doc = await db.collection('config').doc('categories').get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data && Array.isArray(data.list)) {
+                categoriesList = data.list.slice().sort();
+                // Re-render to reflect possible new categories (with 0 counts)
+                renderCategoryButtons();
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load categories list from Firestore; will derive from services');
+    }
+}
+
+// Subscribe to Firestore and keep a warm in-memory cache for instant filtering
+let unsubscribeServices = null;
+const startServicesSubscription = () => {
+    if (!db) return Promise.resolve();
+    return new Promise((resolve) => {
+        unsubscribeServices = db.collection('services')
+            .onSnapshot((snapshot) => {
+                serviceData = snapshot.docs.map(doc => {
+                    const d = doc.data();
+                    let last = d.lastRecommended;
+                    if (last && typeof last.toDate === 'function') {
+                        last = last.toDate();
+                    } else if (typeof last === 'string') {
+                        last = new Date(last);
+                    }
+                    const iso = last instanceof Date && !isNaN(last) ? last.toISOString().slice(0, 10) : '';
+                    return { id: doc.id, ...d, lastRecommended: iso };
+                });
+                // If UI is already visible, keep it updated
+                if (!passwordModal || passwordModal.classList.contains('hidden')) {
+                    renderCategoryButtons();
+                    filterAndRender();
+                }
+                resolve();
+            }, (err) => {
+                console.error('Failed to load services from Firestore:', err);
+                resolve();
+            });
+    });
+};
+
 // --- RENDER FUNCTIONS ---
 const renderServices = (services) => {
     serviceList.innerHTML = '';
@@ -81,6 +206,15 @@ const renderCategoryButtons = () => {
         }
         categoryTotals[service.category] += service.recommendations;
     });
+
+    // Ensure categories from config are present (even if zero services)
+    if (Array.isArray(categoriesList) && categoriesList.length) {
+        categoriesList.forEach(cat => {
+            if (cat && !(cat in categoryTotals)) {
+                categoryTotals[cat] = 0;
+            }
+        });
+    }
 
     // Sort categories by total recommendations (descending)
     const sortedCategories = Object.keys(categoryTotals)
@@ -384,9 +518,16 @@ passwordForm.addEventListener('submit', (e) => {
             mainContent.classList.remove('hidden');
             // mainContent is now visible
 
-            // Initialize the app now that content is visible
-            renderCategoryButtons();
-            filterAndRender();
+            // Initialize data from Firestore now that content is visible
+            Promise.all([
+                loadCategoryGroupsConfig(),
+                loadCategoriesConfig(),
+                startServicesSubscription(),
+            ]).then(() => {
+                // In case snapshot arrived before render
+                renderCategoryButtons();
+                filterAndRender();
+            });
         }, 500); // Match transition duration
 
     } else {

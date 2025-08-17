@@ -1,0 +1,22 @@
+rules_version = '2'
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // TEMP: Allow reads and writes for admin prototype (no auth yet)
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Category groups and other config docs
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

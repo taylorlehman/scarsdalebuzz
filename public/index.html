@@ -29,6 +29,11 @@
                 <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Incorrect password. Please try again.</p>
                 <button type="submit" class="w-full brand-accent-bg text-white font-bold py-3 px-4 rounded-lg mt-6 brand-accent-bg-hover transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Enter</button>
             </form>
+            <div class="mt-6 text-sm text-stone-500">
+                <a href="privacy.html" class="underline hover:text-stone-700">Privacy Policy</a>
+                <span class="mx-2">•</span>
+                <a href="data-deletion.html" class="underline hover:text-stone-700">Data Deletion</a>
+            </div>
         </div>
     </div>
 
@@ -70,7 +75,11 @@
 
     </div>
 
-    <script src="data.js"></script>
+    <!-- Firebase SDK (Compat for simplicity) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+    <!-- Your Firebase config (fill in keys in firebase-config.js) -->
+    <script src="firebase-config.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
