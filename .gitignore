@@ -1,0 +1,22 @@
+# MacOS
+.DS_Store
+
+# Node
+node_modules/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.log.*
+
+# Environment variables
+.env
+.env.*
+serviceAccountKey.json
+*.csv
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scarsdale Buzz Service Request</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="antialiased bg-[#f7e9cf]">
+    <div id="main-content" class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <img src="../images/scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-24 h-24 mx-auto mb-4">
+            <h1 class="font-brand text-4xl md:text-5xl font-black text-stone-800">Sunny, your helpful AI assistant</h1>
+            <p class="text-lg text-stone-600 mt-1 italic">powered by the Scarsdale Buzz 🐝 community</p>
+        </header>
+
+        <!-- Form and Requests -->
+        <div class="flex flex-col items-center gap-8">
+            <!-- Submission Form -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg w-full md:w-3/4 lg:w-1/2">
+                <h2 class="font-brand text-2xl font-bold text-stone-800 mb-4">Submit a New Request</h2>
+                <div class="form-container flex flex-col">
+                    <textarea id="issue-description" placeholder="Describe your issue..." class="w-full p-3 border-2 border-stone-300 rounded-lg text-lg brand-accent-ring focus:ring-2 focus:border-transparent transition mb-4" rows="5"></textarea>
+                    <button id="submit-request" class="w-full md:w-auto self-end brand-accent-bg text-white font-bold py-2 px-6 rounded-lg brand-accent-bg-hover transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Submit</button>
+                </div>
+            </div>
+
+            <!-- Requests List -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg w-full md:w-3/4 lg:w-1/2">
+                <h2 class="font-brand text-2xl font-bold text-stone-800 mb-4">Your Requests</h2>
+                <div class="requests-container">
+                    <ul id="requests-list" class="space-y-3"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="../firebase-config.js"></script>
+    <script src="app.js"></script>
+
+    <!-- Loading Modal -->
+    <div id="loading-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center">
+        <div class="bg-white p-8 rounded-2xl shadow-lg text-center max-w-sm mx-4">
+            <svg id="spinner" class="animate-spin h-16 w-16 text-[#E59F48] mx-auto mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p id="witty-message" class="text-lg text-stone-700 italic font-medium"></p>
+        </div>
+    </div>
+
+    <!-- Request Details Modal -->
+    <div id="details-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-lg relative animate-fade-in-up">
+            <!-- Close Button -->
+            <button id="details-close-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-800 text-3xl leading-none font-bold">&times;</button>
+
+            <!-- Modal Content -->
+            <h2 id="details-title" class="text-2xl font-bold text-stone-800 mb-4 pr-8"></h2>
+            
+            <div class="space-y-4 mb-6">
+                <!-- Request Summary -->
+                <div>
+                    <h3 class="font-bold text-stone-700">Latest Updates:</h3>
+                    <p id="details-summary" class="text-stone-600 bg-blue-50 p-3 rounded-lg border border-blue-100"></p>
+                </div>
+
+                <!-- User Action Required Section (hidden by default) -->
+                <div id="details-user-action-section" class="hidden">
+                    <h3 class="font-bold text-red-600">Action Required:</h3>
+                    <form id="user-response-form" class="bg-red-50 border border-red-200 p-3 rounded-lg">
+                        <p class="text-stone-700 font-semibold mb-2">The service provider has a question for you:</p>
+                        <p id="details-provider-question" class="text-stone-600 italic mb-3"></p>
+                        <textarea name="response" placeholder="Your answer..." class="w-full p-2 border-2 border-stone-300 rounded-lg brand-accent-ring focus:ring-2 focus:border-transparent transition" rows="3"></textarea>
+                        <button type="submit" class="w-full mt-2 brand-accent-bg text-white font-bold py-2 px-4 rounded-lg brand-accent-bg-hover transition">Submit Information</button>
+                    </form>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-stone-700">Your Request:</h3>
+                    <p id="details-user-request" class="text-stone-600 italic bg-stone-100 p-3 rounded-lg max-h-28 overflow-y-auto"></p>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-stone-700">Currently contacting:</h3>
+                    <div class="bg-stone-100 p-3 rounded-lg">
+                        <p id="details-provider-name" class="text-stone-600">Plumber Pete</p>
+                        <p id="details-provider-phone" class="text-stone-600">(914) 555-1234</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-stone-700">Status:</h3>
+                    <div id="details-status-badge" class="inline-flex items-center gap-2 text-white font-bold py-1 px-3 rounded-full text-sm">
+                        <span id="details-status-emoji"></span>
+                        <span id="details-status-text"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end">
+                <button id="details-cancel-request-btn" class="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition">Cancel Request</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center">
+        <div class="bg-white p-8 rounded-2xl shadow-lg text-center max-w-sm mx-4">
+            <h3 class="text-xl font-bold text-stone-800 mb-4">Are you sure?</h3>
+            <p id="confirm-message" class="text-stone-600 mb-6">Do you really want to cancel this request? This action cannot be undone.</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel-btn" class="w-full bg-gray-200 text-stone-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">Nevermind</button>
+                <button id="confirm-action-btn" class="w-full bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition">Yes, Cancel</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

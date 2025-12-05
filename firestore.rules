@@ -14,6 +14,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Allow clients to read the list of requests
+    match /requests/{requestId} {
+      allow read: if true;
+      allow write: if false; // Writes should only come from the backend
+    }
+
     // Default deny for everything else
     match /{document=**} {
       allow read, write: if false;
