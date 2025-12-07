@@ -52,7 +52,7 @@ const extractJson = (str) => {
 };
 
 // Helper function to add a message to a request's chat history
-const addMessageToChatHistory = async (requestId, role, message, phoneNumber) => {
+const addMessageToChatHistory = async (requestId, sender, receiver, message, phoneNumber) => {
     const requestRef = admin.firestore().collection('requests').doc(requestId);
 
     try {
@@ -65,9 +65,11 @@ const addMessageToChatHistory = async (requestId, role, message, phoneNumber) =>
             const chatHistory = doc.data().chat_history || [];
             
             const newMessage = {
-                role,
+                sender,
+                receiver,
+                role: sender, // Backward compatibility
                 message,
-                timestamp: new Date(), // Use a client-side timestamp
+                timestamp: new Date(),
                 phoneNumber
             };
 
@@ -75,10 +77,10 @@ const addMessageToChatHistory = async (requestId, role, message, phoneNumber) =>
 
             transaction.update(requestRef, { chat_history: chatHistory });
         });
-        logger.info(`Message from ${role} added to request ${requestId}`);
+        logger.info(`Message from ${sender} to ${receiver} added to request ${requestId}`);
     } catch (e) {
         logger.error("Transaction failed: ", e);
-        throw e; // Re-throw the error to be caught by the calling function
+        throw e;
     }
 };
 
@@ -114,13 +116,15 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             const title = titleResult.response.text();
             logger.info(`Generated title: ${title}`);
 
-            // 2. Create the request and add the first message
+            // 2. Create the request and add the first message (User -> Sunny)
             const newRequestRef = await admin.firestore().collection('requests').add({
                 timestamp: admin.firestore.FieldValue.serverTimestamp(),
                 status: 'in progress',
                 title: title,
                 summary: 'Request submitted. Generating initial message...',
                 chat_history: [{
+                    sender: 'User',
+                    receiver: 'Sunny',
                     role: 'User',
                     message: description,
                     timestamp: new Date(),
@@ -170,11 +174,32 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
                 const call = functionCalls[0];
                 if (call.name === "get_plumber_contact_info") {
                     logger.info("Executing tool: get_plumber_contact_info");
-                    // Mock implementation
-                    const toolResult = {
-                        name: "Plumber Pete",
-                        phoneNumber: "+18777804236"
-                    };
+                    
+                    let toolResult = { name: null, phoneNumber: null };
+                    try {
+                        const servicesRef = admin.firestore().collection('services');
+                        // Query for a Sunny Approved Plumber
+                        const snapshot = await servicesRef
+                            .where('category', '==', 'Plumbing')
+                            .where('sunnyApproved', '==', true)
+                            .limit(1)
+                            .get();
+
+                        if (!snapshot.empty) {
+                            const doc = snapshot.docs[0].data();
+                            const providerName = doc.businessName || `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+                            toolResult = {
+                                name: providerName,
+                                phoneNumber: doc.phone
+                            };
+                            logger.info(`Found sunny approved provider: ${toolResult.name}`);
+                        } else {
+                            logger.warn("No sunny approved plumber found.");
+                            // Fallback to mock or handle gracefully if desired, but for now returning nulls implies none found
+                        }
+                    } catch (e) {
+                        logger.error("Error querying provider", e);
+                    }
                     
                     // Send tool result back to model
                     result = await chat.sendMessage([{
@@ -191,7 +216,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             logger.info("Gemini response received:", geminiResponseText);
 
             let messageToSend = geminiResponseText;
-            let phoneToSendTo = '+18777804236'; // Default fallback
+            let phoneToSendTo = null;
             let providerName = 'Unknown Provider';
 
             try {
@@ -212,32 +237,47 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             });
             logger.info(`Updated request ${newRequestRef.id} with provider info: ${providerName}, ${phoneToSendTo}`);
             
-            if (messageToSend.length > 1599) {
-                messageToSend = messageToSend.substring(0, 1599);
-                logger.info("Gemini response truncated to 1599 characters.");
+            let userConfirmation = '';
+
+            if (phoneToSendTo) {
+                if (messageToSend.length > 1599) {
+                    messageToSend = messageToSend.substring(0, 1599);
+                    logger.info("Gemini response truncated to 1599 characters.");
+                }
+
+                logger.info("Final message to be used:", messageToSend);
+
+                // Send text message with Twilio
+                logger.info(`Sending text message via Twilio to ${phoneToSendTo}`);
+                try {
+                    const twilioClient = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+                    await twilioClient.messages.create({
+                        body: messageToSend,
+                        from: process.env.TWILIO_PHONE_NUMBER,
+                        to: phoneToSendTo
+                    });
+                    logger.info("Text message sent successfully.");
+                } catch (twilioError) {
+                    logger.error("Twilio Error:", twilioError.message);
+                    // Continue execution even if Twilio fails, but maybe note it?
+                }
+
+                // Log Sunny -> Provider message (Hidden from UI typically)
+                await addMessageToChatHistory(newRequestRef.id, 'Sunny', 'Service Provider', messageToSend, process.env.TWILIO_PHONE_NUMBER);
+                
+                userConfirmation = `I'm on it! I've contacted ${providerName} to see if they can help. I'll let you know as soon as I hear back.`;
+            } else {
+                logger.warn("No phone number found/extracted. Skipping SMS.");
+                userConfirmation = `I reviewed your request, but I couldn't find an available Sunny Approved plumber at the moment. Please try again later or check the directory manually.`;
+                // We don't log a message to the provider since we didn't send one.
             }
 
-            logger.info("Final message to be used:", messageToSend);
+            // NEW: Message the User (Sunny -> User)
+            await addMessageToChatHistory(newRequestRef.id, 'Sunny', 'User', userConfirmation, null);
 
-            // Send text message with Twilio
-            logger.info(`Sending text message via Twilio to ${phoneToSendTo}`);
-            try {
-                const twilioClient = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-                await twilioClient.messages.create({
-                    body: messageToSend,
-                    from: process.env.TWILIO_PHONE_NUMBER,
-                    to: phoneToSendTo
-                });
-                logger.info("Text message sent successfully.");
-            } catch (twilioError) {
-                logger.error("Twilio Error:", twilioError.message);
-                // Continue execution even if Twilio fails
-            }
-
-            await addMessageToChatHistory(newRequestRef.id, 'Sunny', messageToSend, process.env.TWILIO_PHONE_NUMBER);
             await generateAndSaveSummary(newRequestRef.id);
 
-            res.status(200).send(messageToSend);
+            res.status(200).json({ message: userConfirmation, id: newRequestRef.id });
         } catch (error) {
             logger.error("Error message:", error.message);
             logger.error("Error stack:", error.stack);
@@ -267,8 +307,8 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         const requestDoc = snapshot.docs[0];
         const requestData = requestDoc.data();
 
-        // 2. Append incoming message to chat history using the helper function
-        await addMessageToChatHistory(requestDoc.id, 'Service Provider', body, from);
+        // 2. Append incoming message to chat history (Provider -> Sunny)
+        await addMessageToChatHistory(requestDoc.id, 'Service Provider', 'Sunny', body, from);
 
         // We need to refetch the data to get the latest chat history for the prompt
         const updatedRequestDoc = await requestDoc.ref.get();
@@ -276,43 +316,123 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
 
         // 3. Pass conversation to Gemini
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const confirmTools = [
+            {
+                functionDeclarations: [
+                    {
+                        name: "confirm_appointment",
+                        description: "Confirms the appointment when both the user and provider have agreed on a time.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                appointmentDate: { type: "STRING", description: "The confirmed date and time in ISO 8601 format." },
+                                providerName: { type: "STRING", description: "The name of the service provider." }
+                            },
+                            required: ["appointmentDate", "providerName"]
+                        }
+                    }
+                ]
+            }
+        ];
 
-        const prompt = `${process.env.GEMINI_PROMPT_INCOMING_SMS}${JSON.stringify(updatedChatHistory)}`;
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash",
+            tools: confirmTools
+        });
+
+        const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        const prompt = `${process.env.GEMINI_PROMPT_INCOMING_SMS}
+        
+        Current Date and Time: ${currentDate}
+        
+        AUTONOMY INSTRUCTIONS:
+        1. ANSWERING QUESTIONS: If the provider asks a question and the User has ALREADY provided the answer in the history, Sunny should answer the provider directly. In this case, set 'messageToUser' to null (do not bother the user). Only do this if you are CONFIDENT. If there is doubt, ask the user.
+        2. CONFIRMING APPOINTMENTS: If the provider proposes a time that the User has ALREADY explicitly stated works for them (e.g., "Tuesday at 2pm works"), Sunny should CONFIRM the appointment immediately by calling the 'confirm_appointment' tool.
+        
+        IMPORTANT: If the appointment is confirmed (per rule #2 above or if both parties just agreed), you MUST call the 'confirm_appointment' tool. Do not output JSON in that case.
+        If the appointment is NOT confirmed, output the JSON object as described.
+        
+        Chat History: ${JSON.stringify(updatedChatHistory)}`;
 
         const result = await model.generateContent(prompt);
-        const geminiResponseText = result.response.text();
+        const response = result.response;
+        const functionCalls = response.functionCalls();
+        
+        // Check for Tool Call (Confirmation)
+        if (functionCalls && functionCalls.length > 0) {
+            const call = functionCalls[0];
+            if (call.name === "confirm_appointment") {
+                const args = call.args;
+                logger.info("Tool called: confirm_appointment", args);
+                
+                // Update Firestore
+                await requestDoc.ref.update({ 
+                    status: 'scheduled',
+                    serviceDate: args.appointmentDate,
+                    providerName: args.providerName
+                });
+                logger.info("Request status updated to 'scheduled'.");
+                
+                // Generate and save summary
+                await generateAndSaveSummary(requestDoc.id);
+
+                // Notify Provider
+                const confirmationMsg = `Great, the appointment is confirmed for ${new Date(args.appointmentDate).toLocaleString()}. I've updated the request.`;
+                const twiml = new MessagingResponse();
+                twiml.message(confirmationMsg);
+                
+                // Log Sunny -> Provider
+                await addMessageToChatHistory(requestDoc.id, 'Sunny', 'Service Provider', confirmationMsg, process.env.TWILIO_PHONE_NUMBER);
+                
+                res.writeHead(200, {'Content-Type': 'text/xml'});
+                res.end(twiml.toString());
+                return;
+            }
+        }
+
+        // Fallback to JSON logic if no tool called
+        const geminiResponseText = response.text();
         logger.info("Gemini analysis response:", geminiResponseText);
 
         const cleanJsonString = extractJson(geminiResponseText);
         const geminiJson = JSON.parse(cleanJsonString);
 
-        // 4. Update status and save Gemini's message
-        const followUpLower = (geminiJson.followUpMessage || "").toLowerCase();
-        const impliesUserInput = followUpLower.includes("ask the homeowner") || followUpLower.includes("check with the homeowner");
+        // 4. Update status and save Gemini's messages
+        const messageToUser = geminiJson.messageToUser;
+        const messageToProvider = geminiJson.messageToProvider;
+        
+        // Heuristics fallback
+        const impliesUserInput = (messageToUser || "").toLowerCase().includes("ask the homeowner");
 
+        // Note: isScheduled check removed in favor of tool call, but keeping fallback just in case
         if (geminiJson.isScheduled) {
-            await requestDoc.ref.update({ status: 'scheduled' });
-            logger.info("Request status updated to 'scheduled'.");
+             // ... existing logic fallback ...
+             await requestDoc.ref.update({ status: 'scheduled' });
         } else if (geminiJson.isProviderUnavailable) {
             await requestDoc.ref.update({ status: 'provider unavailable' });
             logger.info("Request status updated to 'provider unavailable'.");
         } else if (geminiJson.needsUserInput || impliesUserInput) {
             await requestDoc.ref.update({ status: 'user action required' });
-            logger.info(`Request status updated to 'user action required'. (needsUserInput: ${geminiJson.needsUserInput}, impliesUserInput: ${impliesUserInput})`);
+            logger.info("Request status updated to 'user action required'.");
         }
 
-        if (geminiJson.followUpMessage) {
-            await addMessageToChatHistory(requestDoc.id, 'Sunny', geminiJson.followUpMessage, process.env.TWILIO_PHONE_NUMBER);
+        // Log Sunny -> User message
+        if (messageToUser) {
+            await addMessageToChatHistory(requestDoc.id, 'Sunny', 'User', messageToUser, null);
+        }
+
+        // Log Sunny -> Provider message
+        if (messageToProvider) {
+            await addMessageToChatHistory(requestDoc.id, 'Sunny', 'Service Provider', messageToProvider, process.env.TWILIO_PHONE_NUMBER);
         }
 
         // Generate and save the summary after all updates
         await generateAndSaveSummary(requestDoc.id);
 
-        // 5. Respond via Twilio
+        // 5. Respond via Twilio (to Provider)
         const twiml = new MessagingResponse();
-        if (geminiJson.followUpMessage) {
-            twiml.message(geminiJson.followUpMessage);
+        if (messageToProvider) {
+            twiml.message(messageToProvider);
         }
         res.writeHead(200, {'Content-Type': 'text/xml'});
         res.end(twiml.toString());
@@ -345,7 +465,9 @@ exports.cancelRequest = functions.https.onRequest(async (req, res) => {
             }
 
             const requestData = doc.data();
-            const providerMessage = requestData.chat_history.find(m => m.role === 'Service Provider');
+            // Find provider phone using the new or old schema
+            // New schema: look for messages where sender is 'Service Provider'
+            const providerMessage = requestData.chat_history.find(m => m.sender === 'Service Provider' || m.role === 'Service Provider');
             const providerPhoneNumber = requestData.providerPhoneNumber || (providerMessage ? providerMessage.phoneNumber : null);
 
             // Send cancellation text if we have a provider phone number
@@ -390,45 +512,159 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
         const requestRef = db.collection('requests').doc(requestId);
 
         try {
-            await db.runTransaction(async (transaction) => {
-                const requestDoc = await transaction.get(requestRef);
-                if (!requestDoc.exists) {
-                    throw new Error('Request not found.');
-                }
+            // 1. Fetch current data
+            const requestDoc = await requestRef.get();
+            if (!requestDoc.exists) {
+                return res.status(404).json({ error: 'Request not found.' });
+            }
+            const requestData = requestDoc.data();
+            const currentHistory = requestData.chat_history || [];
 
-                const requestData = requestDoc.data();
+            // 2. Construct User Message object
+            const userMessage = {
+                sender: 'User',
+                receiver: 'Sunny',
+                role: 'User',
+                message: response,
+                timestamp: new Date(),
+                phoneNumber: null 
+            };
 
-                // 1. Add user's response to history
-                const newHistoryEntry = {
-                    role: 'User',
-                    message: response,
-                    timestamp: new Date(),
-                    phoneNumber: null // From the web app, not a phone
-                };
+            // 3. Provisional History for Analysis
+            const provisionalHistory = [...currentHistory, userMessage];
 
-                // 2. Update status and chat history
-                transaction.update(requestRef, {
-                    chat_history: admin.firestore.FieldValue.arrayUnion(newHistoryEntry),
-                    status: 'in progress',
+            // 4. Check for Confirmation via Gemini FIRST
+            let isConfirmed = false;
+            let confirmArgs = null;
+
+            try {
+                const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+                const confirmTools = [
+                    {
+                        functionDeclarations: [
+                            {
+                                name: "confirm_appointment",
+                                description: "Confirms the appointment when both the user and provider have agreed on a time.",
+                                parameters: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        appointmentDate: { type: "STRING", description: "The confirmed date and time in ISO 8601 format." },
+                                        providerName: { type: "STRING", description: "The name of the service provider." }
+                                    },
+                                    required: ["appointmentDate", "providerName"]
+                                }
+                            }
+                        ]
+                    }
+                ];
+
+                const model = genAI.getGenerativeModel({ 
+                    model: "gemini-2.5-flash",
+                    tools: confirmTools
                 });
 
-                // 3. Notify service provider
-                const providerMessage = requestData.chat_history.find(m => m.role === 'Service Provider');
-                if (providerMessage && providerMessage.phoneNumber) {
-                    const providerNotification = response;
+                const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+                const prompt = `Current Date and Time: ${currentDate}
+                
+                Analyze the conversation. If both the homeowner and provider have explicitly agreed on a time, call the 'confirm_appointment' tool. Otherwise, do nothing.
+                
+                Chat History: ${JSON.stringify(provisionalHistory)}`;
+
+                const result = await model.generateContent(prompt);
+                const functionCalls = result.response.functionCalls();
+                
+                if (functionCalls && functionCalls.length > 0) {
+                    const call = functionCalls[0];
+                    if (call.name === "confirm_appointment") {
+                        isConfirmed = true;
+                        confirmArgs = call.args;
+                        logger.info("Confirmation detected:", confirmArgs);
+                    }
+                }
+            } catch (aiError) {
+                logger.error("Error in confirmation check:", aiError);
+            }
+
+            // 5. Execute Logic based on Confirmation Status
+            const newHistoryEntries = [userMessage];
+            const providerPhoneNumber = requestData.providerPhoneNumber || (currentHistory.find(m => m.sender === 'Service Provider' || m.role === 'Service Provider')?.phoneNumber);
+
+            if (isConfirmed && confirmArgs) {
+                // --- CONFIRMED FLOW ---
+                // 1. Send Confirmation SMS to Provider (Skip forwarding raw user msg)
+                const confirmationMsg = `Great, the appointment is confirmed for ${new Date(confirmArgs.appointmentDate).toLocaleString()}. I've updated the request.`;
+                
+                if (providerPhoneNumber) {
                     const twilioClient = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
                     await twilioClient.messages.create({
-                        body: providerNotification,
+                        body: confirmationMsg,
                         from: process.env.TWILIO_PHONE_NUMBER,
-                        to: providerMessage.phoneNumber
+                        to: providerPhoneNumber
                     });
-                    logger.info(`User response sent to ${providerMessage.phoneNumber} for request ${requestId}`);
-                } else {
-                    logger.warn(`Could not find service provider phone number for request ${requestId}. SMS not sent.`);
                 }
-            });
 
-            // Generate a new summary after the update
+                // 2. Add Confirmation Message to History
+                newHistoryEntries.push({
+                    sender: 'Sunny',
+                    receiver: 'Service Provider',
+                    role: 'Sunny',
+                    message: confirmationMsg,
+                    timestamp: new Date(),
+                    phoneNumber: process.env.TWILIO_PHONE_NUMBER
+                });
+
+                // 3. Update DB
+                await requestRef.update({
+                    chat_history: admin.firestore.FieldValue.arrayUnion(...newHistoryEntries),
+                    status: 'scheduled',
+                    serviceDate: confirmArgs.appointmentDate,
+                    providerName: confirmArgs.providerName
+                });
+
+            } else {
+                // --- STANDARD FLOW ---
+                // 1. Forward User Message to Provider
+                if (providerPhoneNumber) {
+                    const twilioClient = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+                    await twilioClient.messages.create({
+                        body: response,
+                        from: process.env.TWILIO_PHONE_NUMBER,
+                        to: providerPhoneNumber
+                    });
+                    
+                    // Add Sunny -> Provider copy (optional, but keeps history complete)
+                    newHistoryEntries.push({
+                        sender: 'Sunny',
+                        receiver: 'Service Provider',
+                        role: 'Sunny',
+                        message: response, // Copy of what we sent
+                        timestamp: new Date(),
+                        phoneNumber: process.env.TWILIO_PHONE_NUMBER
+                    });
+
+                    // 2. Add "Passed along" message to User
+                    const providerName = requestData.providerName || "the provider";
+                    newHistoryEntries.push({
+                        sender: 'Sunny',
+                        receiver: 'User',
+                        role: 'Sunny',
+                        message: `Thanks! I've passed that along to ${providerName}.`,
+                        timestamp: new Date(),
+                        phoneNumber: null
+                    });
+                } else {
+                     // No provider phone? Just save user message.
+                     logger.warn(`No provider phone for request ${requestId}`);
+                }
+
+                // 3. Update DB
+                await requestRef.update({
+                    chat_history: admin.firestore.FieldValue.arrayUnion(...newHistoryEntries),
+                    status: 'in progress'
+                });
+            }
+
+            // Generate summary
             await generateAndSaveSummary(requestId);
 
             res.status(200).json({ success: true, message: 'Response processed successfully.' });

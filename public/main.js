@@ -202,8 +202,14 @@ const renderServices = (services) => {
             </div>`;
         }
 
+        const sunnyBadgeHTML = service.sunnyApproved ? 
+            `<div class="absolute top-0 right-0 bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-bl-lg border-l border-b border-orange-200 z-10">
+                ☀️ Sunny Approved
+            </div>` : '';
+
         card.innerHTML = `
-            <div class="p-6 flex-grow">
+            ${sunnyBadgeHTML}
+            <div class="p-6 flex-grow relative">
                 <div class="flex items-center mb-4">
                     <div class="w-16 h-16 rounded-full brand-accent-bg flex flex-col items-center justify-center mr-4 flex-shrink-0 p-1 text-center">
                         <span class="text-2xl font-black text-white leading-none">${service.recommendations}</span>

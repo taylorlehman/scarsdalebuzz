@@ -38,6 +38,7 @@ const lastNameEl = document.getElementById('lastName');
 const phoneEl = document.getElementById('phone');
 const emailEl = document.getElementById('email');
 const categoryEl = document.getElementById('category');
+const sunnyApprovedEl = document.getElementById('sunnyApproved');
 const lastRecommendedEl = document.getElementById('lastRecommended');
 const recommendationsEl = document.getElementById('recommendations');
 const cancelBtn = document.getElementById('cancelBtn');
@@ -426,7 +427,10 @@ function renderTable() {
     tr.className = 'border-b hover:bg-stone-50';
     const name = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
     tr.innerHTML = `
-      <td class="py-2 pr-4">${name || '-'}</td>
+      <td class="py-2 pr-4">
+        ${name || '-'}
+        ${s.sunnyApproved ? '<span title="Sunny Approved">☀️</span>' : ''}
+      </td>
       <td class="py-2 pr-4">${s.category || '-'}</td>
       <td class="py-2 pr-4">${s.phone || '-'}</td>
       <td class="py-2 pr-4">${s.email || '-'}</td>
@@ -443,6 +447,7 @@ function resetFormToNew() {
   formTitle.textContent = 'Add New Listing';
   docIdEl.value = '';
   form.reset();
+  sunnyApprovedEl.checked = false;
   recommendationsEl.value = 0;
   deleteBtn.classList.add('hidden');
 }
@@ -456,6 +461,7 @@ function fillFormFromDoc(doc) {
   phoneEl.value = doc.phone || '';
   emailEl.value = doc.email || '';
   categoryEl.value = doc.category || '';
+  sunnyApprovedEl.checked = !!doc.sunnyApproved;
   if (doc.lastRecommended) {
     const d = typeof doc.lastRecommended.toDate === 'function' ? doc.lastRecommended.toDate() : new Date(doc.lastRecommended);
     if (!isNaN(d)) {
@@ -499,6 +505,7 @@ form.addEventListener('submit', async (e) => {
     phone: phoneEl.value.trim() || null,
     email: emailEl.value.trim() || null,
     category: categoryEl.value || null,
+    sunnyApproved: sunnyApprovedEl.checked,
     recommendations: Number(recommendationsEl.value || 0),
   };
   const ts = parseDateToTimestamp(lastRecommendedEl.value.trim());
