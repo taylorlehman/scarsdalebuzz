@@ -6,11 +6,28 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { defineString } = require('firebase-functions/params');
 const twilio = require('twilio');
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
+const PROMPTS = require('./prompts');
 
 // Define environment variables
 const GEMINI_API_KEY = defineString('GEMINI_API_KEY');
 
 const cors = require('cors')({origin: true});
+
+// Helper function to verify ID token
+const verifyAuthToken = async (req) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.error("Error verifying ID token:", error);
+        return null;
+    }
+};
 
 // Helper function to extract a JSON string from a Markdown code block
 // Helper function to generate and save a summary for a request
@@ -32,7 +49,7 @@ const generateAndSaveSummary = async (requestId) => {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-        const prompt = `${process.env.GEMINI_PROMPT_SUMMARY}\n\nChat History:\n${JSON.stringify(chatHistory)}`;
+        const prompt = `${PROMPTS.SUMMARY_PROMPT}\n\nChat History:\n${JSON.stringify(chatHistory)}`;
         const result = await model.generateContent(prompt);
         const summary = result.response.text();
 
@@ -93,8 +110,31 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             return;
         }
 
-        const description = req.body;
-        logger.info("Description from body:", description);
+        const userId = await verifyAuthToken(req);
+        if (!userId) {
+             res.status(401).send('Unauthorized');
+             return;
+        }
+
+        // Fetch User Profile for context
+        const userDoc = await admin.firestore().collection('users').doc(userId).get();
+        const userData = userDoc.data() || {};
+        const userContext = `
+        Homeowner Name: ${userData.displayName || 'The Homeowner'}
+        Homeowner Address: ${userData.address || 'Unknown Address'}
+        Homeowner Phone: ${userData.phoneNumber || 'Unknown Phone'}
+        `;
+
+        let description;
+
+        if (req.get('content-type') === 'application/json') {
+             description = req.body.description;
+        } else {
+             description = req.body;
+        }
+        
+        logger.info("Description:", description);
+        logger.info("UserId:", userId);
 
         if (!description || description.trim() === '') {
             res.status(400).send('Description is required');
@@ -111,7 +151,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
 
 
             // 1. Generate Title
-            const titlePrompt = `${process.env.GEMINI_PROMPT_TITLE}\n\nRequest: ${description}`;
+            const titlePrompt = `${PROMPTS.TITLE_PROMPT}\n\nRequest: ${description}`;
             const titleResult = await model.generateContent(titlePrompt);
             const title = titleResult.response.text();
             logger.info(`Generated title: ${title}`);
@@ -121,6 +161,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
                 timestamp: admin.firestore.FieldValue.serverTimestamp(),
                 status: 'in progress',
                 title: title,
+                userId: userId,
                 summary: 'Request submitted. Generating initial message...',
                 chat_history: [{
                     sender: 'User',
@@ -157,7 +198,12 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
 
             const chat = toolModel.startChat();
 
-            const prompt = `${process.env.GEMINI_PROMPT_SUBMIT_REQUEST} ${description}
+            const prompt = `${PROMPTS.SUBMIT_REQUEST_PROMPT}
+            
+            Context:
+            ${userContext}
+            
+            Request: ${description}
             
             IMPORTANT: You must use the 'get_plumber_contact_info' tool to find the plumber's contact details. The tool will return the name and phone number. 
             You MUST output your final response as a valid JSON object with three keys: 
@@ -341,7 +387,7 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         });
 
         const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
-        const prompt = `${process.env.GEMINI_PROMPT_INCOMING_SMS}
+        const prompt = `${PROMPTS.INCOMING_SMS_PROMPT}
         
         Current Date and Time: ${currentDate}
         
@@ -451,6 +497,11 @@ exports.cancelRequest = functions.https.onRequest(async (req, res) => {
             return res.status(405).send('Method Not Allowed');
         }
 
+        const userId = await verifyAuthToken(req);
+        if (!userId) {
+             return res.status(401).send('Unauthorized');
+        }
+
         const { requestId } = req.body;
         if (!requestId) {
             return res.status(400).send('Request ID is required.');
@@ -465,6 +516,11 @@ exports.cancelRequest = functions.https.onRequest(async (req, res) => {
             }
 
             const requestData = doc.data();
+            
+            if (requestData.userId !== userId) {
+                return res.status(403).send('Forbidden');
+            }
+
             // Find provider phone using the new or old schema
             // New schema: look for messages where sender is 'Service Provider'
             const providerMessage = requestData.chat_history.find(m => m.sender === 'Service Provider' || m.role === 'Service Provider');
@@ -503,6 +559,11 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
             return res.status(405).send('Method Not Allowed');
         }
 
+        const userId = await verifyAuthToken(req);
+        if (!userId) {
+             return res.status(401).send('Unauthorized');
+        }
+
         const { requestId, response } = req.body;
         if (!requestId || !response) {
             return res.status(400).json({ error: 'Request ID and response are required.' });
@@ -518,6 +579,20 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 return res.status(404).json({ error: 'Request not found.' });
             }
             const requestData = requestDoc.data();
+            
+            if (requestData.userId !== userId) {
+                return res.status(403).send('Forbidden');
+            }
+
+            // Fetch User Profile for context
+            const userDoc = await db.collection('users').doc(userId).get();
+            const userData = userDoc.data() || {};
+            const userContext = `
+            Homeowner Name: ${userData.displayName || 'The Homeowner'}
+            Homeowner Address: ${userData.address || 'Unknown Address'}
+            Homeowner Phone: ${userData.phoneNumber || 'Unknown Phone'}
+            `;
+
             const currentHistory = requestData.chat_history || [];
 
             // 2. Construct User Message object
@@ -549,9 +624,12 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                                     type: "OBJECT",
                                     properties: {
                                         appointmentDate: { type: "STRING", description: "The confirmed date and time in ISO 8601 format." },
-                                        providerName: { type: "STRING", description: "The name of the service provider." }
+                                        providerName: { type: "STRING", description: "The name of the service provider." },
+                                        providerPhoneNumber: { type: "STRING", description: "The phone number of the service provider." },
+                                        userAddress: { type: "STRING", description: "The homeowner's address to share with the provider." },
+                                        userPhone: { type: "STRING", description: "The homeowner's phone number to share with the provider." }
                                     },
-                                    required: ["appointmentDate", "providerName"]
+                                    required: ["appointmentDate", "providerName", "providerPhoneNumber", "userAddress", "userPhone"]
                                 }
                             }
                         ]
@@ -564,11 +642,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 });
 
                 const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
-                const prompt = `Current Date and Time: ${currentDate}
-                
-                Analyze the conversation. If both the homeowner and provider have explicitly agreed on a time, call the 'confirm_appointment' tool. Otherwise, do nothing.
-                
-                Chat History: ${JSON.stringify(provisionalHistory)}`;
+                const prompt = PROMPTS.CONFIRMATION_CHECK_PROMPT(currentDate, userContext, provisionalHistory);
 
                 const result = await model.generateContent(prompt);
                 const functionCalls = result.response.functionCalls();
@@ -618,7 +692,8 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                     chat_history: admin.firestore.FieldValue.arrayUnion(...newHistoryEntries),
                     status: 'scheduled',
                     serviceDate: confirmArgs.appointmentDate,
-                    providerName: confirmArgs.providerName
+                    providerName: confirmArgs.providerName,
+                    providerPhoneNumber: confirmArgs.providerPhoneNumber
                 });
 
             } else {

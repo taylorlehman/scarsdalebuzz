@@ -4,8 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.initializeApp(window.firebaseConfig);
     }
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
     // --- State ---
+    let currentUser = null;
+    let unsubscribeFirestore = null; // To stop listener on logout
     let activeRequestId = null;
     let requestToCancelId = null; // Track which request is being cancelled
     let requestsCache = {};
@@ -15,6 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestsList = document.getElementById('requests-list');
     const newRequestBtn = document.getElementById('new-request-btn');
     
+    // Header Elements
+    const userNameEl = document.getElementById('user-name');
+    const userPhotoEl = document.getElementById('user-photo');
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userDropdown = document.getElementById('user-dropdown');
+    const signOutBtn = document.getElementById('sign-out-btn');
+
     // Desktop Chat Elements
     const chatHeader = document.getElementById('chat-header');
     const chatTitle = document.getElementById('chat-title');
@@ -59,6 +69,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmModal = document.getElementById('confirm-modal');
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
     const confirmActionBtn = document.getElementById('confirm-action-btn');
+
+    // Onboarding Elements
+    const onboardingModal = document.getElementById('onboarding-modal');
+    const onboardStep0 = document.getElementById('onboard-step-0');
+    const onboardStepHow = document.getElementById('onboard-step-how');
+    const onboardStep1 = document.getElementById('onboard-step-1');
+    const onboardStep2 = document.getElementById('onboard-step-2');
+    
+    const onboardStartBtn = document.getElementById('onboard-start-btn');
+    const onboardHowNextBtn = document.getElementById('onboard-how-next-btn');
+    const onboardAddressInput = document.getElementById('onboard-address');
+    const onboardStep1Next = document.getElementById('onboard-step-1-next');
+    const onboardPhoneInput = document.getElementById('onboard-phone');
+    const onboardStep2Back = document.getElementById('onboard-step-2-back');
+    const onboardFinishBtn = document.getElementById('onboard-finish-btn');
 
     // --- Helper Functions ---
 
@@ -160,14 +185,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const bg = isUser ? 'bg-orange-100 text-stone-800 rounded-br-none' : 'bg-white text-stone-800 border border-stone-200 rounded-bl-none';
         const timeString = timestamp ? formatTime(timestamp.toDate ? timestamp.toDate() : new Date(timestamp)) : '';
 
+        const userAvatar = currentUser && currentUser.photoURL ? currentUser.photoURL : 'https://www.gravatar.com/avatar?d=mp';
+        const sunnyAvatar = '../images/sunny_the_bee.png';
+
         return `
-            <div class="flex ${alignment}">
-                <div class="max-w-[85%] md:max-w-[75%]">
+            <div class="flex ${alignment} items-end gap-2 mb-4">
+                ${!isUser ? `<img src="${sunnyAvatar}" class="w-8 h-8 rounded-full border border-stone-200 bg-white mb-5 flex-shrink-0">` : ''}
+                
+                <div class="max-w-[80%] md:max-w-[70%]">
                     <div class="p-3 md:p-4 rounded-2xl shadow-sm ${bg}">
-                        <p class="whitespace-pre-wrap leading-relaxed">${text}</p>
+                        <p class="whitespace-pre-wrap leading-relaxed text-sm md:text-base">${text}</p>
                     </div>
                     <p class="text-[10px] text-stone-400 mt-1 px-1 ${isUser ? 'text-right' : 'text-left'}">${role} • ${timeString}</p>
                 </div>
+
+                ${isUser ? `<img src="${userAvatar}" class="w-8 h-8 rounded-full border border-stone-200 mb-5 flex-shrink-0">` : ''}
             </div>
         `;
     };
@@ -383,11 +415,17 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollToBottom(container);
 
             try {
+                const token = currentUser ? await currentUser.getIdToken() : null;
                 const functionUrl = 'https://submitrequest-bnvo6soxla-uc.a.run.app';
                 const response = await fetch(functionUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: text,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ 
+                        description: text
+                    }),
                 });
                 
                 if (!response.ok) throw new Error('Failed to submit');
@@ -434,10 +472,14 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollToBottom(container);
 
             try {
+                const token = currentUser ? await currentUser.getIdToken() : null;
                 const functionUrl = 'https://handleuserresponse-bnvo6soxla-uc.a.run.app';
                 const response = await fetch(functionUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         requestId: activeRequestId,
                         response: text
@@ -567,10 +609,14 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmActionBtn.disabled = true;
 
         try {
+            const token = currentUser ? await currentUser.getIdToken() : null;
             const functionUrl = 'https://cancelrequest-bnvo6soxla-uc.a.run.app';
             await fetch(functionUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ requestId: requestToCancelId }),
             });
             
@@ -632,82 +678,186 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Close menus when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.menu-btn') && !e.target.closest('.menu-dropdown')) {
-            document.querySelectorAll('.menu-dropdown').forEach(el => el.classList.add('hidden'));
+    // --- Onboarding Logic ---
+    onboardStartBtn.addEventListener('click', () => {
+        onboardStep0.classList.add('hidden');
+        onboardStepHow.classList.remove('hidden');
+    });
+
+    onboardHowNextBtn.addEventListener('click', () => {
+        onboardStepHow.classList.add('hidden');
+        onboardStep1.classList.remove('hidden');
+    });
+
+    onboardStep1Next.addEventListener('click', () => {
+        if (!onboardAddressInput.value.trim()) {
+            onboardAddressInput.classList.add('ring-2', 'ring-red-500');
+            return;
+        }
+        onboardStep1.classList.add('hidden');
+        onboardStep2.classList.remove('hidden');
+    });
+    
+    onboardAddressInput.addEventListener('input', () => onboardAddressInput.classList.remove('ring-2', 'ring-red-500'));
+
+    onboardStep2Back.addEventListener('click', () => {
+        onboardStep2.classList.add('hidden');
+        onboardStep1.classList.remove('hidden');
+    });
+    
+    onboardPhoneInput.addEventListener('input', () => onboardPhoneInput.classList.remove('ring-2', 'ring-red-500'));
+
+    onboardFinishBtn.addEventListener('click', async () => {
+        if (!onboardPhoneInput.value.trim()) {
+            onboardPhoneInput.classList.add('ring-2', 'ring-red-500');
+            return;
+        }
+        
+        onboardFinishBtn.disabled = true;
+        onboardFinishBtn.textContent = 'Saving...';
+        
+        try {
+            await db.collection('users').doc(currentUser.uid).set({
+                email: currentUser.email,
+                displayName: currentUser.displayName,
+                photoURL: currentUser.photoURL,
+                address: onboardAddressInput.value.trim(),
+                phoneNumber: window.formatPhoneNumber(onboardPhoneInput.value.trim()),
+                onboardingCompleted: true,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            
+            onboardingModal.classList.add('hidden');
+            
+        } catch (error) {
+            console.error("Error saving profile:", error);
+            alert("Error saving profile. Please try again.");
+            onboardFinishBtn.disabled = false;
+            onboardFinishBtn.textContent = 'All Set!';
         }
     });
 
+    // --- Header Actions ---
+    userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('hidden');
+    });
 
-    // --- Firestore Listener ---
-    db.collection('requests')
-        .orderBy('timestamp', 'desc')
-        .onSnapshot((snapshot) => {
-            renderRequestsList(snapshot);
+    signOutBtn.addEventListener('click', () => {
+        auth.signOut().then(() => {
+            window.location.href = '../login.html';
+        });
+    });
 
-            // Safeguard: If no requests exist and we aren't creating a new one, force empty state
-            if (snapshot.empty && !isCreatingNew) {
-                activeRequestId = null;
-                emptyState.classList.remove('hidden');
-                confirmationView.classList.add('hidden');
-                chatMessages.classList.add('hidden');
-                chatHeader.classList.add('hidden');
-                chatInputArea.classList.add('hidden');
-                mobileChatOverlay.classList.add('hidden');
-                return;
+    // Close user dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+            userDropdown.classList.add('hidden');
+        }
+    });
+
+    // --- Auth & Data Listener ---
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUser = user;
+
+            // Check Onboarding Status
+            db.collection('users').doc(user.uid).get().then(doc => {
+                const data = doc.data();
+                if (!doc.exists || !data || !data.address || !data.phoneNumber) {
+                    // Show Onboarding Modal
+                    onboardingModal.classList.remove('hidden');
+                    // Pre-fill if partial
+                    if (data && data.address) onboardAddressInput.value = data.address;
+                    if (data && data.phoneNumber) onboardPhoneInput.value = data.phoneNumber;
+                }
+            });
+
+            // Update Header
+            if (userNameEl) userNameEl.textContent = user.displayName || 'User';
+            if (userPhotoEl && user.photoURL) {
+                userPhotoEl.src = user.photoURL;
             }
             
-            // Check if we are waiting for a new request to appear in the snapshot
-            if (isCreatingNew && activeRequestId && activeRequestId !== 'new' && requestsCache[activeRequestId]) {
-                isCreatingNew = false;
-            }
+            // Start Firestore Listener (Filtered by User)
+            if (unsubscribeFirestore) unsubscribeFirestore();
+            
+            unsubscribeFirestore = db.collection('requests')
+                .where('userId', '==', user.uid)
+                .orderBy('timestamp', 'desc')
+                .onSnapshot((snapshot) => {
+                    renderRequestsList(snapshot);
 
-            // If we have an active request selected, update its chat view
-            if (activeRequestId && !isCreatingNew) {
-                const data = requestsCache[activeRequestId];
-                if (data) {
-                    
-                    if (data.status === 'scheduled') {
-                        // Switch to Confirmation View
-                        chatMessages.classList.add('hidden');
-                        chatInputArea.classList.add('hidden');
-                        confirmationView.classList.remove('hidden');
-                        
-                        confirmProvider.textContent = data.providerName || 'Service Provider';
-                        let dateStr = 'TBD';
-                        if (data.serviceDate) {
-                            const d = new Date(data.serviceDate);
-                            dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                        }
-                        confirmTime.textContent = dateStr;
-                    } else {
-                        // Switch to Chat View if we were in confirmation?
-                        // Just ensure visibility
+                    // Safeguard: If no requests exist and we aren't creating a new one, force empty state
+                    if (snapshot.empty && !isCreatingNew) {
+                        activeRequestId = null;
+                        emptyState.classList.remove('hidden');
                         confirmationView.classList.add('hidden');
-                        chatMessages.classList.remove('hidden');
-                        chatInputArea.classList.remove('hidden');
-                        
-                        // Update Chat History
-                        renderChatHistory(data.chat_history);
+                        chatMessages.classList.add('hidden');
+                        chatHeader.classList.add('hidden');
+                        chatInputArea.classList.add('hidden');
+                        mobileChatOverlay.classList.add('hidden');
+                        return;
                     }
                     
-                    // Update Headers/Status/Description
-                    chatTitle.textContent = data.title || 'Request';
-                } else {
-                    // Switch to Chat View if we were in confirmation?
-                    // Just ensure visibility
-                    confirmationView.classList.add('hidden');
-                    chatMessages.classList.remove('hidden');
-                    chatInputArea.classList.remove('hidden');
-                    
-                    // Update Chat History
-                    renderChatHistory(data.chat_history);
-                }
-            }
-        }, (error) => {
-            console.error("Error fetching requests: ", error);
-            requestsList.innerHTML = '<p class="text-red-500 p-4 text-center">Could not connect to server.</p>';
-        });
+                    // Check if we are waiting for a new request to appear in the snapshot
+                    if (isCreatingNew && activeRequestId && activeRequestId !== 'new' && requestsCache[activeRequestId]) {
+                        isCreatingNew = false;
+                    }
+
+                    // If we have an active request selected, update its chat view
+                    if (activeRequestId && !isCreatingNew) {
+                        const data = requestsCache[activeRequestId];
+                        if (data) {
+                            
+                            if (data.status === 'scheduled') {
+                                // Switch to Confirmation View
+                                chatMessages.classList.add('hidden');
+                                chatInputArea.classList.add('hidden');
+                                confirmationView.classList.remove('hidden');
+                                
+                                confirmProvider.textContent = data.providerName || 'Service Provider';
+                                let dateStr = 'TBD';
+                                if (data.serviceDate) {
+                                    const d = new Date(data.serviceDate);
+                                    dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                                }
+                                confirmTime.textContent = dateStr;
+                            } else {
+                                // Switch to Chat View
+                                confirmationView.classList.add('hidden');
+                                chatMessages.classList.remove('hidden');
+                                chatInputArea.classList.remove('hidden');
+                                
+                                // Update Chat History
+                                renderChatHistory(data.chat_history);
+                            }
+                            
+                            // Update Headers/Status/Description
+                            chatTitle.textContent = data.title || 'Request';
+                            chatDescription.textContent = data.summary || 'No details yet...';
+                        } else {
+                            // Switch to Chat View
+                            confirmationView.classList.add('hidden');
+                            chatMessages.classList.remove('hidden');
+                            chatInputArea.classList.remove('hidden');
+                            
+                            // Update Chat History
+                            renderChatHistory(data.chat_history);
+                        }
+                    }
+                }, (error) => {
+                    console.error("Error fetching requests: ", error);
+                    if (error.code === 'failed-precondition') {
+                         console.error("Index needed:", error);
+                    }
+                    requestsList.innerHTML = '<p class="text-red-500 p-4 text-center">Could not connect to server.</p>';
+                });
+
+        } else {
+            // Redirect
+            window.location.href = '../login.html';
+        }
+    });
 
 });

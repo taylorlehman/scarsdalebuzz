@@ -11,11 +11,29 @@
 // };
 
 window.firebaseConfig = window.firebaseConfig || {
-  apiKey: "AIzaSyCvVHvmNZ91gzvRxy9yHHTB9wXvzFig10M",
-  authDomain: "scarsdale-buzz-prod.firebaseapp.com",
+  apiKey: "AIzaSyDemya3LBmhAZoDbKLodJ1f03JMjydMdEU",
+  authDomain: "scarsdalebuzz.com",
   projectId: "scarsdale-buzz-prod",
   storageBucket: "scarsdale-buzz-prod.appspot.com",
   messagingSenderId: "942213582160",
   appId: "1:942213582160:web:54f165829c3dbb6514b055",
   measurementId: "G-81E3DP7LET"
+};
+
+// Global Helper for Phone Formatting
+// converts (555) 123-4567 -> +15551234567
+window.formatPhoneNumber = (input) => {
+    if (!input) return '';
+    
+    // Remove all non-digits
+    let cleaned = ('' + input).replace(/\D/g, '');
+    
+    // Handle US country code
+    // If 10 digits, assume US and prepend 1
+    if (cleaned.length === 10) {
+        cleaned = '1' + cleaned;
+    } 
+    // If 11 digits and starts with 1, it's already good
+    
+    return '+' + cleaned;
 };
