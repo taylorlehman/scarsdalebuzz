@@ -48,7 +48,7 @@ const generateAndSaveSummary = async (requestId) => {
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-        const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `${PROMPTS.SUMMARY_PROMPT}\n\nChat History:\n${JSON.stringify(chatHistory)}`;
         const result = await model.generateContent(prompt);
@@ -146,7 +146,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             logger.info("Initializing Gemini client");
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
             const model = genAI.getGenerativeModel({
-                model: "gemini-3.0-flash",
+                model: "gemini-2.5-flash",
                 systemInstruction: ""
             });
 
@@ -184,7 +184,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
 
             // Re-initialize model with tools
             const toolModel = genAI.getGenerativeModel({
-                model: "gemini-3.0-flash",
+                model: "gemini-2.5-flash",
                 tools: tools
             });
 
@@ -356,7 +356,7 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         const confirmTools = [TOOLS.CONFIRM_APPOINTMENT_TOOL];
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-3.0-flash",
+            model: "gemini-2.5-flash",
             tools: confirmTools
         });
 
@@ -581,7 +581,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 const confirmTools = [TOOLS.CONFIRM_APPOINTMENT_TOOL];
 
                 const model = genAI.getGenerativeModel({ 
-                    model: "gemini-3.0-flash",
+                    model: "gemini-2.5-flash",
                     tools: confirmTools
                 });
 
