@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scarsdale Buzz // The Edit</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', // Slightly deeper warm oatmeal
+                        'scandi-surface': '#FFFCF5', // Off-white paper
+                        'scandi-text': '#282624', // Almost black
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', // For dividers
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-nav': 'rgba(242, 240, 233, 0.9)',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 10px rgba(40, 38, 36, 0.03)',
+                        'card': '0 0 0 1px rgba(40, 38, 36, 0.04), 0 2px 8px rgba(40, 38, 36, 0.04)',
+                        'hover': '0 0 0 1px rgba(40, 38, 36, 0.08), 0 8px 24px rgba(40, 38, 36, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Subtle noise texture for paper feel */
+        .texture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.4;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons ---
+        const Icons = {
+            Search: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+            Menu: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+            ArrowRight: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+            ArrowUpRight: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>,
+            MapPin: (props) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+            Clock: (props) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+        };
+
+        const { Search, Menu, ArrowRight, ArrowUpRight, MapPin, Clock } = Icons;
+
+        // --- Data ---
+        // Added 'variant' to manually curate the rhythm of the grid
+        const DATA = [
+            { id: 1, variant: 'standard', type: 'vendor', title: 'Martine’s Bakery', category: 'Patisserie', time: 'Until 4pm', desc: 'Renowned for hand-rolled croissants. Early arrival is recommended for almond.', location: 'East Pkwy' },
+            { id: 2, variant: 'featured', type: 'note', title: 'The Old Post Office', category: 'Developing', time: 'Rumor', desc: 'Discussions are underway regarding the repurposing of the historic building. A jazz lounge is the current leading proposal.', location: 'Village Center' },
+            { id: 3, variant: 'standard', type: 'vendor', title: 'Scarsdale Hardware', category: 'Essentials', time: 'Sale', desc: 'Curated winter equipment selection available at a 20% seasonal reduction.', location: 'Scarsdale Ave' },
+            { id: 4, variant: 'colored', type: 'event', title: 'Gallery Night', category: 'Culture', time: 'Tonight 7pm', desc: 'Intimate viewing of local modernists. Entry requires guest list passphrase "Buzz".', location: 'Popham Rd' },
+            { id: 5, variant: 'standard', type: 'vendor', title: 'DeCicco & Sons', category: 'Provisions', time: 'Busy', desc: 'Experiencing high foot traffic. Suggested delay: 1hr.', location: 'East Pkwy' },
+            { id: 6, variant: 'alert', type: 'alert', title: 'Traffic Notice: Garth Rd', category: 'Advisory', time: 'Avoid', desc: 'Construction operations have resulted in significant delays.', location: 'Garth Rd' },
+            { id: 7, variant: 'standard', type: 'vendor', title: 'Bronx River Books', category: 'Literature', time: 'Until 6pm', desc: 'Author reading this evening. Limited seating available in the back alcove.', location: 'Spencer Pl' },
+        ];
+
+        const CATEGORIES = ['All', 'Patisserie', 'Provisions', 'Culture', 'Essentials', 'Updates'];
+
+        // --- Components ---
+
+        const Nav = () => (
+            <nav className="fixed top-0 w-full bg-scandi-nav backdrop-blur-md z-40 px-6 py-6 border-b border-scandi-line transition-all duration-300">
+                <div className="max-w-7xl mx-auto flex justify-between items-center">
+                    <button className="text-scandi-text hover:text-scandi-muted transition-colors">
+                        <Menu />
+                    </button>
+
+                    <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
+                        <h1 className="font-serif text-2xl tracking-tight text-scandi-text">Scarsdale<span className="italic text-scandi-stone">Buzz</span></h1>
+                    </div>
+
+                    <button className="text-scandi-text hover:text-scandi-muted transition-colors">
+                        <Search />
+                    </button>
+                </div>
+            </nav>
+        );
+
+        const Hero = () => (
+            <section className="pt-48 pb-24 px-6 max-w-7xl mx-auto">
+                <div className="flex flex-col md:flex-row justify-between items-end gap-12 fade-in">
+                    <div className="max-w-2xl">
+                        <span className="text-xs font-semibold tracking-[0.2em] uppercase text-scandi-muted mb-6 block">The Daily Digest</span>
+                        <h2 className="font-serif text-6xl md:text-7xl text-scandi-text leading-[0.9]">
+                            The village,<br />
+                            <span className="italic text-scandi-sage">distilled.</span>
+                        </h2>
+                    </div>
+                    
+                    <div className="w-full md:w-auto flex flex-col items-end gap-4">
+                        <div className="text-right">
+                            <div className="text-sm font-medium text-scandi-text">Tuesday, October 24</div>
+                            <div className="text-xs text-scandi-muted">Sunny, 62°F</div>
+                        </div>
+                        <div className="h-px w-32 bg-scandi-text"></div>
+                    </div>
+                </div>
+            </section>
+        );
+
+        const IndexNumber = ({ num }) => (
+            <span className="font-mono text-xs text-scandi-muted tracking-widest opacity-60">
+                {(num + 1).toString().padStart(2, '0')}
+            </span>
+        );
+
+        const Card = ({ item, index }) => {
+            // Variant 1: Standard (White, Clean, Receipt-like)
+            if (item.variant === 'standard') {
+                return (
+                    <div className="group bg-scandi-surface p-8 rounded-sm shadow-card hover:shadow-hover transition-all duration-500 ease-out flex flex-col h-full relative fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                        <div className="flex justify-between items-start mb-6 pb-6 border-b border-scandi-line/50">
+                            <IndexNumber num={index} />
+                            <span className="text-xs uppercase tracking-widest font-medium text-scandi-sage">{item.category}</span>
+                        </div>
+                        
+                        <div className="flex-grow">
+                            <h3 className="font-serif text-3xl text-scandi-text mb-4 group-hover:italic transition-all duration-300">{item.title}</h3>
+                            <p className="text-sm text-scandi-muted leading-relaxed max-w-sm">{item.desc}</p>
+                        </div>
+
+                        <div className="mt-8 pt-4 border-t border-scandi-line/50 flex justify-between items-end">
+                            <div className="flex flex-col gap-1">
+                                <span className="flex items-center gap-2 text-xs font-medium text-scandi-text">
+                                    <MapPin /> {item.location}
+                                </span>
+                                <span className="flex items-center gap-2 text-xs text-scandi-muted">
+                                    <Clock /> {item.time}
+                                </span>
+                            </div>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-2 group-hover:translate-x-0">
+                                <ArrowRight size={16} className="text-scandi-clay" />
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Variant 2: Featured (Colored Background)
+            if (item.variant === 'featured' || item.variant === 'colored') {
+                const isClay = item.variant === 'colored';
+                return (
+                    <div className={`group p-8 rounded-sm shadow-card transition-all duration-500 ease-out flex flex-col h-full relative fade-in ${isClay ? 'bg-scandi-clay text-white' : 'bg-scandi-sage text-white'}`} style={{ animationDelay: `${index * 0.1}s` }}>
+                        <div className="flex justify-between items-start mb-8">
+                            <IndexNumber num={index} />
+                            <ArrowUpRight className="opacity-60" />
+                        </div>
+                        
+                        <span className="text-xs uppercase tracking-widest font-medium mb-4 block opacity-80">{item.category}</span>
+                        <h3 className="font-serif text-4xl mb-6 leading-tight">{item.title}</h3>
+                        <p className="text-sm opacity-90 leading-relaxed border-l border-white/30 pl-4 mb-8">{item.desc}</p>
+
+                        <div className="mt-auto flex items-center gap-2 text-xs font-medium tracking-wide uppercase opacity-80">
+                            <span>Read More</span>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Variant 3: Alert (Minimal, Stroke)
+            if (item.variant === 'alert') {
+                return (
+                    <div className="group bg-transparent p-8 rounded-sm border border-scandi-stone/30 hover:border-scandi-stone transition-colors duration-300 flex flex-col justify-center h-full text-center fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                         <span className="text-xs font-bold text-red-800/60 uppercase tracking-widest mb-3 block">✦ Notice</span>
+                         <h3 className="font-serif text-2xl text-scandi-text mb-3 italic">{item.title}</h3>
+                         <p className="text-xs text-scandi-muted">{item.desc}</p>
+                    </div>
+                );
+            }
+        };
+
+        const App = () => {
+            const [filter, setFilter] = useState('All');
+            const [data, setData] = useState(DATA);
+
+            useEffect(() => {
+                // Simple filter logic
+                if (filter === 'All') setData(DATA);
+                else setData(DATA.filter(item => item.category === filter));
+            }, [filter]);
+
+            return (
+                <div className="min-h-screen flex flex-col relative selection:bg-scandi-sage selection:text-white">
+                    <div className="texture-overlay"></div>
+                    <Nav />
+                    <Hero />
+                    
+                    <main className="flex-grow max-w-7xl mx-auto w-full px-6 pb-20 relative z-10">
+                        {/* Filter Line */}
+                        <div className="flex flex-wrap gap-x-8 gap-y-2 mb-12 pb-4 border-b border-scandi-line text-sm fade-in font-medium">
+                            {CATEGORIES.map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setFilter(cat)}
+                                    className={`relative transition-colors duration-300 ${
+                                        filter === cat 
+                                        ? 'text-scandi-text' 
+                                        : 'text-scandi-muted hover:text-scandi-text'
+                                    }`}
+                                >
+                                    {cat}
+                                    {filter === cat && <span className="absolute -bottom-[17px] left-0 w-full h-px bg-scandi-text"></span>}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        {/* Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                            {data.map((item, index) => (
+                                <Card key={item.id} item={item} index={index} />
+                            ))}
+                        </div>
+                    </main>
+
+                    <footer className="py-12 border-t border-scandi-line text-center text-xs text-scandi-muted font-mono uppercase tracking-widest">
+                        Scarsdale Buzz • Est. 2024
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

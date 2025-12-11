@@ -7,6 +7,7 @@ const { defineString } = require('firebase-functions/params');
 const twilio = require('twilio');
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
 const PROMPTS = require('./prompts');
+const TOOLS = require('./tools');
 
 // Define environment variables
 const GEMINI_API_KEY = defineString('GEMINI_API_KEY');
@@ -47,7 +48,7 @@ const generateAndSaveSummary = async (requestId) => {
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
 
         const prompt = `${PROMPTS.SUMMARY_PROMPT}\n\nChat History:\n${JSON.stringify(chatHistory)}`;
         const result = await model.generateContent(prompt);
@@ -145,7 +146,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             logger.info("Initializing Gemini client");
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
             const model = genAI.getGenerativeModel({
-                model: "gemini-2.5-flash",
+                model: "gemini-3.0-flash",
                 systemInstruction: ""
             });
 
@@ -179,39 +180,18 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             logger.info("Calling Gemini API with tools");
             
             // Define the tool
-            const tools = [
-                {
-                    functionDeclarations: [
-                        {
-                            name: "get_plumber_contact_info",
-                            description: "Retrieves the name and phone number of the available plumber.",
-                        }
-                    ]
-                }
-            ];
+            const tools = [TOOLS.GET_PLUMBER_CONTACT_INFO_TOOL];
 
             // Re-initialize model with tools
             const toolModel = genAI.getGenerativeModel({
-                model: "gemini-2.5-flash",
+                model: "gemini-3.0-flash",
                 tools: tools
             });
 
             const chat = toolModel.startChat();
 
-            const prompt = `${PROMPTS.SUBMIT_REQUEST_PROMPT}
+            const prompt = PROMPTS.SUBMIT_REQUEST_PROMPT(userContext, description);
             
-            Context:
-            ${userContext}
-            
-            Request: ${description}
-            
-            IMPORTANT: You must use the 'get_plumber_contact_info' tool to find the plumber's contact details. The tool will return the name and phone number. 
-            You MUST output your final response as a valid JSON object with three keys: 
-            1. "message" (the text message content)
-            2. "phoneNumber" (the plumber's phone number from the tool)
-            3. "providerName" (the name of the plumber from the tool)
-            Do not output markdown formatting for the JSON.`;
-
             let result = await chat.sendMessage(prompt);
             let response = result.response;
             let functionCalls = response.functionCalls();
@@ -358,47 +338,30 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
 
         // We need to refetch the data to get the latest chat history for the prompt
         const updatedRequestDoc = await requestDoc.ref.get();
-        const updatedChatHistory = updatedRequestDoc.data().chat_history;
+        const updatedRequestData = updatedRequestDoc.data();
+        const updatedChatHistory = updatedRequestData.chat_history;
+
+        // Fetch User Context for Incoming SMS
+        const userId = updatedRequestData.userId;
+        const userDoc = await admin.firestore().collection('users').doc(userId).get();
+        const userData = userDoc.data() || {};
+        const userContext = `
+        Homeowner Name: ${userData.displayName || 'The Homeowner'}
+        Homeowner Address: ${userData.address || 'Unknown Address'}
+        Homeowner Phone: ${userData.phoneNumber || 'Unknown Phone'}
+        `;
 
         // 3. Pass conversation to Gemini
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-        const confirmTools = [
-            {
-                functionDeclarations: [
-                    {
-                        name: "confirm_appointment",
-                        description: "Confirms the appointment when both the user and provider have agreed on a time.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                appointmentDate: { type: "STRING", description: "The confirmed date and time in ISO 8601 format." },
-                                providerName: { type: "STRING", description: "The name of the service provider." }
-                            },
-                            required: ["appointmentDate", "providerName"]
-                        }
-                    }
-                ]
-            }
-        ];
+        const confirmTools = [TOOLS.CONFIRM_APPOINTMENT_TOOL];
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
+            model: "gemini-3.0-flash",
             tools: confirmTools
         });
 
         const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
-        const prompt = `${PROMPTS.INCOMING_SMS_PROMPT}
-        
-        Current Date and Time: ${currentDate}
-        
-        AUTONOMY INSTRUCTIONS:
-        1. ANSWERING QUESTIONS: If the provider asks a question and the User has ALREADY provided the answer in the history, Sunny should answer the provider directly. In this case, set 'messageToUser' to null (do not bother the user). Only do this if you are CONFIDENT. If there is doubt, ask the user.
-        2. CONFIRMING APPOINTMENTS: If the provider proposes a time that the User has ALREADY explicitly stated works for them (e.g., "Tuesday at 2pm works"), Sunny should CONFIRM the appointment immediately by calling the 'confirm_appointment' tool.
-        
-        IMPORTANT: If the appointment is confirmed (per rule #2 above or if both parties just agreed), you MUST call the 'confirm_appointment' tool. Do not output JSON in that case.
-        If the appointment is NOT confirmed, output the JSON object as described.
-        
-        Chat History: ${JSON.stringify(updatedChatHistory)}`;
+        const prompt = PROMPTS.INCOMING_SMS_PROMPT(currentDate, userContext, updatedChatHistory);
 
         const result = await model.generateContent(prompt);
         const response = result.response;
@@ -415,7 +378,8 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
                 await requestDoc.ref.update({ 
                     status: 'scheduled',
                     serviceDate: args.appointmentDate,
-                    providerName: args.providerName
+                    providerName: args.providerName,
+                    providerPhoneNumber: args.providerPhoneNumber // Ensure this is captured
                 });
                 logger.info("Request status updated to 'scheduled'.");
                 
@@ -614,30 +578,10 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
 
             try {
                 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-                const confirmTools = [
-                    {
-                        functionDeclarations: [
-                            {
-                                name: "confirm_appointment",
-                                description: "Confirms the appointment when both the user and provider have agreed on a time.",
-                                parameters: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        appointmentDate: { type: "STRING", description: "The confirmed date and time in ISO 8601 format." },
-                                        providerName: { type: "STRING", description: "The name of the service provider." },
-                                        providerPhoneNumber: { type: "STRING", description: "The phone number of the service provider." },
-                                        userAddress: { type: "STRING", description: "The homeowner's address to share with the provider." },
-                                        userPhone: { type: "STRING", description: "The homeowner's phone number to share with the provider." }
-                                    },
-                                    required: ["appointmentDate", "providerName", "providerPhoneNumber", "userAddress", "userPhone"]
-                                }
-                            }
-                        ]
-                    }
-                ];
+                const confirmTools = [TOOLS.CONFIRM_APPOINTMENT_TOOL];
 
                 const model = genAI.getGenerativeModel({ 
-                    model: "gemini-2.5-flash",
+                    model: "gemini-3.0-flash",
                     tools: confirmTools
                 });
 
