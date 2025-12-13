@@ -24,8 +24,8 @@ class SharedHeader {
         const inactiveClass = "font-serif text-scandi-muted hover:text-scandi-text transition-colors text-base tracking-wide";
 
         // Determine links
-        const dirLink = activePage === 'directory' ? '#' : `${rootPath}directory.html`;
-        const sunnyLink = activePage === 'sunny' ? '#' : `${rootPath}sunny/sunny.html`;
+        const dirLink = activePage === 'directory' ? '#' : `${rootPath}directory/index.html`;
+        const sunnyLink = activePage === 'sunny' ? '#' : `${rootPath}sunny/index.html`;
 
         const dirClass = activePage === 'directory' ? activeClass : inactiveClass;
         const sunnyClass = activePage === 'sunny' ? activeClass : inactiveClass;
