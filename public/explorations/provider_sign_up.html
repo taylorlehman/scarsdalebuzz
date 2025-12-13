@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunny // Trade Network</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Nothing+You+Could+Do&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', 
+                        'scandi-surface': '#FFFCF5', 
+                        'scandi-text': '#282624', 
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', 
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-nav': 'rgba(242, 240, 233, 0.9)',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'script': ['Nothing You Could Do', 'cursive'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 10px rgba(40, 38, 36, 0.03)',
+                        'card': '0 0 0 1px rgba(40, 38, 36, 0.04), 0 2px 8px rgba(40, 38, 36, 0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .texture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.4;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const Icons = {
+            PenTool: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>,
+            Check: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="20 6 9 17 4 12"/></svg>,
+            Smartphone: (props) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+        };
+
+        const { PenTool, Check, Smartphone } = Icons;
+
+        const Nav = () => (
+            <nav className="fixed top-0 w-full bg-scandi-nav backdrop-blur-md z-40 px-6 py-6 border-b border-scandi-line transition-all duration-300">
+                <div className="max-w-7xl mx-auto flex justify-between items-center">
+                    <span className="text-sm tracking-widest uppercase text-scandi-muted font-medium">Trade Network</span>
+                    <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
+                        <h1 className="font-serif text-2xl tracking-tight text-scandi-text">Sunny<span className="text-scandi-clay">.</span></h1>
+                    </div>
+                    <button className="text-scandi-text hover:text-scandi-muted transition-colors text-sm font-medium border-b border-transparent hover:border-scandi-text">
+                        Log In
+                    </button>
+                </div>
+            </nav>
+        );
+
+        const SignatureCanvas = ({ onEnd }) => {
+            const canvasRef = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [hasDrawn, setHasDrawn] = useState(false);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#282624';
+            }, []);
+
+            const startDrawing = (e) => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - rect.left;
+                const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                setIsDrawing(true);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - rect.left;
+                const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                if (!hasDrawn) setHasDrawn(true);
+            };
+
+            const endDrawing = () => {
+                setIsDrawing(false);
+                if (hasDrawn && onEnd) onEnd();
+            };
+
+            const clear = () => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                setHasDrawn(false);
+            };
+
+            return (
+                <div className="relative">
+                    <div className="border border-scandi-line bg-white rounded-sm overflow-hidden relative group">
+                        <canvas 
+                            ref={canvasRef}
+                            width={400}
+                            height={150}
+                            className="w-full h-32 cursor-crosshair touch-none"
+                            onMouseDown={startDrawing}
+                            onMouseMove={draw}
+                            onMouseUp={endDrawing}
+                            onMouseLeave={endDrawing}
+                            onTouchStart={startDrawing}
+                            onTouchMove={draw}
+                            onTouchEnd={endDrawing}
+                        />
+                        {!hasDrawn && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+                                <span className="font-script text-2xl text-scandi-muted">Sign here...</span>
+                            </div>
+                        )}
+                        <button 
+                            onClick={clear}
+                            type="button"
+                            className="absolute top-2 right-2 text-xs text-scandi-muted hover:text-scandi-clay opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                    <div className="mt-2 flex justify-between items-center text-xs text-scandi-muted">
+                        <span className="font-mono uppercase tracking-wider">X _______________________</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const OptInForm = () => {
+            const [phone, setPhone] = useState("");
+            const [signed, setSigned] = useState(false);
+            const [submitted, setSubmitted] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setSubmitted(true);
+            };
+
+            if (submitted) {
+                return (
+                    <div className="bg-scandi-surface p-12 text-center border border-scandi-line rounded-sm h-full flex flex-col justify-center items-center fade-in shadow-card">
+                        <div className="w-16 h-16 bg-scandi-clay/10 rounded-full flex items-center justify-center mb-6">
+                            <Check className="text-scandi-clay" size={32} />
+                        </div>
+                        <h3 className="font-serif text-3xl text-scandi-text mb-4">Agreement Ratified</h3>
+                        <p className="text-scandi-muted mb-8 leading-relaxed max-w-xs mx-auto">
+                            Welcome to the network. We have sent a verification code to {phone} to confirm your device.
+                        </p>
+                        <button className="text-scandi-text border-b border-scandi-text pb-1 hover:text-scandi-clay hover:border-scandi-clay transition-colors text-sm uppercase tracking-widest font-medium">
+                            Access Dashboard
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="bg-scandi-surface p-8 md:p-10 border border-scandi-line rounded-sm shadow-soft relative overflow-hidden fade-in">
+                    {/* Decorative Stamp */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-scandi-clay/5 rounded-full blur-xl"></div>
+
+                    <div className="flex items-center gap-2 mb-6 text-scandi-clay">
+                        <Smartphone size={20} />
+                        <span className="text-xs font-bold uppercase tracking-widest">Dispatch Consent Form</span>
+                    </div>
+
+                    <h3 className="font-serif text-3xl text-scandi-text mb-2">The Digital Handshake</h3>
+                    <p className="text-sm text-scandi-muted mb-8">Authorize Sunny to transmit high-priority leads directly to your mobile device.</p>
+
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        {/* Phone Field */}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-medium uppercase tracking-widest text-scandi-muted">Mobile Number</label>
+                            <input 
+                                type="tel" 
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="(914) 555-0123" 
+                                className="w-full bg-white border border-scandi-line p-4 font-mono text-scandi-text placeholder-scandi-muted/50 focus:outline-none focus:border-scandi-clay focus:ring-1 focus:ring-scandi-clay transition-all rounded-sm"
+                                required
+                            />
+                        </div>
+
+                        {/* Legal Text */}
+                        <div className="text-[11px] leading-relaxed text-scandi-muted border-l-2 border-scandi-line pl-4 italic">
+                            By affixing your signature below, you agree to receive automated dispatch notifications and client inquiries via SMS from Sunny. Carrier rates may apply. You may opt-out of the network at any time by replying STOP.
+                        </div>
+
+                        {/* Signature Field */}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-medium uppercase tracking-widest text-scandi-muted">Authorized Signature</label>
+                            <SignatureCanvas onEnd={() => setSigned(true)} />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={!signed || !phone}
+                            className={`w-full py-4 text-sm font-medium uppercase tracking-[0.2em] transition-all duration-300 rounded-sm border ${
+                                signed && phone 
+                                ? 'bg-scandi-text text-white border-scandi-text hover:bg-scandi-clay hover:border-scandi-clay' 
+                                : 'bg-transparent text-scandi-muted/50 border-scandi-line cursor-not-allowed'
+                            }`}
+                        >
+                            Seal Agreement
+                        </button>
+                    </form>
+                </div>
+            );
+        };
+
+        const Hero = () => (
+            <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen flex flex-col justify-center">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                    
+                    {/* Left Column: Value Prop */}
+                    <div className="fade-in max-w-xl">
+                        <div className="inline-flex items-center gap-2 border border-scandi-clay/30 rounded-full px-4 py-1 mb-8">
+                            <span className="w-2 h-2 rounded-full bg-scandi-clay animate-pulse"></span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-scandi-clay">Now Vetting: Scarsdale, NY</span>
+                        </div>
+                        
+                        <h2 className="font-serif text-6xl md:text-7xl text-scandi-text leading-[1.05] mb-8">
+                            Craftsmanship<br />
+                            <span className="italic text-scandi-muted">deserves a stage.</span>
+                        </h2>
+                        
+                        <p className="text-lg text-scandi-muted mb-10 leading-relaxed max-w-md">
+                            We curate the client, you curate the work. Receive exclusively vetted, high-intent inquiries from Scarsdale’s most discerning homeowners.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4 text-sm text-scandi-text">
+                                <div className="w-6 h-6 rounded-full bg-scandi-bg flex items-center justify-center text-scandi-clay">
+                                    <Check size={14} />
+                                </div>
+                                <span>Zero lead-gen fees. We take a flat success fee.</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-scandi-text">
+                                <div className="w-6 h-6 rounded-full bg-scandi-bg flex items-center justify-center text-scandi-clay">
+                                    <Check size={14} />
+                                </div>
+                                <span>Direct SMS dispatch. No app fatigue.</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-scandi-text">
+                                <div className="w-6 h-6 rounded-full bg-scandi-bg flex items-center justify-center text-scandi-clay">
+                                    <Check size={14} />
+                                </div>
+                                <span>Pre-screened project scopes & budgets.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Opt-In Form */}
+                    <div className="w-full max-w-md mx-auto lg:mx-0" style={{ animationDelay: '0.2s' }}>
+                        <OptInForm />
+                    </div>
+
+                </div>
+            </section>
+        );
+
+        const App = () => {
+            return (
+                <div className="min-h-screen flex flex-col relative selection:bg-scandi-clay selection:text-white">
+                    <div className="texture-overlay"></div>
+                    <Nav />
+                    <Hero />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

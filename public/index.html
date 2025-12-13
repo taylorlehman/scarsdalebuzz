@@ -1,85 +1,389 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scarsdale Services Directory</title>
-    <link rel="icon" type="image/png" href="images/scarsdale_services_directory.png">
-    <link rel="apple-touch-icon" href="images/scarsdale_services_directory.png">
+    <title>Scarsdale Buzz - Home Services</title>
+    <link rel="icon" type="image/png" href="images/logos/logo_bee_white_bg.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="antialiased">
-
-    <!-- Password Modal / Welcome Screen -->
-    <div id="password-modal" class="fixed inset-0 bg-[#f7e9cf] flex items-center justify-center z-50 transition-opacity duration-500">
-        <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-2xl text-center w-full max-w-md m-4">
-            <div class="w-44 h-44 rounded-full bg-[#f7e9cf] p-1 mx-auto mb-6 flex items-center justify-center" style="border: 4px solid #81503f;">
-                <img src="images/scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-28 h-28">
-            </div>
-            <h1 class="font-brand text-3xl md:text-4xl font-black text-stone-800">Scarsdale Services Directory</h1>
-            <p class="text-md text-stone-600 mt-1 mb-6 italic">powered by the Scarsdale Buzz 🐝 community</p>
-
-            <form id="password-form">
-                 <label for="password-input" class="sr-only">Password</label>
-                <input type="text" id="password-input" class="w-full p-3 border-2 border-stone-300 rounded-lg text-lg text-center brand-accent-ring focus:ring-2 focus:border-transparent transition" placeholder="Enter Password (from Buzz FB Page)" autofocus>
-                <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Incorrect password. Please try again.</p>
-                <button type="submit" class="w-full brand-accent-bg text-white font-bold py-3 px-4 rounded-lg mt-6 brand-accent-bg-hover transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Enter</button>
-            </form>
-            <div class="mt-6 text-sm text-stone-500">
-                <a href="privacy.html" class="underline hover:text-stone-700">Privacy Policy</a>
-                <span class="mx-2">•</span>
-                <a href="data-deletion.html" class="underline hover:text-stone-700">Data Deletion</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content (initially hidden) -->
-    <div id="main-content" class="container mx-auto p-4 md:p-8 max-w-4xl hidden">
-
-        <!-- Header -->
-        <header class="text-center mb-8">
-            <img src="images/scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-24 h-24 mx-auto mb-4">
-            <h1 class="font-brand text-4xl md:text-5xl font-black text-stone-800">Scarsdale Services Directory</h1>
-            <p class="text-lg text-stone-600 mt-1 italic">powered by the Scarsdale Buzz 🐝 community</p>
-        </header>
-
-        <!-- Search and Filters -->
-        <div class="mb-8 sticky top-4 bg-white/80 backdrop-blur-sm z-10 p-4 rounded-xl shadow-md border">
-            <!-- Search Box -->
-            <div class="relative mb-4">
-                <input type="text" id="searchInput" placeholder="Search by name, business, or category..." class="w-full p-4 pl-12 text-lg border-2 border-stone-300 rounded-full brand-accent-ring focus:ring-2 focus:border-transparent transition">
-                <svg class="w-6 h-6 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-            </div>
-            <!-- Filter Categories -->
-            <div id="categoryFilters" class="flex flex-wrap justify-center gap-2">
-                <!-- Category buttons will be injected here by JavaScript -->
-            </div>
-        </div>
-
-        <!-- Service Listings -->
-        <main id="serviceList" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- Service cards will be injected here by JavaScript -->
-        </main>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Font Assignments */
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
         
-        <!-- No Results Message -->
-        <div id="noResults" class="text-center py-16 hidden">
-             <h3 class="text-2xl font-bold text-stone-700">No matching services found!</h3>
-             <p class="text-stone-500 mt-2">Try a different search or filter.</p>
-        </div>
+        /* Smooth fade for the navbar */
+        #navbar { transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease; }
+        
+        /* Custom Selection Color */
+        ::selection { background-color: #D4D2CD; color: black; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#F9F8F4] text-[#2C2C2C] overflow-x-hidden">
 
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed w-full z-50 px-6 md:px-12 py-4 flex justify-center items-center bg-transparent">
+        <a href="#" class="font-serif text-2xl tracking-tight hover:opacity-80 transition-opacity">
+            Scarsdale<span class="italic text-[#666]">Buzz</span>
+        </a>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 z-40 bg-[#F9F8F4] pt-24 px-6 hidden md:hidden flex-col h-screen w-screen">
+        <div class="flex flex-col gap-8 text-xl font-serif">
+            <a href="#directory" class="mobile-link">Directory</a>
+            <a href="#sunny" class="mobile-link">Sunny AI</a>
+            <a href="#providers" class="mobile-link">For Providers</a>
+            <div class="h-px bg-[#E8E6E1] w-full my-2"></div>
+            <button onclick="window.location.href='login.html'" class="bg-[#2C2C2C] text-[#F9F8F4] px-5 py-3 text-lg font-medium rounded-sm w-full">
+                Sign In
+            </button>
+        </div>
     </div>
 
-    <!-- Firebase SDK (Compat for simplicity) -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
-    <!-- Your Firebase config (fill in keys in firebase-config.js) -->
-    <script src="firebase-config.js"></script>
-    <script src="main.js"></script>
+    <!-- Hero Section -->
+    <header class="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+        <!-- Left Column: Text -->
+        <div class="max-w-xl z-10 relative">
+            <h1 class="font-serif text-5xl md:text-7xl leading-[1.1] mb-8 text-[#1A1A1A]">
+                An easier way to  <br/> <span class="italic text-[#555]">take care of <br /> your home.</span>
+            </h1>
+            <p class="text-lg md:text-xl text-[#555] leading-relaxed max-w-xl mb-10 font-light">
+                Access a community-vetted directory of local providers, or let Sunny, our AI agent, handle the scheduling for you.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button id="btn-view-directory" onclick="window.location.href='directory/index.html'" class="bg-[#2C2C2C] text-[#F9F8F4] px-8 py-4 text-sm md:text-base font-medium rounded-sm hover:bg-black transition-all flex items-center justify-center gap-2 group cursor-pointer">
+                    View the Directory
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+                <button id="btn-meet-sunny" onclick="document.getElementById('sunny').scrollIntoView({behavior: 'smooth'})" class="bg-transparent border border-[#CCC] text-[#2C2C2C] px-8 py-4 text-sm md:text-base font-medium rounded-sm hover:border-black transition-all cursor-pointer">
+                    Meet Sunny AI
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column: App Screenshots Composition -->
+        <div class="relative h-[400px] md:h-[500px] w-full hidden md:block group perspective-[1000px]">
+            
+            <!-- BACK LAYER: Directory Screen -->
+            <div id="hero-card-directory" class="absolute top-0 right-0 w-[90%] h-[400px] bg-[#F9F8F4] border border-[#E8E6E1] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] rounded-md overflow-hidden z-0 transition-all duration-700 ease-out cursor-pointer hover:scale-[1.02]">
+                <!-- Fake UI Header -->
+                <div class="h-12 border-b border-[#F0F0F0] flex items-center px-4 justify-between">
+                    <div class="flex gap-4 text-[10px] uppercase tracking-widest text-[#888]">
+                        <span class="border-b border-black text-black pb-4 -mb-4">Directory</span>
+                        <span>Sunny</span>
+                    </div>
+                    <div class="text-[10px] uppercase tracking-widest text-[#888]">Taylor Lehman</div>
+                </div>
+                
+                <!-- Fake Directory Content -->
+                <div class="p-8 opacity-90">
+                    <h3 class="font-serif text-2xl mb-1 text-[#1A1A1A]">Scarsdale Services</h3>
+                    <h3 class="font-serif text-2xl mb-6 text-[#999] italic">Directory.</h3>
+                    
+                    <div class="flex gap-4 text-[10px] text-[#888] mb-6 border-b border-[#F0F0F0] pb-2">
+                        <span class="text-black font-bold">All</span>
+                        <span>Kids Activities</span>
+                        <span>Plumbing</span>
+                        <span>HVAC</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-4 border border-[#F5F5F5] shadow-sm">
+                            <div class="text-[8px] uppercase tracking-widest text-[#CCC] mb-2">01 — Power Washing</div>
+                            <div class="font-serif text-lg mb-1">Washing Westchester</div>
+                            <div class="text-[10px] text-[#888] mb-2">Jody Alter</div>
+                            <div class="flex items-center gap-1">
+                                <div class="w-4 h-4 rounded-full bg-[#F5F4F0] text-[8px] flex items-center justify-center">87</div>
+                                <div class="text-[8px] text-[#AAA] tracking-wide">RECOMMENDATIONS</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 border border-[#F5F5F5] shadow-sm">
+                            <div class="text-[8px] uppercase tracking-widest text-[#CCC] mb-2">02 — Fresh Fish</div>
+                            <div class="font-serif text-lg mb-1">Eastchester Fish</div>
+                            <div class="text-[10px] text-[#888] mb-2">Market</div>
+                            <div class="flex items-center gap-1">
+                                <div class="w-4 h-4 rounded-full bg-[#F5F4F0] text-[8px] flex items-center justify-center">65</div>
+                                <div class="text-[8px] text-[#AAA] tracking-wide">RECOMMENDATIONS</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FRONT LAYER: Sunny Screen -->
+            <div id="hero-card-sunny" class="absolute bottom-10 left-0 w-[75%] h-[300px] bg-[#F9F8F4] border border-[#E8E6E1] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] rounded-md overflow-hidden z-10 transition-all duration-700 ease-out cursor-pointer hover:scale-[1.02]">
+                <div class="flex h-full">
+                    <!-- Sidebar -->
+                    <div class="w-1/3 bg-[#F4F3EF] p-4 flex flex-col border-r border-[#EAE8E3]">
+                        <div class="bg-white border border-[#E0E0E0] px-3 py-2 text-[10px] tracking-widest text-center mb-8 bg-opacity-50">
+                            + NEW REQUEST
+                        </div>
+                        <div class="text-[8px] tracking-widest text-[#AAA] leading-relaxed text-center mt-auto mb-4">
+                            NO ACTIVE MATTERS.<br/>INITIATE A REQUEST.
+                        </div>
+                    </div>
+                    <!-- Main Content -->
+                    <div class="w-2/3 p-8 flex flex-col justify-center items-center text-center">
+                        <h2 class="font-serif text-3xl mb-2 text-[#1A1A1A]">Hi, I'm <span class="italic text-[#D4AF37]">Sunny.</span></h2>
+                        <p class="text-[10px] text-[#888] leading-relaxed max-w-[200px] mb-6">
+                            Select an active matter from the ledger, or initiate a new request to maintain your home.
+                        </p>
+                        <button class="bg-[#2C2C2C] text-white text-[10px] tracking-widest px-4 py-2 hover:bg-black transition-colors cursor-pointer">
+                            INITIATE REQUEST
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Feature Split 1: The Directory -->
+    <section id="directory" class="py-20 px-6 md:px-12 border-t border-[#E8E6E1]">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+            
+            <!-- Text Content -->
+            <div class="order-2 md:order-1">
+                <span class="inline-block py-1 px-3 border border-[#E0E0E0] rounded-full text-xs font-medium tracking-wide mb-6 text-[#666]">
+                    THE DIRECTORY
+                </span>
+                <h2 class="font-serif text-4xl md:text-5xl mb-6 text-[#1A1A1A]">
+                    Recommended by your neighbors, <br/> trusted by you.
+                </h2>
+                <p class="text-[#555] text-lg leading-relaxed mb-8">
+                    Stop scrolling through Facebook groups for recommendations. Our directory is powered by real Scarsdale homeowners. We verify every review so you can hire with confidence.
+                </p>
+                
+                <ul class="space-y-4 mb-10">
+                    <li class="flex items-center gap-3 text-[#444]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span class="font-light">Strict vetting process</span>
+                    </li>
+                    <li class="flex items-center gap-3 text-[#444]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span class="font-light">Real community reviews</span>
+                    </li>
+                    <li class="flex items-center gap-3 text-[#444]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span class="font-light">Direct contact info</span>
+                    </li>
+                    <li class="flex items-center gap-3 text-[#444]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span class="font-light">Curated categories</span>
+                    </li>
+                </ul>
+
+                <button onclick="window.location.href='directory/index.html'" class="text-[#1A1A1A] border-b border-[#1A1A1A] pb-1 hover:opacity-70 transition-opacity font-medium flex items-center gap-2 cursor-pointer">
+                    Browse the Directory 
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+
+            <!-- Visual: Abstract Directory Card -->
+            <div class="order-1 md:order-2 bg-white p-8 md:p-12 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] rounded-sm border border-[#F0F0F0]">
+                <div class="flex justify-between items-center mb-8 border-b border-[#F5F5F5] pb-6">
+                    <div class="flex gap-4 overflow-x-hidden text-sm text-[#888]">
+                        <span class="font-medium text-black border-b border-black pb-6 -mb-6">All</span>
+                        <span>Plumbing</span>
+                        <span>HVAC</span>
+                        <span>Electrician</span>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CCC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+
+                <!-- Card Mockup -->
+                <div class="space-y-6">
+                    <div class="group cursor-pointer">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] tracking-widest text-[#AAA] uppercase">01 — Power Washing</span>
+                            <span class="text-[10px] tracking-widest text-[#AAA] uppercase">Electrician</span>
+                        </div>
+                        <h3 class="font-serif text-2xl mb-1 group-hover:underline decoration-1 underline-offset-4">Gregory Romano</h3>
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="bg-[#F5F4F0] text-[#555] text-xs px-2 py-1 rounded-sm">56 Recommendations</span>
+                            <div class="flex text-[#D4AF37]">
+                                <!-- 5 Stars -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            </div>
+                        </div>
+                        <div class="text-sm text-[#666]">914-265-2222</div>
+                    </div>
+
+                    <div class="h-px w-full bg-[#F5F5F5]"></div>
+
+                    <div class="group cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] tracking-widest text-[#AAA] uppercase">02 — Fresh Fish</span>
+                            <span class="text-[10px] tracking-widest text-[#AAA] uppercase">Food</span>
+                        </div>
+                        <h3 class="font-serif text-2xl mb-1">Eastchester Fish</h3>
+                        <div class="flex items-center gap-3">
+                            <span class="bg-[#F5F4F0] text-[#555] text-xs px-2 py-1 rounded-sm">65 Recommendations</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Split 2: Sunny -->
+    <section id="sunny" class="py-20 px-6 md:px-12 bg-[#F2F0EB]">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+            
+            <!-- Visual: Chat Interface -->
+            <div class="relative">
+                <!-- Abstract shape for aesthetic -->
+                <div class="absolute -top-10 -left-10 w-32 h-32 bg-[#E6E4DE] rounded-full mix-blend-multiply filter blur-2xl opacity-70"></div>
+                
+                <div class="bg-[#F9F8F4] p-6 md:p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] rounded-sm border border-[#E8E6E1] relative z-10 min-h-[400px] flex flex-col">
+                    <div class="border-b border-[#E8E6E1] pb-4 mb-6 flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] tracking-widest text-[#888] border border-[#DDD] px-1 py-0.5 rounded-sm mr-2">BETA</span>
+                            <span class="font-serif text-lg">New Matter</span>
+                        </div>
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    </div>
+
+                    <div class="flex-1 space-y-6">
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-[#D4D2CD] flex items-center justify-center text-xs font-serif text-white flex-shrink-0">S</div>
+                            <div class="bg-[#F2F0EB] p-4 rounded-sm rounded-tl-none max-w-[85%]">
+                                <p class="text-sm leading-relaxed text-[#444]">
+                                    How can I assist with your home today? Please describe the issue.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 flex-row-reverse">
+                            <div class="w-8 h-8 rounded-full bg-[#333] flex items-center justify-center text-xs font-serif text-white flex-shrink-0">Y</div>
+                            <div class="bg-white border border-[#EAEAEA] p-4 rounded-sm rounded-tr-none max-w-[85%] shadow-sm">
+                                <p class="text-sm leading-relaxed text-[#444]">
+                                    My gutters are overflowing and I need someone to come clean them out before the rain on Thursday.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-[#D4D2CD] flex items-center justify-center text-xs font-serif text-white flex-shrink-0">S</div>
+                            <div class="bg-[#F2F0EB] p-4 rounded-sm rounded-tl-none max-w-[85%]">
+                                <p class="text-sm leading-relaxed text-[#444]">
+                                    I can help with that. I've found 3 highly-rated gutter cleaning services in Scarsdale available tomorrow. Would you like me to book <strong>Washing Westchester</strong> for a $150 estimate?
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-[#E8E6E1]">
+                        <div class="text-xs text-[#AAA] italic text-center">Sunny is typing...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Content -->
+            <div>
+                <span class="inline-block py-1 px-3 border border-[#D4D2CD] rounded-full text-xs font-medium tracking-wide mb-6 text-[#666]">
+                    MEET SUNNY
+                </span>
+                <h2 class="font-serif text-4xl md:text-5xl mb-6 text-[#1A1A1A]">
+                    Your home’s personal <br/> executive assistant.
+                </h2>
+                <p class="text-[#555] text-lg leading-relaxed mb-8">
+                    Finding a number is easy. Playing phone tag is hard. Sunny is an AI agent that doesn't just search—it schedules. Tell Sunny what you need, and consider it handled.
+                </p>
+                
+                <button onclick="window.location.href='sunny/index.html'" class="bg-[#2C2C2C] text-[#F9F8F4] px-8 py-4 text-sm md:text-base font-medium rounded-sm hover:bg-black transition-all inline-flex items-center gap-2 cursor-pointer">
+                    Sign Up for Sunny Beta
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+                <p class="mt-4 text-xs text-[#888]">Currently accepting limited sign-ups.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Testimonial / Community Section -->
+    <section class="py-24 px-6 md:px-12 text-center max-w-4xl mx-auto">
+        <div class="mb-10 flex justify-center text-[#D4AF37]">
+            <svg class="mx-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg class="mx-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg class="mx-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg class="mx-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg class="mx-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <h3 class="font-serif text-3xl md:text-4xl leading-tight text-[#1A1A1A] mb-8">
+            "Finally, a list that isn't just paid ads. I found my electrician and my landscaper here, and Sunny saved me hours of calling around."
+        </h3>
+        <p class="text-sm font-bold tracking-widest uppercase text-[#888]">
+            Sarah J. — Fox Meadow
+        </p>
+    </section>
+
+    <!-- Provider CTA -->
+    <section id="providers" class="py-20 px-6 md:px-12 bg-white border-y border-[#E8E6E1]">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+            <div>
+                <h2 class="font-serif text-3xl md:text-4xl mb-4 text-[#1A1A1A]">Are you a top-rated pro?</h2>
+                <p class="text-[#666] max-w-lg">
+                    Join the network of trusted Scarsdale service providers. We only accept businesses with verified community references.
+                </p>
+            </div>
+            <button onclick="window.location.href='mailto:taylor@tl-labs.com?subject=I\'d like to join the directory'" class="bg-transparent border border-[#2C2C2C] text-[#2C2C2C] px-8 py-4 text-sm font-medium rounded-sm hover:bg-[#2C2C2C] hover:text-white transition-all whitespace-nowrap cursor-pointer">
+                Apply to Join Directory
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-[#F9F8F4] pt-20 pb-10 px-6 md:px-12 border-t border-[#E8E6E1]">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            <div class="col-span-1">
+                <a href="#" class="font-serif text-2xl tracking-tight mb-6 block">
+                    Scarsdale<span class="italic text-[#666]">Buzz</span>
+                </a>
+                <p class="text-[#666] text-sm leading-relaxed">
+                    Simplifying home ownership for the Scarsdale community.
+                </p>
+            </div>
+            
+            <div class="col-span-1 md:col-span-2">
+                <h4 class="font-bold text-xs tracking-widest uppercase mb-6 text-[#2C2C2C]">Made by Scarsdale Residents</h4>
+                <div class="flex gap-6 items-start">
+                    <img src="images/taylor.jpg" alt="Taylor" class="w-14 h-14 rounded-full object-cover border border-[#E8E6E1] grayscale hover:grayscale-0 transition-all duration-500">
+                    <div class="text-sm text-[#666] leading-relaxed max-w-lg">
+                        <p class="mb-3">
+                            The worker bee behind ScarsdaleBuzz is Taylor Lehman. Taylor lives in Greenacres. Taylor built Scarsdale because he thinks you should spend time enjoying your home, not managing it.
+                        </p>
+                        <p>
+                            If you you run into an issue, <a href="mailto:taylor@tl-labs.com" class="text-[#2C2C2C] border-b border-[#2C2C2C] hover:opacity-70 transition-opacity font-medium">Email me</a>!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-xs tracking-widest uppercase mb-6 text-[#2C2C2C]">Legal</h4>
+                <ul class="space-y-4 text-sm text-[#666]">
+                    <li><a href="privacy.html" class="hover:text-black transition-colors">Privacy Policy</a></li>
+                    <li><a href="data-deletion.html" class="hover:text-black transition-colors">Data Deletion</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#E8E6E1] text-xs text-[#888]">
+            <p>&copy; <span id="year"></span> Scarsdale Buzz. All rights reserved.</p>
+            <div class="flex gap-6 mt-4 md:mt-0">
+                <span>Made with care in Westchester</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="landing.js"></script>
 </body>
 </html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account - Sunny</title>
+    <link rel="icon" type="image/png" href="../images/scarsdale_services_directory.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+    </style>
+</head>
+<body class="bg-stone-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-stone-200 p-4 sticky top-0 z-10">
+        <div class="max-w-3xl mx-auto flex items-center justify-between">
+            <a href="sunny/sunny.html" class="flex items-center gap-2 text-stone-600 hover:text-stone-900 font-bold transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Back to Sunny
+            </a>
+            <h1 class="text-lg font-bold text-stone-800">Account Settings</h1>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-6">
+        
+        <!-- Profile Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 mb-8 flex flex-col items-center text-center">
+            <img id="user-photo" src="" alt="Profile" class="w-24 h-24 rounded-full mb-4 border-4 border-[#f7e9cf] bg-stone-100">
+            <h2 id="user-name" class="text-2xl font-black text-stone-800 mb-1">...</h2>
+            <p id="user-email" class="text-stone-500 font-mono text-sm mb-6">...</p>
+            
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4">
+                Signed in with Google
+            </div>
+        </div>
+
+        <!-- Contact Details -->
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 mb-8">
+            <h3 class="text-xl font-bold text-stone-800 mb-6">Contact Details</h3>
+            
+            <div class="mb-4">
+                <label class="block text-stone-600 font-bold mb-2">Home Address</label>
+                <input type="text" id="address-input" placeholder="e.g. 123 Main St" class="w-full p-3 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-stone-600 font-bold mb-2">Phone Number</label>
+                <input type="tel" id="phone-input" placeholder="+15551234567" class="w-full p-3 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition">
+            </div>
+            
+            <button id="save-btn" class="w-full bg-[#81503f] hover:bg-[#6d4335] text-white font-bold py-3 px-4 rounded-xl transition shadow-sm">
+                Update Profile
+            </button>
+            <p id="save-msg" class="text-center text-sm font-bold mt-3 hidden"></p>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-8">
+            <h3 class="text-xl font-bold text-red-600 mb-2">Danger Zone</h3>
+            <p class="text-stone-600 mb-6">Once you delete your account, there is no going back. All your requests and chat history will be permanently removed.</p>
+            
+            <a id="delete-btn" href="#" class="block w-full text-center bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 font-bold py-3 px-4 rounded-xl transition">
+                Delete Account
+            </a>
+        </div>
+        
+        <div class="mt-8 text-center">
+            <button id="sign-out-btn" class="text-stone-500 hover:text-stone-800 font-bold underline">Sign Out</button>
+        </div>
+
+    </main>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        firebase.initializeApp(window.firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const addressInput = document.getElementById('address-input');
+        const phoneInput = document.getElementById('phone-input');
+        const saveBtn = document.getElementById('save-btn');
+        const saveMsg = document.getElementById('save-msg');
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // Display Basic Info
+                document.getElementById('user-name').textContent = user.displayName;
+                document.getElementById('user-email').textContent = user.email;
+                if (user.photoURL) {
+                    document.getElementById('user-photo').src = user.photoURL;
+                }
+                
+                // Configure Delete Button
+                const subject = encodeURIComponent("Please delete my account");
+                const body = encodeURIComponent(`I request to delete my account associated with email: ${user.email}. \n\nUID: ${user.uid}`);
+                const mailto = `mailto:taylor@tl-labs.com?subject=${subject}&body=${body}`;
+                document.getElementById('delete-btn').href = mailto;
+
+                // Fetch Profile Data
+                try {
+                    const doc = await db.collection('users').doc(user.uid).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.address) addressInput.value = data.address;
+                        if (data.phoneNumber) phoneInput.value = data.phoneNumber;
+                    }
+                } catch (error) {
+                    console.error("Error fetching profile:", error);
+                }
+
+                // Handle Save
+                saveBtn.addEventListener('click', async () => {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Saving...';
+                    saveMsg.classList.add('hidden');
+
+                    try {
+                        await db.collection('users').doc(user.uid).set({
+                            address: addressInput.value.trim(),
+                            phoneNumber: window.formatPhoneNumber(phoneInput.value.trim()),
+                            email: user.email, // Ensure email is kept
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+
+                        saveBtn.textContent = 'Saved!';
+                        saveMsg.textContent = 'Profile updated successfully.';
+                        saveMsg.className = 'text-center text-sm font-bold mt-3 text-green-600';
+                        saveMsg.classList.remove('hidden');
+
+                        setTimeout(() => {
+                            saveBtn.disabled = false;
+                            saveBtn.textContent = 'Update Profile';
+                            saveMsg.classList.add('hidden');
+                        }, 2000);
+
+                    } catch (error) {
+                        console.error("Error saving profile:", error);
+                        saveBtn.textContent = 'Update Profile';
+                        saveBtn.disabled = false;
+                        saveMsg.textContent = 'Error saving profile.';
+                        saveMsg.className = 'text-center text-sm font-bold mt-3 text-red-600';
+                        saveMsg.classList.remove('hidden');
+                    }
+                });
+                
+            } else {
+                // Not signed in, redirect to login
+                window.location.href = 'login.html';
+            }
+        });
+
+        document.getElementById('sign-out-btn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            });
+        });
+    </script>
+</body>
+</html>

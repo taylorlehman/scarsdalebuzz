@@ -3,128 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scarsdale Buzz Service Request</title>
+    <title>Scarsdale Buzz // Sunny</title>
+    <link rel="icon" type="image/png" href="../images/logos/logo_bee_white_bg.png">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', 
+                        'scandi-surface': '#FFFCF5', 
+                        'scandi-text': '#282624', 
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', 
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-dark': '#1A1918',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 20px rgba(40, 38, 36, 0.02)',
+                        'card': '0 1px 3px rgba(0,0,0,0.05)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #DCD6CE;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C29B8B;
+        }
+
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.5;
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+        }
+
+        /* Helpers for sunny.js compatibility */
+        .hidden { display: none !important; }
+    </style>
 </head>
-<body class="antialiased bg-[#f7e9cf]">
-    <div id="main-content" class="container mx-auto p-4 md:p-8 max-w-4xl">
+<body class="antialiased flex flex-col h-screen overflow-hidden">
+    <div class="paper-texture"></div>
 
-        <!-- Header -->
-        <header class="text-center mb-8">
-            <img src="../images/scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-24 h-24 mx-auto mb-4">
-            <h1 class="font-brand text-4xl md:text-5xl font-black text-stone-800">Sunny, your helpful AI assistant</h1>
-            <p class="text-lg text-stone-600 mt-1 italic">powered by the Scarsdale Buzz 🐝 community</p>
-        </header>
+    <!-- Global Header -->
+    <div id="header-container"></div>
 
-        <!-- Form and Requests -->
-        <div class="flex flex-col items-center gap-8">
-            <!-- Submission Form -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg w-full md:w-3/4 lg:w-1/2">
-                <h2 class="font-brand text-2xl font-bold text-stone-800 mb-4">Submit a New Request</h2>
-                <div class="form-container flex flex-col">
-                    <textarea id="issue-description" placeholder="Describe your issue..." class="w-full p-3 border-2 border-stone-300 rounded-lg text-lg brand-accent-ring focus:ring-2 focus:border-transparent transition mb-4" rows="5"></textarea>
-                    <button id="submit-request" class="w-full md:w-auto self-end brand-accent-bg text-white font-bold py-2 px-6 rounded-lg brand-accent-bg-hover transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Submit</button>
-                </div>
-            </div>
-
-            <!-- Requests List -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg w-full md:w-3/4 lg:w-1/2">
-                <h2 class="font-brand text-2xl font-bold text-stone-800 mb-4">Your Requests</h2>
-                <div class="requests-container">
-                    <ul id="requests-list" class="space-y-3"></ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
-    <script src="../firebase-config.js"></script>
-    <script src="app.js"></script>
-
-    <!-- Loading Modal -->
-    <div id="loading-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center">
-        <div class="bg-white p-8 rounded-2xl shadow-lg text-center max-w-sm mx-4">
-            <svg id="spinner" class="animate-spin h-16 w-16 text-[#E59F48] mx-auto mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p id="witty-message" class="text-lg text-stone-700 italic font-medium"></p>
-        </div>
-    </div>
-
-    <!-- Request Details Modal -->
-    <div id="details-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-        <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-lg relative animate-fade-in-up">
-            <!-- Close Button -->
-            <button id="details-close-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-800 text-3xl leading-none font-bold">&times;</button>
-
-            <!-- Modal Content -->
-            <h2 id="details-title" class="text-2xl font-bold text-stone-800 mb-4 pr-8"></h2>
+    <!-- Content Wrapper (padded top for fixed header) -->
+    <div class="flex-grow flex w-full relative pt-20 h-full">
+        
+        <!-- Sidebar / Docket -->
+        <aside class="w-80 border-r border-scandi-line flex flex-col bg-scandi-bg z-10 h-full">
             
-            <div class="space-y-4 mb-6">
-                <!-- Request Summary -->
-                <div>
-                    <h3 class="font-bold text-stone-700">Latest Updates:</h3>
-                    <p id="details-summary" class="text-stone-600 bg-blue-50 p-3 rounded-lg border border-blue-100"></p>
-                </div>
+            <!-- New Request Button -->
+            <div class="p-6 pb-2">
+                <button id="new-request-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-scandi-line text-scandi-text py-4 text-xs font-mono uppercase tracking-widest hover:border-scandi-clay hover:text-scandi-clay transition-all shadow-sm rounded-sm group">
+                    <span class="group-hover:scale-110 transition-transform duration-300 text-lg leading-none">+</span>
+                     New Request
+                </button>
+            </div>
 
-                <!-- User Action Required Section (hidden by default) -->
-                <div id="details-user-action-section" class="hidden">
-                    <h3 class="font-bold text-red-600">Action Required:</h3>
-                    <form id="user-response-form" class="bg-red-50 border border-red-200 p-3 rounded-lg">
-                        <p class="text-stone-700 font-semibold mb-2">The service provider has a question for you:</p>
-                        <p id="details-provider-question" class="text-stone-600 italic mb-3"></p>
-                        <textarea name="response" placeholder="Your answer..." class="w-full p-2 border-2 border-stone-300 rounded-lg brand-accent-ring focus:ring-2 focus:border-transparent transition" rows="3"></textarea>
-                        <button type="submit" class="w-full mt-2 brand-accent-bg text-white font-bold py-2 px-4 rounded-lg brand-accent-bg-hover transition">Submit Information</button>
-                    </form>
-                </div>
+            <!-- List -->
+            <div id="requests-list" class="flex-grow overflow-y-auto p-4 space-y-2">
+                <!-- sunny.js injects requests here -->
+                <div class="text-center text-scandi-muted mt-10 text-xs font-mono uppercase">Loading ledger...</div>
+            </div>
+            
+        </aside>
 
-                <div>
-                    <h3 class="font-bold text-stone-700">Your Request:</h3>
-                    <p id="details-user-request" class="text-stone-600 italic bg-stone-100 p-3 rounded-lg max-h-28 overflow-y-auto"></p>
+        <!-- Main Workspace -->
+        <main class="flex-grow flex flex-col bg-scandi-surface z-0 relative overflow-hidden h-full">
+            
+            <!-- Chat Header -->
+            <header id="chat-header" class="h-20 border-b border-scandi-line flex items-center justify-between px-8 bg-white/50 backdrop-blur-sm sticky top-0 hidden shrink-0">
+                <div class="flex items-center gap-4 overflow-hidden">
+                    <span id="chat-header-status-badge" class="font-mono text-xs text-scandi-muted border border-scandi-line px-2 py-1 rounded-sm shrink-0 uppercase tracking-widest">ACTIVE</span>
+                    <div class="overflow-hidden">
+                        <h2 id="chat-title" class="font-serif text-2xl text-scandi-text truncate">Select a request</h2>
+                        <div class="flex gap-2">
+                             <p id="chat-description" class="text-xs text-scandi-muted truncate max-w-md">Details...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-scandi-muted shrink-0">
+                    <button id="chat-details-btn" class="hover:text-scandi-text transition-colors"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></button>
+                </div>
+            </header>
+
+            <!-- Chat / Transcript Area -->
+            <div id="chat-messages" class="flex-grow overflow-y-auto p-8 lg:px-16 hidden">
+                <!-- sunny.js injects messages here -->
+            </div>
+
+            <!-- Confirmation View (Scheduled) -->
+            <div id="confirmation-view" class="flex-grow flex flex-col items-center justify-center p-8 hidden text-center">
+                <div class="text-6xl mb-6 text-scandi-text">🗓️</div>
+                <h2 class="font-serif text-3xl italic text-scandi-text mb-4">Appointment Confirmed.</h2>
+                <p class="text-scandi-muted mb-8 max-w-md font-sans">Sunny has synchronized with the provider. Your sanctuary is in good hands.</p>
+                
+                <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line w-full max-w-sm text-left">
+                    <div class="mb-6">
+                        <p class="text-xs font-mono text-scandi-muted uppercase tracking-widest mb-1">Provider</p>
+                        <p id="confirm-provider" class="text-lg font-serif text-scandi-text">Provider Name</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-mono text-scandi-muted uppercase tracking-widest mb-1">Date & Time</p>
+                        <p id="confirm-time" class="text-lg font-serif text-scandi-clay">Oct 12 at 2:00 PM</p>
+                    </div>
                 </div>
                 
-                <div>
-                    <h3 class="font-bold text-stone-700">Currently contacting:</h3>
-                    <div class="bg-stone-100 p-3 rounded-lg">
-                        <p id="details-provider-name" class="text-stone-600">Plumber Pete</p>
-                        <p id="details-provider-phone" class="text-stone-600">(914) 555-1234</p>
-                    </div>
-                </div>
+                <p class="text-xs font-mono text-scandi-muted mt-8 max-w-sm">
+                    Contact <span id="confirm-provider-contact" class="font-bold">the provider</span> at <a id="confirm-phone" href="#" class="border-b border-scandi-clay text-scandi-text hover:text-scandi-clay transition-colors">555-0123</a>.
+                </p>
+                
+                <button id="confirm-cancel-btn-view" class="mt-8 text-red-800/60 hover:text-red-800 text-xs font-mono uppercase tracking-widest border-b border-transparent hover:border-red-800 transition">
+                    Cancel Request
+                </button>
+            </div>
 
-                <div>
-                    <h3 class="font-bold text-stone-700">Status:</h3>
-                    <div id="details-status-badge" class="inline-flex items-center gap-2 text-white font-bold py-1 px-3 rounded-full text-sm">
-                        <span id="details-status-emoji"></span>
-                        <span id="details-status-text"></span>
+            <!-- Default Empty State -->
+            <div id="empty-state" class="absolute inset-0 z-0 flex flex-col items-center justify-center text-center p-8">
+                <h1 class="font-serif text-4xl text-scandi-text mb-4">Hi, I'm <span class="italic text-scandi-clay">Sunny</span>.</h1>
+                <p class="text-lg text-scandi-muted max-w-md mb-8 font-light">Select an active matter from the ledger, or initiate a new request to maintain your home.</p>
+                <button id="empty-state-new-btn" class="bg-scandi-text text-white px-8 py-3 text-sm tracking-widest uppercase hover:bg-scandi-clay transition-colors duration-300 shadow-lg">
+                    Initiate Request
+                </button>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div id="chat-input-area" class="p-8 lg:px-16 bg-white border-t border-scandi-line hidden z-10 shrink-0">
+                <div class="max-w-4xl mx-auto">
+                    <form id="chat-form" class="relative group">
+                        <textarea id="chat-input" rows="1" placeholder="Type a message to Sunny..." class="w-full bg-scandi-bg/30 border border-scandi-line rounded-sm p-4 pr-16 text-scandi-text placeholder-scandi-muted focus:outline-none focus:border-scandi-clay focus:bg-white transition-all resize-none font-serif text-lg h-24"></textarea>
+                        <button type="submit" class="absolute bottom-4 right-4 p-2 rounded-sm transition-all duration-300 bg-scandi-text text-white hover:bg-scandi-clay">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </form>
+                    <div class="mt-2 text-xs text-scandi-muted flex justify-between items-center font-mono">
+                        <span>Press Enter to send</span>
+                        <span>Sunny Status: Online ●</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex justify-end">
-                <button id="details-cancel-request-btn" class="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition">Cancel Request</button>
+        </main>
+    </div>
+
+    <!-- Mobile Overlay (Hidden by default, used by sunny.js logic for mobile) -->
+    <div id="mobile-chat-overlay" class="hidden fixed inset-0 bg-scandi-surface z-40 flex-col md:hidden pt-20">
+        <div class="bg-white p-4 border-b border-scandi-line flex items-center gap-3 shadow-sm">
+            <button id="mobile-back-btn" class="text-scandi-text"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 19l-7-7 7-7"/></svg></button>
+            <div class="flex-grow overflow-hidden">
+                <h2 id="mobile-chat-title" class="font-serif text-lg text-scandi-text truncate">Request Details</h2>
+                <div id="mobile-chat-status" class="text-xs text-scandi-muted truncate"></div>
+            </div>
+             <button id="mobile-details-btn" class="text-scandi-muted"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+        <div id="mobile-chat-messages" class="flex-grow overflow-y-auto p-4 space-y-4"></div>
+        <div id="mobile-chat-input-area" class="p-4 bg-white border-t border-scandi-line">
+            <form id="mobile-chat-form" class="flex gap-2">
+                <textarea id="mobile-chat-input" rows="1" placeholder="Type a message..." class="flex-grow p-3 border border-scandi-line rounded-sm focus:outline-none focus:border-scandi-clay font-serif"></textarea>
+                <button type="submit" class="bg-scandi-text text-white p-3 rounded-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="hidden fixed inset-0 bg-scandi-dark/20 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+        <div class="bg-white p-8 rounded-sm shadow-hover w-full max-w-md relative border border-scandi-line">
+            <button id="details-close-btn" class="absolute top-4 right-4 text-scandi-muted hover:text-scandi-text">&times;</button>
+            <h2 class="font-serif text-2xl text-scandi-text mb-1">Details</h2>
+            <p id="modal-request-id" class="text-xs font-mono text-scandi-muted mb-6">REF-...</p>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="font-mono text-xs text-scandi-muted uppercase tracking-widest mb-2">Summary</h3>
+                    <p id="modal-summary" class="text-scandi-text text-sm leading-relaxed bg-scandi-bg p-4 border border-scandi-line/50"></p>
+                </div>
+                <div>
+                    <h3 class="font-mono text-xs text-scandi-muted uppercase tracking-widest mb-2">Provider</h3>
+                    <div class="bg-scandi-bg p-4 border border-scandi-line/50">
+                        <p id="modal-provider-name" class="font-serif font-medium text-scandi-text">Finding pro...</p>
+                        <p id="modal-provider-phone" class="text-scandi-muted text-sm font-mono"></p>
+                    </div>
+                </div>
+                <div class="pt-6 border-t border-scandi-line">
+                    <button id="modal-cancel-btn" class="w-full py-3 text-red-800/70 hover:text-red-800 text-xs font-mono uppercase tracking-widest border border-transparent hover:border-red-200 hover:bg-red-50 transition">
+                        Cancel Request
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Confirmation Modal -->
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center">
-        <div class="bg-white p-8 rounded-2xl shadow-lg text-center max-w-sm mx-4">
-            <h3 class="text-xl font-bold text-stone-800 mb-4">Are you sure?</h3>
-            <p id="confirm-message" class="text-stone-600 mb-6">Do you really want to cancel this request? This action cannot be undone.</p>
-            <div class="flex justify-center gap-4">
-                <button id="confirm-cancel-btn" class="w-full bg-gray-200 text-stone-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">Nevermind</button>
-                <button id="confirm-action-btn" class="w-full bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition">Yes, Cancel</button>
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-scandi-dark/20 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+        <div class="bg-white p-8 rounded-sm shadow-hover text-center max-w-sm w-full mx-4 border border-scandi-line">
+            <h3 class="font-serif text-xl text-scandi-text mb-4">Confirm Cancellation</h3>
+            <p class="text-scandi-muted mb-8 text-sm">Are you sure you wish to cancel? This action is irreversible.</p>
+            <div class="flex gap-4">
+                <button id="confirm-cancel-btn" class="w-full bg-scandi-bg text-scandi-text py-3 text-xs font-mono uppercase tracking-widest hover:bg-scandi-line transition">Back</button>
+                <button id="confirm-action-btn" class="w-full bg-red-800 text-white py-3 text-xs font-mono uppercase tracking-widest hover:bg-red-900 transition">Confirm</button>
             </div>
         </div>
     </div>
+
+    <!-- Onboarding Modal -->
+    <div id="onboarding-modal" class="hidden fixed inset-0 bg-scandi-bg z-50 flex flex-col items-center justify-center p-4">
+        <div class="bg-white p-12 rounded-sm shadow-hover w-full max-w-md text-center border border-scandi-line relative">
+            <div class="paper-texture"></div>
+            
+            <!-- Step 0 -->
+            <div id="onboard-step-0" class="onboard-step relative z-10">
+                <h1 class="font-serif text-4xl text-scandi-text mb-4">Hi, I'm <span class="italic text-scandi-clay">Sunny</span>.</h1>
+                <p class="text-scandi-muted mb-8 text-lg font-light">I am your personal home manager. I coordinate trusted professionals so you can reclaim your time.</p>
+                <button id="onboard-start-btn" class="w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-widest py-4 hover:bg-scandi-clay transition">
+                    How does it work?
+                </button>
+            </div>
+
+            <!-- Step How -->
+            <div id="onboard-step-how" class="onboard-step hidden relative z-10">
+                <img src="../images/how_it_works.png" alt="Methodology" class="w-full h-auto mb-8 border border-scandi-line p-2 bg-scandi-bg">
+                <button id="onboard-how-next-btn" class="w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-widest py-4 hover:bg-scandi-clay transition">
+                    Let's Begin
+                </button>
+            </div>
+
+            <!-- Step 1 -->
+            <div id="onboard-step-1" class="onboard-step hidden relative z-10 text-left">
+                <h1 class="font-serif text-2xl text-scandi-text mb-2">Property Address</h1>
+                <p class="text-scandi-muted mb-6 text-sm">Where should we direct the professionals?</p>
+                <input type="text" id="onboard-address" placeholder="123 Scarsdale Blvd..." class="w-full p-4 border border-scandi-line bg-scandi-bg/30 rounded-sm mb-6 focus:outline-none focus:border-scandi-clay font-serif">
+                <button id="onboard-step-1-next" class="w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-widest py-4 hover:bg-scandi-clay transition">
+                    Next
+                </button>
+            </div>
+
+            <!-- Step 2 -->
+            <div id="onboard-step-2" class="onboard-step hidden relative z-10 text-left">
+                <h1 class="font-serif text-2xl text-scandi-text mb-2">Direct Line</h1>
+                <p class="text-scandi-muted mb-6 text-sm">A number for providers to confirm appointments.</p>
+                <input type="tel" id="onboard-phone" placeholder="(914) 555-..." class="w-full p-4 border border-scandi-line bg-scandi-bg/30 rounded-sm mb-6 focus:outline-none focus:border-scandi-clay font-serif">
+                <div class="flex gap-3">
+                     <button id="onboard-step-2-back" class="w-1/3 bg-scandi-bg text-scandi-text font-mono text-xs uppercase tracking-widest py-4 hover:bg-scandi-line transition">
+                        Back
+                    </button>
+                    <button id="onboard-finish-btn" class="w-2/3 bg-scandi-text text-white font-mono text-xs uppercase tracking-widest py-4 hover:bg-scandi-clay transition">
+                        Complete Setup
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-functions-compat.js"></script>
+    <script src="../firebase-config.js"></script>
+    <script src="../components/header.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new SharedHeader({
+                activePage: 'sunny',
+                rootPath: '../'
+            });
+        });
+    </script>
+    <script src="sunny.js"></script>
 </body>
 </html>

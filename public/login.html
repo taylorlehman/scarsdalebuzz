@@ -3,40 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - Sunny</title>
-    <link rel="icon" type="image/png" href="../images/scarsdale_services_directory.png">
+    <title>Sunny // Sign In</title>
+    <link rel="icon" type="image/png" href="images/logos/logo_bee_white_bg.png">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', 
+                        'scandi-surface': '#FFFCF5', 
+                        'scandi-text': '#282624', 
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', 
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-dark': '#1A1918',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 20px rgba(40, 38, 36, 0.02)',
+                        'card': '0 1px 3px rgba(0,0,0,0.05)',
+                        'hover': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Nunito', sans-serif; }
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.5;
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-[#f7e9cf] min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div class="paper-texture"></div>
+
+    <!-- Navigation (Minimal) -->
+    <nav class="hidden absolute top-0 w-full p-8 flex justify-between items-center z-20">
+        <a href="index.html" class="font-serif text-scandi-muted hover:text-scandi-text transition-colors text-sm tracking-wide">Directory</a>
+    </nav>
 
     <!-- Card -->
-    <div class="bg-white p-8 md:p-12 rounded-3xl shadow-2xl w-full max-w-md text-center">
+    <div class="bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center relative z-10 fade-in">
         
-        <!-- Logo -->
-        <div class="w-24 h-24 rounded-full bg-[#f7e9cf] p-1 mx-auto mb-6 flex items-center justify-center border-4 border-[#81503f]">
-            <span class="text-4xl">🐝</span>
+        <!-- Logo Area -->
+        <div class="mb-8">
+            <img src="images/logos/logo_name_white_bg.png" alt="Sunny" class="h-12 w-auto mx-auto mb-4 opacity-80 hover:opacity-100 transition-opacity">
+            <p class="text-scandi-muted font-light text-lg italic">Your home, handled.</p>
         </div>
 
-        <h1 class="text-3xl font-black text-stone-800 mb-2">Welcome to Sunny</h1>
-        <p class="text-stone-600 mb-8">Your AI home assistant. We vetted the pros so you don't have to.</p>
-
         <!-- Value Prop -->
-        <div class="text-left bg-stone-50 p-6 rounded-xl mb-8 space-y-3 text-sm text-stone-700">
-            <div class="flex gap-3">
-                <span>⚡️</span>
-                <span>Save hours of phone tag</span>
+        <div class="text-left bg-scandi-bg/50 p-6 border border-scandi-line/50 mb-10 space-y-4">
+            <div class="flex gap-4 items-center">
+                <div class="w-1 h-1 bg-scandi-clay rounded-full"></div>
+                <span class="text-sm text-scandi-text font-serif">Access a curated registry of artisans</span>
             </div>
-            <div class="flex gap-3">
-                <span>🛡️</span>
-                <span>Trusted, vetted local providers</span>
+            <div class="flex gap-4 items-center">
+                <div class="w-1 h-1 bg-scandi-clay rounded-full"></div>
+                <span class="text-sm text-scandi-text font-serif">Delegate the noise of coordination</span>
             </div>
-            <div class="flex gap-3">
-                <span>💬</span>
-                <span>Sunny handles the scheduling</span>
+            <div class="flex gap-4 items-center">
+                <div class="w-1 h-1 bg-scandi-clay rounded-full"></div>
+                <span class="text-sm text-scandi-text font-serif">Preserve the calm of your sanctuary</span>
             </div>
         </div>
 
@@ -46,7 +110,9 @@
             <span>Sign in with Google</span>
         </button>
 
-        <p class="text-xs text-stone-400 mt-6">By signing in, you agree to our Terms and Privacy Policy.</p>
+        <p class="text-[10px] text-scandi-muted mt-8 font-mono uppercase tracking-wider">
+            By entering, you agree to our Terms & Privacy Policy.
+        </p>
     </div>
 
     <!-- Firebase SDKs -->
@@ -56,16 +122,38 @@
 
     <script>
         // Initialize Firebase
-        firebase.initializeApp(window.firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(window.firebaseConfig);
+        }
         const auth = firebase.auth();
+
+        // Helper to parse query params
+        const getQueryParams = () => {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                redirect: params.get('redirect')
+            };
+        };
+
+        const handleRedirect = () => {
+            const { redirect } = getQueryParams();
+            // Default to sunny/index.html if no redirect
+            let target = redirect || 'sunny/index.html';
+            
+            // Clean up target if needed
+            if (target.startsWith('http') && !target.includes(window.location.hostname)) {
+                target = 'sunny/index.html';
+            }
+            
+            window.location.href = target;
+        };
 
         const btn = document.getElementById('google-signin-btn');
         btn.addEventListener('click', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider)
                 .then((result) => {
-                    // Success - Redirect to Sunny
-                    window.location.href = 'sunny/sunny.html';
+                    handleRedirect();
                 })
                 .catch((error) => {
                     console.error("Auth Error:", error);
@@ -76,7 +164,7 @@
         // Check if already signed in
         auth.onAuthStateChanged(user => {
             if (user) {
-                window.location.href = 'sunny/sunny.html';
+                handleRedirect();
             }
         });
     </script>

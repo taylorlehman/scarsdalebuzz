@@ -3,75 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account - Sunny</title>
-    <link rel="icon" type="image/png" href="../images/scarsdale_services_directory.png">
+    <title>Sunny // Account</title>
+    <link rel="icon" type="image/png" href="images/logos/logo_bee_white_bg.png">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', 
+                        'scandi-surface': '#FFFCF5', 
+                        'scandi-text': '#282624', 
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', 
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-dark': '#1A1918',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 20px rgba(40, 38, 36, 0.02)',
+                        'card': '0 1px 3px rgba(0,0,0,0.05)',
+                        'hover': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Nunito', sans-serif; }
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.5;
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-stone-50 min-h-screen">
+<body class="min-h-screen flex flex-col relative">
+    <div class="paper-texture"></div>
 
     <!-- Header -->
-    <header class="bg-white border-b border-stone-200 p-4 sticky top-0 z-10">
-        <div class="max-w-3xl mx-auto flex items-center justify-between">
-            <a href="sunny/sunny.html" class="flex items-center gap-2 text-stone-600 hover:text-stone-900 font-bold transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-                Back to Sunny
+    <header class="bg-scandi-bg border-b border-scandi-line p-6 sticky top-0 z-40">
+        <div class="max-w-2xl mx-auto flex items-center justify-between">
+            <a href="sunny/sunny2.html" class="flex items-center gap-2 text-scandi-muted hover:text-scandi-text font-serif transition-colors group">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="group-hover:-translate-x-1 transition-transform"><path d="M15 19l-7-7 7-7"/></svg>
+                <span class="text-sm tracking-wide">Back to Sunny</span>
             </a>
-            <h1 class="text-lg font-bold text-stone-800">Account Settings</h1>
+            <h1 class="font-serif text-xl text-scandi-text">Account Settings</h1>
         </div>
     </header>
 
-    <main class="max-w-2xl mx-auto p-6">
+    <main class="flex-grow max-w-2xl w-full mx-auto p-6 relative z-10 fade-in">
         
         <!-- Profile Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 mb-8 flex flex-col items-center text-center">
-            <img id="user-photo" src="" alt="Profile" class="w-24 h-24 rounded-full mb-4 border-4 border-[#f7e9cf] bg-stone-100">
-            <h2 id="user-name" class="text-2xl font-black text-stone-800 mb-1">...</h2>
-            <p id="user-email" class="text-stone-500 font-mono text-sm mb-6">...</p>
+        <div class="bg-white rounded-sm shadow-soft border border-scandi-line p-10 mb-8 flex flex-col items-center text-center">
+            <img id="user-photo" src="" alt="Profile" class="w-24 h-24 rounded-full mb-6 border border-scandi-line object-cover p-1 bg-scandi-bg">
+            <h2 id="user-name" class="font-serif text-3xl text-scandi-text mb-2">...</h2>
+            <p id="user-email" class="text-scandi-muted font-mono text-xs uppercase tracking-widest mb-8">...</p>
             
-            <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4">
-                Signed in with Google
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-scandi-bg border border-scandi-line rounded-full">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4 opacity-70">
+                <span class="text-xs font-mono text-scandi-muted uppercase tracking-wider">Signed in with Google</span>
             </div>
         </div>
 
         <!-- Contact Details -->
-        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 mb-8">
-            <h3 class="text-xl font-bold text-stone-800 mb-6">Contact Details</h3>
-            
-            <div class="mb-4">
-                <label class="block text-stone-600 font-bold mb-2">Home Address</label>
-                <input type="text" id="address-input" placeholder="e.g. 123 Main St" class="w-full p-3 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition">
-            </div>
+        <div class="bg-white rounded-sm shadow-soft border border-scandi-line p-10 mb-8">
+            <h3 class="font-serif text-2xl text-scandi-text mb-8 border-b border-scandi-line pb-4">Contact Details</h3>
             
             <div class="mb-6">
-                <label class="block text-stone-600 font-bold mb-2">Phone Number</label>
-                <input type="tel" id="phone-input" placeholder="+15551234567" class="w-full p-3 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition">
+                <label class="block text-xs font-mono text-scandi-muted uppercase tracking-widest mb-2">Home Address</label>
+                <input type="text" id="address-input" placeholder="e.g. 123 Scarsdale Blvd" class="w-full p-4 border border-scandi-line bg-scandi-bg/30 rounded-sm focus:outline-none focus:border-scandi-clay font-serif text-scandi-text transition-colors">
             </div>
             
-            <button id="save-btn" class="w-full bg-[#81503f] hover:bg-[#6d4335] text-white font-bold py-3 px-4 rounded-xl transition shadow-sm">
+            <div class="mb-10">
+                <label class="block text-xs font-mono text-scandi-muted uppercase tracking-widest mb-2">Phone Number</label>
+                <input type="tel" id="phone-input" placeholder="+1 (914) 555-0123" class="w-full p-4 border border-scandi-line bg-scandi-bg/30 rounded-sm focus:outline-none focus:border-scandi-clay font-serif text-scandi-text transition-colors">
+            </div>
+            
+            <button id="save-btn" class="w-full bg-scandi-text hover:bg-scandi-clay text-white font-mono text-xs uppercase tracking-[0.2em] py-4 rounded-sm transition-all duration-300 shadow-sm hover:shadow-md">
                 Update Profile
             </button>
-            <p id="save-msg" class="text-center text-sm font-bold mt-3 hidden"></p>
+            <p id="save-msg" class="text-center text-xs font-mono mt-4 hidden"></p>
         </div>
 
         <!-- Danger Zone -->
-        <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-8">
-            <h3 class="text-xl font-bold text-red-600 mb-2">Danger Zone</h3>
-            <p class="text-stone-600 mb-6">Once you delete your account, there is no going back. All your requests and chat history will be permanently removed.</p>
+        <div class="bg-white rounded-sm shadow-soft border border-scandi-line p-10 mb-8 opacity-80 hover:opacity-100 transition-opacity">
+            <h3 class="font-serif text-xl text-scandi-text mb-4">Danger Zone</h3>
+            <p class="text-scandi-muted mb-8 text-sm leading-relaxed">Once you delete your account, there is no going back. All your requests and chat history will be permanently removed.</p>
             
-            <a id="delete-btn" href="#" class="block w-full text-center bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 font-bold py-3 px-4 rounded-xl transition">
+            <a id="delete-btn" href="#" class="block w-full text-center text-red-800/70 hover:text-red-800 text-xs font-mono uppercase tracking-widest border border-transparent hover:border-red-200 hover:bg-red-50 py-3 transition-colors">
                 Delete Account
             </a>
         </div>
         
-        <div class="mt-8 text-center">
-            <button id="sign-out-btn" class="text-stone-500 hover:text-stone-800 font-bold underline">Sign Out</button>
+        <div class="mt-12 mb-20 text-center">
+            <button id="sign-out-btn" class="text-scandi-muted hover:text-scandi-text text-xs font-mono uppercase tracking-widest border-b border-transparent hover:border-scandi-muted transition-all">Sign Out</button>
         </div>
 
     </main>
@@ -91,6 +150,23 @@
         const phoneInput = document.getElementById('phone-input');
         const saveBtn = document.getElementById('save-btn');
         const saveMsg = document.getElementById('save-msg');
+
+        // Phone formatter helper
+        window.formatPhoneNumber = (value) => {
+            if (!value) return value;
+            const phoneNumber = value.replace(/[^\d]/g, '');
+            const phoneNumberLength = phoneNumber.length;
+            if (phoneNumberLength < 4) return phoneNumber;
+            if (phoneNumberLength < 7) {
+                return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+            }
+            return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+        };
+
+        phoneInput.addEventListener('input', (e) => {
+            const formatted = window.formatPhoneNumber(e.target.value);
+            e.target.value = formatted;
+        });
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -128,14 +204,14 @@
                     try {
                         await db.collection('users').doc(user.uid).set({
                             address: addressInput.value.trim(),
-                            phoneNumber: window.formatPhoneNumber(phoneInput.value.trim()),
-                            email: user.email, // Ensure email is kept
+                            phoneNumber: phoneInput.value.trim(),
+                            email: user.email,
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                         }, { merge: true });
 
-                        saveBtn.textContent = 'Saved!';
+                        saveBtn.textContent = 'Saved';
                         saveMsg.textContent = 'Profile updated successfully.';
-                        saveMsg.className = 'text-center text-sm font-bold mt-3 text-green-600';
+                        saveMsg.className = 'text-center text-xs font-mono mt-4 text-scandi-sage uppercase tracking-wider';
                         saveMsg.classList.remove('hidden');
 
                         setTimeout(() => {
@@ -149,7 +225,7 @@
                         saveBtn.textContent = 'Update Profile';
                         saveBtn.disabled = false;
                         saveMsg.textContent = 'Error saving profile.';
-                        saveMsg.className = 'text-center text-sm font-bold mt-3 text-red-600';
+                        saveMsg.className = 'text-center text-xs font-mono mt-4 text-red-800 uppercase tracking-wider';
                         saveMsg.classList.remove('hidden');
                     }
                 });

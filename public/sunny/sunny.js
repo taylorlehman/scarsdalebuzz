@@ -18,18 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestsList = document.getElementById('requests-list');
     const newRequestBtn = document.getElementById('new-request-btn');
     
-    // Header Elements
-    const userNameEl = document.getElementById('user-name');
-    const userPhotoEl = document.getElementById('user-photo');
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.getElementById('user-dropdown');
-    const signOutBtn = document.getElementById('sign-out-btn');
-
+    // Header Elements - Handled by SharedHeader
+    
     // Desktop Chat Elements
     const chatHeader = document.getElementById('chat-header');
     const chatTitle = document.getElementById('chat-title');
     const chatDescription = document.getElementById('chat-description');
-    const chatStatus = document.getElementById('chat-status');
+    const chatHeaderStatusBadge = document.getElementById('chat-header-status-badge');
     const chatMessages = document.getElementById('chat-messages');
     const chatInputArea = document.getElementById('chat-input-area');
     const chatForm = document.getElementById('chat-form');
@@ -88,19 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Helper Functions ---
 
     const getStatusEmoji = (status) => {
-        switch (status) {
-            case 'in progress': return '🐝';
-            case 'scheduled': return '🗓️';
-            case 'user action required': return '⚠️';
-            case 'provider unavailable': return '🚫';
-            case 'closed': return '🏁';
-            default: return '⚪';
-        }
+        // Updated to use text/icons in the render function, but keeping generic logic here if needed
+        return status;
     };
 
     const formatTime = (date) => {
         if (!date) return '';
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatDate = (date) => {
+        if (!date) return '';
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
     const autoResizeTextarea = (element) => {
@@ -116,9 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (snapshot.empty) {
             requestsList.innerHTML = `
-                <div class="text-center p-6 text-stone-500">
-                    <p>No requests found.</p>
-                    <p class="text-sm mt-2">Tap + to start a new one!</p>
+                <div class="text-center p-6 text-scandi-muted font-mono text-xs uppercase tracking-widest mt-10">
+                    <p>No active matters.</p>
+                    <p class="mt-2 opacity-60">Initiate a request above.</p>
                 </div>
             `;
             return;
@@ -130,76 +124,74 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const isActive = doc.id === activeRequestId;
             const div = document.createElement('div');
-            div.className = `request-item relative p-4 rounded-xl cursor-pointer transition border ${isActive ? 'bg-white border-orange-300 shadow-md ring-1 ring-orange-200' : 'bg-white border-stone-200 hover:border-orange-200 hover:shadow-sm'}`;
+            
+            // New Scandi Sidebar Item Style
+            div.className = `group p-4 rounded-sm cursor-pointer transition-all duration-300 border-l-2 relative ${isActive ? 'bg-white border-scandi-clay shadow-soft' : 'bg-transparent border-transparent hover:bg-white/50 hover:border-scandi-line'}`;
             div.dataset.id = doc.id;
             div.onclick = () => selectRequest(doc.id);
 
             const title = data.title || 'Untitled Request';
-            const summary = data.summary || 'No details yet...';
-            const statusEmoji = getStatusEmoji(data.status);
+            const status = data.status || 'Active';
+            // Use timestamp for date if available
+            let dateStr = 'Today';
+            if (data.timestamp) {
+                const d = data.timestamp.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
+                dateStr = formatDate(d);
+            }
 
             div.innerHTML = `
-                <!-- Emoji: Vertically Centered Left -->
-                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl" title="${data.status}">
-                    ${statusEmoji}
+                <div class="flex justify-between items-start mb-1 pr-6">
+                    <h3 class="font-serif text-lg leading-tight truncate w-full ${isActive ? 'text-scandi-text' : 'text-scandi-muted group-hover:text-scandi-text'}">${title}</h3>
+                    ${isActive ? '<div class="w-1.5 h-1.5 rounded-full bg-scandi-clay mt-2 flex-shrink-0 ml-2"></div>' : ''}
                 </div>
-                
-                <!-- Menu: Vertically Centered Right -->
-                <button class="menu-btn absolute right-3 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-full transition z-10" data-id="${doc.id}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                    </svg>
-                </button>
+                <div class="flex justify-between items-center text-xs pr-6">
+                    <span class="uppercase tracking-widest font-medium ${isActive ? 'text-scandi-clay' : 'text-scandi-muted'}">${status}</span>
+                    <span class="font-mono text-scandi-muted opacity-60">${dateStr}</span>
+                </div>
 
-                <!-- Content: Padded to clear accessories -->
-                <div class="ml-10 mr-6">
-                    <h3 class="font-bold text-stone-800 leading-tight mb-1">${title}</h3>
-                    <p class="text-xs text-stone-500 line-clamp-2">${summary}</p>
-                </div>
+                <!-- Menu Button (Bottom Right) -->
+                <button class="menu-btn absolute right-2 bottom-2 p-1 text-scandi-muted hover:text-scandi-text hover:bg-scandi-bg rounded-sm transition z-10 opacity-0 group-hover:opacity-100 focus:opacity-100" data-id="${doc.id}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                </button>
                 
                 <!-- Dropdown Menu -->
-                <div id="menu-${doc.id}" class="menu-dropdown hidden absolute right-2 top-8 bg-white shadow-xl border border-stone-200 rounded-lg z-20 w-40 py-1 overflow-hidden">
-                    <button class="cancel-request-action w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 font-bold flex items-center gap-2" data-id="${doc.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                <div id="menu-${doc.id}" class="menu-dropdown hidden absolute right-2 top-8 bg-white shadow-hover border border-scandi-line rounded-sm z-20 w-40 py-1 overflow-hidden">
+                    <button class="cancel-request-action w-full text-left px-4 py-3 text-xs uppercase tracking-widest text-red-800 hover:bg-red-50 font-medium flex items-center gap-2" data-id="${doc.id}">
                         Cancel Request
                     </button>
                 </div>
             `;
-            // Ensure relative positioning for the menu
-            div.classList.add('relative');
             
             requestsList.appendChild(div);
         });
-
-        // If we are creating a new request but a list update happened, stay in create mode visually
-        if (isCreatingNew && activeRequestId === 'new') {
-            // Optionally highlight a "New Request" placeholder if we added one to the list
-        }
     };
 
     const renderMessage = (role, text, timestamp) => {
         const isUser = role === 'You' || role === 'User';
-        const alignment = isUser ? 'justify-end' : 'justify-start';
-        const bg = isUser ? 'bg-orange-100 text-stone-800 rounded-br-none' : 'bg-white text-stone-800 border border-stone-200 rounded-bl-none';
         const timeString = timestamp ? formatTime(timestamp.toDate ? timestamp.toDate() : new Date(timestamp)) : '';
 
-        const userAvatar = currentUser && currentUser.photoURL ? currentUser.photoURL : 'https://www.gravatar.com/avatar?d=mp';
-        const sunnyAvatar = '../images/sunny_the_bee.png';
+        // Avatar Initials
+        let userInitial = 'U';
+        if (currentUser && currentUser.displayName) userInitial = currentUser.displayName[0].toUpperCase();
 
         return `
-            <div class="flex ${alignment} items-end gap-2 mb-4">
-                ${!isUser ? `<img src="${sunnyAvatar}" class="w-8 h-8 rounded-full border border-stone-200 bg-white mb-5 flex-shrink-0">` : ''}
-                
-                <div class="max-w-[80%] md:max-w-[70%]">
-                    <div class="p-3 md:p-4 rounded-2xl shadow-sm ${bg}">
-                        <p class="whitespace-pre-wrap leading-relaxed text-sm md:text-base">${text}</p>
-                    </div>
-                    <p class="text-[10px] text-stone-400 mt-1 px-1 ${isUser ? 'text-right' : 'text-left'}">${role} • ${timeString}</p>
+            <div class="flex gap-4 py-6 fade-in group ${!isUser ? 'bg-scandi-bg/30 -mx-8 px-8' : 'flex-row-reverse'}">
+                <!-- Avatar -->
+                <div class="w-8 flex-shrink-0 pt-1">
+                    ${isUser ? 
+                        `<div class="w-8 h-8 rounded-full bg-scandi-text text-white flex items-center justify-center font-serif italic text-sm">${userInitial}</div>` : 
+                        `<div class="w-8 h-8 rounded-full bg-scandi-clay text-white flex items-center justify-center"><span class="font-bold text-xs">S</span></div>`
+                    }
                 </div>
 
-                ${isUser ? `<img src="${userAvatar}" class="w-8 h-8 rounded-full border border-stone-200 mb-5 flex-shrink-0">` : ''}
+                <!-- Content -->
+                <div class="${isUser ? 'max-w-2xl text-right' : 'flex-grow max-w-2xl'}">
+                    <div class="flex items-baseline justify-between mb-2 ${isUser ? 'flex-row-reverse' : ''}">
+                        <span class="text-sm font-medium tracking-wide ${isUser ? 'text-scandi-text' : 'text-scandi-clay'}">${isUser ? 'You' : 'Sunny'}</span>
+                        <span class="text-xs font-mono text-scandi-muted opacity-0 group-hover:opacity-100 transition-opacity">${timeString}</span>
+                    </div>
+                    <p class="text-base leading-relaxed whitespace-pre-wrap ${isUser ? 'font-serif text-scandi-text' : 'font-serif text-scandi-text'}">${text}</p>
+                </div>
             </div>
         `;
     };
@@ -209,11 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
         
         if (!chatHistory || chatHistory.length === 0) {
-            container.innerHTML = '<div class="text-center text-stone-400 italic mt-10">No messages yet.</div>';
+            container.innerHTML = '<div class="text-center text-scandi-muted italic mt-10 font-serif">No transcript available.</div>';
             return;
         }
 
-        // Sort chronologically just in case
+        // Sort chronologically
         const sortedHistory = [...chatHistory].sort((a, b) => {
             const tA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
             const tB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
@@ -222,16 +214,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         sortedHistory.forEach(msg => {
-            // Filter logic: Only show messages involving the User (either as sender or receiver)
-            // Backward compatibility for old messages without sender/receiver
             const isVisible = 
                 (msg.sender === 'User') || 
                 (msg.receiver === 'User') ||
-                // Legacy support
                 (!msg.sender && (msg.role === 'User' || msg.role === 'Sunny'));
 
             if (isVisible) {
-                // Display name logic
                 let roleDisplay = msg.sender || msg.role;
                 if (roleDisplay === 'User') roleDisplay = 'You';
                 
@@ -250,10 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Actions ---
 
     const selectRequest = (requestId) => {
-        if (activeRequestId === requestId && !isCreatingNew) return; // Already selected
+        if (activeRequestId === requestId && !isCreatingNew) return;
 
-        // Reset Placeholder for standard chat
-        chatInput.placeholder = "Type a message...";
+        // Reset Placeholder
+        chatInput.placeholder = "Type a message to Sunny...";
         mobileChatInput.placeholder = "Type a message...";
 
         isCreatingNew = false;
@@ -267,14 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHeader.classList.remove('hidden');
         
         if (data.status === 'scheduled') {
-            // Show Confirmation View
             chatMessages.classList.add('hidden');
             chatInputArea.classList.add('hidden');
             confirmationView.classList.remove('hidden');
             
             confirmProvider.textContent = data.providerName || 'Service Provider';
-            
-            // Update Contact Info
             confirmProviderContact.textContent = data.providerName || 'the provider';
             if (data.providerPhoneNumber) {
                 confirmPhone.textContent = data.providerPhoneNumber;
@@ -284,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmPhone.href = '#';
             }
             
-            // Format Date
             let dateStr = 'TBD';
             if (data.serviceDate) {
                 const d = new Date(data.serviceDate);
@@ -293,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmTime.textContent = dateStr;
 
         } else {
-            // Show Chat Interface
             confirmationView.classList.add('hidden');
             chatMessages.classList.remove('hidden');
             chatInputArea.classList.remove('hidden');
@@ -301,82 +284,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         chatTitle.textContent = data.title || 'Request';
-        chatDescription.textContent = data.summary || 'No details yet...';
-        chatStatus.innerHTML = `<span>${getStatusEmoji(data.status)}</span> <span>${data.status}</span>`;
+        chatDescription.textContent = data.summary || 'Details...';
+        chatHeaderStatusBadge.textContent = data.status || 'Active';
 
-        // Update Mobile UI (Overlay)
+        // Update Mobile UI
         if (window.innerWidth < 768) {
             mobileChatOverlay.classList.remove('hidden');
             mobileChatTitle.textContent = data.title || 'Request';
-            mobileChatStatus.innerHTML = `<span>${getStatusEmoji(data.status)}</span> <span>${data.status}</span>`;
-            // Render chat history into mobile container
-            renderChatHistory(data.chat_history); // Logic above handles selecting correct container based on width, but we need to be careful
-            // Actually, let's just populate both to be safe or strictly check
-            // Re-run render for mobile specific container to be sure
-            // We need to replicate the filter logic here or refactor renderChatHistory to take a container argument (which it does)
-            // But 'selectRequest' calls it for the main container. We need to call it again for mobile.
-            
-            let mobileHtml = '';
-            data.chat_history.forEach(msg => {
-                 const isVisible = 
-                    (msg.sender === 'User') || 
-                    (msg.receiver === 'User') ||
-                    (!msg.sender && (msg.role === 'User' || msg.role === 'Sunny'));
-
-                if (isVisible) {
-                    let roleDisplay = msg.sender || msg.role;
-                    if (roleDisplay === 'User') roleDisplay = 'You';
-                    
-                    // Use the same sort order? Yes, data.chat_history is not sorted here.
-                    // We should use the sorted list.
-                }
-            });
-            
-            // Better approach: Reuse renderChatHistory by passing the mobile container explicitly
+            mobileChatStatus.textContent = data.status;
             renderChatHistory(data.chat_history, mobileChatMessages);
         }
+        
+        // Update sidebar selection
+        const currentCache = { ...requestsCache };
+        const mockSnapshot = {
+            empty: Object.keys(currentCache).length === 0,
+            forEach: (cb) => {
+                Object.keys(currentCache).forEach(id => {
+                    cb({ id, data: () => currentCache[id] });
+                });
+            }
+        };
+        renderRequestsList(mockSnapshot);
     };
 
     const startNewRequest = () => {
         isCreatingNew = true;
         activeRequestId = 'new';
         
-        // Set Placeholder for First Message
-        const promptText = "Describe your issue! Include what's wrong, how urgently you need it fixed, and what times you are available.";
+        const promptText = "Describe your issue! Include urgency and availability.";
         chatInput.placeholder = promptText;
         mobileChatInput.placeholder = promptText;
 
-        // Desktop
         emptyState.classList.add('hidden');
         confirmationView.classList.add('hidden');
         chatMessages.classList.remove('hidden');
         chatHeader.classList.remove('hidden');
         chatInputArea.classList.remove('hidden');
         
-        chatTitle.textContent = 'New Request';
-        chatDescription.textContent = 'How can we help?';
-        chatStatus.innerHTML = '✨ Starting fresh...';
-        chatMessages.innerHTML = `
-            <div class="text-center p-8">
-                <p class="text-stone-500 mb-2">How can Sunny help you today?</p>
-                <p class="text-sm text-stone-400">Describe your issue (e.g., "My kitchen sink is leaking")</p>
+        chatTitle.textContent = 'New Matter';
+        chatDescription.textContent = 'Initiating protocol...';
+        chatHeaderStatusBadge.textContent = 'DRAFTING';
+        
+        const introHtml = `
+            <div class="flex gap-4 py-6 fade-in bg-scandi-bg/30 -mx-8 px-8">
+                <div class="w-8 flex-shrink-0 pt-1">
+                    <div class="w-8 h-8 rounded-full bg-scandi-clay text-white flex items-center justify-center"><span class="font-bold text-xs">S</span></div>
+                </div>
+                <div class="flex-grow max-w-2xl">
+                    <div class="flex items-baseline justify-between mb-2">
+                         <span class="text-sm font-medium tracking-wide text-scandi-clay">Sunny</span>
+                    </div>
+                    <p class="text-base leading-relaxed font-sans text-scandi-text">
+                        How can I assist with your home today? Please describe the issue.
+                    </p>
+                </div>
             </div>
         `;
 
-        // Mobile
+        chatMessages.innerHTML = introHtml;
+
         if (window.innerWidth < 768) {
             mobileChatOverlay.classList.remove('hidden');
-            mobileChatTitle.textContent = 'New Request';
-            mobileChatStatus.innerHTML = '✨ Starting fresh...';
-            mobileChatMessages.innerHTML = `
-                <div class="text-center p-8 mt-10">
-                    <p class="text-stone-500 mb-2">How can Sunny help you today?</p>
-                    <p class="text-sm text-stone-400">Describe your issue...</p>
-                </div>
-            `;
+            mobileChatTitle.textContent = 'New Matter';
+            mobileChatStatus.textContent = 'DRAFTING';
+            mobileChatMessages.innerHTML = introHtml;
         }
         
-        // Focus input
         setTimeout(() => {
             if (window.innerWidth < 768) {
                 mobileChatInput.focus();
@@ -384,6 +358,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInput.focus();
             }
         }, 100);
+        
+        // Update sidebar selection
+        const currentCache = { ...requestsCache };
+        const mockSnapshot = {
+            empty: Object.keys(currentCache).length === 0,
+            forEach: (cb) => {
+                Object.keys(currentCache).forEach(id => {
+                    cb({ id, data: () => currentCache[id] });
+                });
+            }
+        };
+        renderRequestsList(mockSnapshot);
     };
 
     const handleSendMessage = async (text) => {
@@ -393,22 +379,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = window.innerWidth < 768 ? mobileChatMessages : chatMessages;
         
         inputField.value = '';
-        inputField.style.height = 'auto'; // Reset height
+        inputField.style.height = 'auto';
 
         // Optimistic Render
-        const tempMsgHtml = renderMessage('User', text, new Date());
+        const tempMsgHtml = renderMessage('You', text, new Date());
         container.insertAdjacentHTML('beforeend', tempMsgHtml);
         scrollToBottom(container);
 
         if (isCreatingNew) {
-            // Create New Request
-            // Add loading indicator
             const loadingId = 'loading-' + Date.now();
             container.insertAdjacentHTML('beforeend', `
-                <div id="${loadingId}" class="flex justify-start">
-                     <div class="bg-white text-stone-500 p-3 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-2">
-                        <div class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
-                        <span class="text-sm">Sunny is thinking...</span>
+                <div id="${loadingId}" class="flex gap-4 py-6 fade-in bg-scandi-bg/30 -mx-8 px-8 opacity-70">
+                     <div class="w-8 flex-shrink-0 pt-1">
+                          <div class="w-8 h-8 rounded-full bg-scandi-clay text-white flex items-center justify-center"><span class="font-bold text-xs">S</span></div>
+                     </div>
+                     <div class="flex items-center gap-2 text-scandi-muted font-mono text-sm">
+                          <div class="animate-spin h-3 w-3 border-2 border-scandi-clay border-t-transparent rounded-full"></div>
+                          <span>Sunny is thinking...</span>
                      </div>
                 </div>
             `);
@@ -434,19 +421,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const replyText = data.message;
                 const newId = data.id;
                 
-                // Remove loading
                 document.getElementById(loadingId)?.remove();
                 
-                // Add Sunny's reply
                 container.insertAdjacentHTML('beforeend', renderMessage('Sunny', replyText, new Date()));
                 scrollToBottom(container);
                 
-                // Update activeRequestId to the new ID, but keep isCreatingNew = true
-                // untill the Firestore listener confirms the data exists.
                 activeRequestId = newId;
-                // isCreatingNew = false; // Handled in listener
-                
-                // Reset Placeholder for subsequent messages
                 chatInput.placeholder = "Type a message...";
                 mobileChatInput.placeholder = "Type a message...";
 
@@ -456,16 +436,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } else {
-            // Append to Existing Request (User Answer)
-            // This assumes the user is responding to a question or adding info
-            // We need to call 'handleUserResponse' cloud function
-            
              const loadingId = 'loading-' + Date.now();
             container.insertAdjacentHTML('beforeend', `
-                <div id="${loadingId}" class="flex justify-start">
-                     <div class="bg-white text-stone-500 p-3 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-2">
-                        <div class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
-                        <span class="text-sm">Sending reply...</span>
+                <div id="${loadingId}" class="flex gap-4 py-6 fade-in bg-scandi-bg/30 -mx-8 px-8 opacity-70">
+                     <div class="w-8 flex-shrink-0 pt-1">
+                          <div class="w-8 h-8 rounded-full bg-scandi-clay text-white flex items-center justify-center"><span class="font-bold text-xs">S</span></div>
+                     </div>
+                     <div class="flex items-center gap-2 text-scandi-muted font-mono text-sm">
+                          <div class="animate-spin h-3 w-3 border-2 border-scandi-clay border-t-transparent rounded-full"></div>
+                          <span>Sending reply...</span>
                      </div>
                 </div>
             `);
@@ -487,15 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (!response.ok) throw new Error('Failed to send reply');
-                
-                // Remove loading
                 document.getElementById(loadingId)?.remove();
-                
-                // We don't need to manually append the message because Firestore listener
-                // will update the chat history. But for immediate feedback we could.
-                // However, since we just optimistically added the user's message, 
-                // and the server might not reply immediately with a new message (unless Sunny does),
-                // we wait for Firestore.
                 
             } catch (error) {
                 document.getElementById(loadingId)?.remove();
@@ -511,7 +482,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modalRequestId.textContent = `ID: ${activeRequestId}`;
         modalSummary.textContent = data.summary || 'No summary available.';
-        
         modalProviderName.textContent = data.providerName || 'Finding a pro...';
         modalProviderPhone.textContent = data.providerPhoneNumber || '---';
         
@@ -519,8 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Event Listeners ---
-
-    // Desktop Inputs
     chatInput.addEventListener('input', () => autoResizeTextarea(chatInput));
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -533,10 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSendMessage(chatInput.value);
     });
 
-    // Mobile Inputs
     mobileChatInput.addEventListener('input', () => autoResizeTextarea(mobileChatInput));
-    // Mobile users usually prefer the send button or have a specific 'Go' key behavior managed by the OS, 
-    // but adding Enter support for external keyboards on tablets is good practice.
     mobileChatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -548,30 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSendMessage(mobileChatInput.value);
     });
 
-    // Buttons
     newRequestBtn.addEventListener('click', startNewRequest);
-    
-    // Updated listener with animation for empty state button
-    emptyStateNewBtn.addEventListener('click', () => {
-        const logo = emptyState.querySelector('img');
-        const btn = emptyStateNewBtn;
-
-        // Add animation classes
-        logo.classList.add('animate-fly-up');
-        btn.classList.add('fade-out');
-
-        // Wait for animation
-        setTimeout(() => {
-            startNewRequest();
-            
-            // Reset classes (so it's ready if we come back)
-            // Use a small delay to ensure it's hidden before resetting opacity
-            setTimeout(() => {
-                logo.classList.remove('animate-fly-up');
-                btn.classList.remove('fade-out');
-            }, 100); 
-        }, 600);
-    });
+    emptyStateNewBtn.addEventListener('click', startNewRequest);
     
     chatDetailsBtn.addEventListener('click', showDetails);
     mobileDetailsBtn.addEventListener('click', showDetails);
@@ -582,11 +525,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isCreatingNew = false;
     });
 
-    // Modal Actions
     detailsCloseBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
     
     modalCancelBtn.addEventListener('click', () => {
-        requestToCancelId = activeRequestId; // Set target
+        requestToCancelId = activeRequestId;
         detailsModal.classList.add('hidden');
         confirmModal.classList.remove('hidden');
     });
@@ -622,7 +564,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             confirmModal.classList.add('hidden');
             
-            // If we cancelled the currently active request, clear the view
             if (activeRequestId === requestToCancelId) {
                 activeRequestId = null;
                 emptyState.classList.remove('hidden');
@@ -632,7 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInputArea.classList.add('hidden');
                 mobileChatOverlay.classList.add('hidden');
             }
-            
             requestToCancelId = null;
 
         } catch (e) {
@@ -644,41 +584,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Request List Event Delegation (Menu handling)
     requestsList.addEventListener('click', (e) => {
-        // Handle Menu Button Click
         const menuBtn = e.target.closest('.menu-btn');
         if (menuBtn) {
-            e.stopPropagation(); // Prevent selection
+            e.stopPropagation();
             const id = menuBtn.dataset.id;
             const menu = document.getElementById(`menu-${id}`);
-            
-            // Close all other menus
             document.querySelectorAll('.menu-dropdown').forEach(el => {
                 if (el !== menu) el.classList.add('hidden');
             });
-            
             if (menu) menu.classList.toggle('hidden');
             return;
         }
 
-        // Handle Cancel Action Click
         const cancelBtn = e.target.closest('.cancel-request-action');
         if (cancelBtn) {
             e.stopPropagation();
             const id = cancelBtn.dataset.id;
-            // Close menu
             const menu = document.getElementById(`menu-${id}`);
             if (menu) menu.classList.add('hidden');
-            
-            // Show confirm modal
             requestToCancelId = id;
             confirmModal.classList.remove('hidden');
             return;
         }
     });
 
-    // --- Onboarding Logic ---
     onboardStartBtn.addEventListener('click', () => {
         onboardStep0.classList.add('hidden');
         onboardStepHow.classList.remove('hidden');
@@ -691,25 +621,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onboardStep1Next.addEventListener('click', () => {
         if (!onboardAddressInput.value.trim()) {
-            onboardAddressInput.classList.add('ring-2', 'ring-red-500');
+            onboardAddressInput.classList.add('border-red-500');
             return;
         }
         onboardStep1.classList.add('hidden');
         onboardStep2.classList.remove('hidden');
     });
     
-    onboardAddressInput.addEventListener('input', () => onboardAddressInput.classList.remove('ring-2', 'ring-red-500'));
+    onboardAddressInput.addEventListener('input', () => onboardAddressInput.classList.remove('border-red-500'));
 
     onboardStep2Back.addEventListener('click', () => {
         onboardStep2.classList.add('hidden');
         onboardStep1.classList.remove('hidden');
     });
     
-    onboardPhoneInput.addEventListener('input', () => onboardPhoneInput.classList.remove('ring-2', 'ring-red-500'));
+    onboardPhoneInput.addEventListener('input', () => onboardPhoneInput.classList.remove('border-red-500'));
 
     onboardFinishBtn.addEventListener('click', async () => {
         if (!onboardPhoneInput.value.trim()) {
-            onboardPhoneInput.classList.add('ring-2', 'ring-red-500');
+            onboardPhoneInput.classList.add('border-red-500');
             return;
         }
         
@@ -722,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayName: currentUser.displayName,
                 photoURL: currentUser.photoURL,
                 address: onboardAddressInput.value.trim(),
-                phoneNumber: window.formatPhoneNumber(onboardPhoneInput.value.trim()),
+                phoneNumber: window.formatPhoneNumber ? window.formatPhoneNumber(onboardPhoneInput.value.trim()) : onboardPhoneInput.value.trim(),
                 onboardingCompleted: true,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
@@ -733,53 +663,30 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error saving profile:", error);
             alert("Error saving profile. Please try again.");
             onboardFinishBtn.disabled = false;
-            onboardFinishBtn.textContent = 'All Set!';
+            onboardFinishBtn.textContent = 'Complete Setup';
         }
     });
 
-    // --- Header Actions ---
-    userMenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        userDropdown.classList.toggle('hidden');
-    });
-
-    signOutBtn.addEventListener('click', () => {
-        auth.signOut().then(() => {
-            window.location.href = '../login.html';
-        });
-    });
-
-    // Close user dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
-            userDropdown.classList.add('hidden');
+        if (!e.target.closest('.menu-btn') && !e.target.closest('.menu-dropdown')) {
+             document.querySelectorAll('.menu-dropdown').forEach(el => el.classList.add('hidden'));
         }
     });
 
-    // --- Auth & Data Listener ---
     auth.onAuthStateChanged((user) => {
         if (user) {
             currentUser = user;
-
-            // Check Onboarding Status
             db.collection('users').doc(user.uid).get().then(doc => {
                 const data = doc.data();
                 if (!doc.exists || !data || !data.address || !data.phoneNumber) {
-                    // Show Onboarding Modal
                     onboardingModal.classList.remove('hidden');
-                    // Pre-fill if partial
                     if (data && data.address) onboardAddressInput.value = data.address;
                     if (data && data.phoneNumber) onboardPhoneInput.value = data.phoneNumber;
                 }
+            }).catch(err => {
+                console.error("Error fetching user profile:", err);
             });
 
-            // Update Header
-            if (userNameEl) userNameEl.textContent = user.displayName || 'User';
-            if (userPhotoEl && user.photoURL) {
-                userPhotoEl.src = user.photoURL;
-            }
-            
-            // Start Firestore Listener (Filtered by User)
             if (unsubscribeFirestore) unsubscribeFirestore();
             
             unsubscribeFirestore = db.collection('requests')
@@ -788,7 +695,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 .onSnapshot((snapshot) => {
                     renderRequestsList(snapshot);
 
-                    // Safeguard: If no requests exist and we aren't creating a new one, force empty state
                     if (snapshot.empty && !isCreatingNew) {
                         activeRequestId = null;
                         emptyState.classList.remove('hidden');
@@ -800,18 +706,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     
-                    // Check if we are waiting for a new request to appear in the snapshot
                     if (isCreatingNew && activeRequestId && activeRequestId !== 'new' && requestsCache[activeRequestId]) {
                         isCreatingNew = false;
                     }
 
-                    // If we have an active request selected, update its chat view
                     if (activeRequestId && !isCreatingNew) {
                         const data = requestsCache[activeRequestId];
                         if (data) {
-                            
                             if (data.status === 'scheduled') {
-                                // Switch to Confirmation View
                                 chatMessages.classList.add('hidden');
                                 chatInputArea.classList.add('hidden');
                                 confirmationView.classList.remove('hidden');
@@ -824,38 +726,33 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                                 confirmTime.textContent = dateStr;
                             } else {
-                                // Switch to Chat View
                                 confirmationView.classList.add('hidden');
                                 chatMessages.classList.remove('hidden');
                                 chatInputArea.classList.remove('hidden');
-                                
-                                // Update Chat History
                                 renderChatHistory(data.chat_history);
                             }
                             
-                            // Update Headers/Status/Description
                             chatTitle.textContent = data.title || 'Request';
-                            chatDescription.textContent = data.summary || 'No details yet...';
-                        } else {
-                            // Switch to Chat View
-                            confirmationView.classList.add('hidden');
-                            chatMessages.classList.remove('hidden');
-                            chatInputArea.classList.remove('hidden');
+                            chatDescription.textContent = data.summary || 'Details...';
                             
-                            // Update Chat History
-                            renderChatHistory(data.chat_history);
+                            // Re-run selection to highlight correct item
+                             const mockSnapshot = {
+                                empty: Object.keys(requestsCache).length === 0,
+                                forEach: (cb) => {
+                                    Object.keys(requestsCache).forEach(id => {
+                                        cb({ id, data: () => requestsCache[id] });
+                                    });
+                                }
+                            };
+                            renderRequestsList(mockSnapshot);
                         }
                     }
                 }, (error) => {
                     console.error("Error fetching requests: ", error);
-                    if (error.code === 'failed-precondition') {
-                         console.error("Index needed:", error);
-                    }
-                    requestsList.innerHTML = '<p class="text-red-500 p-4 text-center">Could not connect to server.</p>';
+                    requestsList.innerHTML = '<p class="text-red-500 p-4 text-center">Could not connect to ledger.</p>';
                 });
 
         } else {
-            // Redirect
             window.location.href = '../login.html';
         }
     });
