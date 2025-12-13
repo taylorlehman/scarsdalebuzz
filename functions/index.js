@@ -280,6 +280,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
                     await twilioClient.messages.create({
                         body: messageToSend,
                         from: process.env.TWILIO_PHONE_NUMBER,
+                        messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
                         to: phoneToSendTo
                     });
                     logger.info("Text message sent successfully.");
@@ -497,6 +498,7 @@ exports.cancelRequest = functions.https.onRequest(async (req, res) => {
                 await twilioClient.messages.create({
                     body: cancellationMessage,
                     from: process.env.TWILIO_PHONE_NUMBER,
+                    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
                     to: providerPhoneNumber
                 });
                 logger.info(`Cancellation text sent to ${providerPhoneNumber} for request ${requestId}`);
@@ -617,6 +619,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                     await twilioClient.messages.create({
                         body: confirmationMsg,
                         from: process.env.TWILIO_PHONE_NUMBER,
+                        messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
                         to: providerPhoneNumber
                     });
                 }
@@ -648,6 +651,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                     await twilioClient.messages.create({
                         body: response,
                         from: process.env.TWILIO_PHONE_NUMBER,
+                        messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
                         to: providerPhoneNumber
                     });
                     
