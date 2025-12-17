@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeRequestId = null;
     let requestToCancelId = null; // Track which request is being cancelled
     let requestsCache = {};
+    let sortedRequestIds = [];
     let isCreatingNew = false;
 
     // --- DOM Elements ---
@@ -107,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderRequestsList = (snapshot) => {
         requestsList.innerHTML = '';
         requestsCache = {};
+        sortedRequestIds = [];
 
         if (snapshot.empty) {
             requestsList.innerHTML = `
@@ -121,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         snapshot.forEach(doc => {
             const data = doc.data();
             requestsCache[doc.id] = data;
+            sortedRequestIds.push(doc.id);
             
             const isActive = doc.id === activeRequestId;
             const div = document.createElement('div');
@@ -297,10 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Update sidebar selection
         const currentCache = { ...requestsCache };
+        const currentSortedIds = [...sortedRequestIds];
         const mockSnapshot = {
-            empty: Object.keys(currentCache).length === 0,
+            empty: currentSortedIds.length === 0,
             forEach: (cb) => {
-                Object.keys(currentCache).forEach(id => {
+                currentSortedIds.forEach(id => {
                     cb({ id, data: () => currentCache[id] });
                 });
             }
@@ -361,10 +365,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Update sidebar selection
         const currentCache = { ...requestsCache };
+        const currentSortedIds = [...sortedRequestIds];
         const mockSnapshot = {
-            empty: Object.keys(currentCache).length === 0,
+            empty: currentSortedIds.length === 0,
             forEach: (cb) => {
-                Object.keys(currentCache).forEach(id => {
+                currentSortedIds.forEach(id => {
                     cb({ id, data: () => currentCache[id] });
                 });
             }
@@ -386,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.insertAdjacentHTML('beforeend', tempMsgHtml);
         scrollToBottom(container);
 
-        if (isCreatingNew) {
+        if (isCreatingNew && activeRequestId === 'new') {
             const loadingId = 'loading-' + Date.now();
             container.insertAdjacentHTML('beforeend', `
                 <div id="${loadingId}" class="flex gap-4 py-6 fade-in bg-scandi-bg/30 -mx-8 px-8 opacity-70">
@@ -719,6 +724,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 confirmationView.classList.remove('hidden');
                                 
                                 confirmProvider.textContent = data.providerName || 'Service Provider';
+                                confirmProviderContact.textContent = data.providerName || 'the provider';
+                                if (data.providerPhoneNumber) {
+                                    confirmPhone.textContent = data.providerPhoneNumber;
+                                    confirmPhone.href = `tel:${data.providerPhoneNumber}`;
+                                } else {
+                                    confirmPhone.textContent = 'support';
+                                    confirmPhone.href = '#';
+                                }
+                                
                                 let dateStr = 'TBD';
                                 if (data.serviceDate) {
                                     const d = new Date(data.serviceDate);
@@ -734,17 +748,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             chatTitle.textContent = data.title || 'Request';
                             chatDescription.textContent = data.summary || 'Details...';
+                            chatHeaderStatusBadge.textContent = data.status || 'Active';
                             
-                            // Re-run selection to highlight correct item
-                             const mockSnapshot = {
-                                empty: Object.keys(requestsCache).length === 0,
-                                forEach: (cb) => {
-                                    Object.keys(requestsCache).forEach(id => {
-                                        cb({ id, data: () => requestsCache[id] });
-                                    });
-                                }
-                            };
-                            renderRequestsList(mockSnapshot);
+                            // Update Mobile Status too if visible
+                            if (window.innerWidth < 768) {
+                                mobileChatStatus.textContent = data.status;
+                            }
                         }
                     }
                 }, (error) => {

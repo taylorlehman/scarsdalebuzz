@@ -42,6 +42,7 @@ Find a suitable "Sunny Approved" plumber and craft the initial outreach text mes
 2. Write a professional, concise text to the plumber (as Sunny) asking for availability.
 3. **Introduction.** You MUST start the message by introducing yourself as "Sunny, an AI assistant for [Homeowner Name]".
 4. DO NOT share the homeowner's address or phone number in the initial message.
+5. Only share the homeowner's availability in the initial message unless the issue is urgent.
 
 # OUTPUT FORMAT
 Respond with ONLY a valid JSON object (no markdown):
@@ -95,10 +96,73 @@ Analyze the conversation. If both the homeowner and provider have explicitly agr
 Chat History: ${JSON.stringify(chatHistory)}`;
 };
 
+const INTAKE_DECISION_PROMPT = (userContext, chatHistory, questionCount) => `${SYSTEM_PROMPT}
+
+# CONTEXT
+${userContext}
+
+# TRIGGER
+The homeowner is submitting a request. We are in the "Intake Phase".
+
+# CHAT HISTORY
+${JSON.stringify(chatHistory, null, 2)}
+
+# GOAL
+Determine if we have enough information to contact a Service Provider effectively.
+Critical Information Needed:
+1. **What is the issue?** (Scope/Problem)
+2. **How urgent is it?** (Emergency vs Routine)
+3. **When is the homeowner available?** (Times/Days)
+
+# CONSTRAINTS
+- **Question Limit:** You have asked ${questionCount} follow-up questions so far. The limit is 3.
+- If ${questionCount} >= 3, you MUST proceed to contact the provider with whatever info you have.
+- If the issue is an **Emergency** (fire, flood, gas), you MUST proceed immediately (or advise 911 if life-threatening).
+
+# DECISION
+Analyze the history.
+- If you are missing critical info (Availability, Urgency) AND limit not reached: Call 'ask_clarifying_question'.
+- If you have sufficient info OR limit reached: Call 'proceed_to_provider'.
+
+# OUTPUT
+Call the appropriate tool.`;
+
+const USER_RESPONSE_HANDLER_PROMPT = (currentDate, userContext, chatHistory) => `${SYSTEM_PROMPT}
+
+# CONTEXT
+Current Date and Time: ${currentDate}
+${userContext}
+
+# TRIGGER
+The homeowner (User) has sent a new message.
+
+# CHAT HISTORY
+${JSON.stringify(chatHistory, null, 2)}
+
+# GOAL
+Analyze the user's latest message and decide the appropriate action.
+
+# SCENARIOS
+1. **Status Inquiry:** If the user asks for an update (e.g., "Any word?"), check the history. If you're waiting on the provider, tell the user you'll follow up and then MESSAGE THE PROVIDER to nudge them. Error on the side of answering the user without bugging the plumber, unless you are waiting for a response from the plumber and it's been a long time.
+2. **Urgency/Scope Change:** If the user adds new info or urgency (e.g., "It's leaking faster!"), MESSAGE THE PROVIDER immediately with the update and confirm to the user that you've passed it on.
+3. **General Chat:** If the user is just saying thanks or chatting, reply politely to the user. No need to bug the provider.
+4. **Confirmation:** If the user is confirming a time proposed by the provider, use the 'confirm_appointment' tool.
+
+# TOOLS
+- Use 'manage_request' to send messages to the User and/or Provider, or to update the status.
+- Use 'confirm_appointment' ONLY if a specific time is fully agreed upon.
+
+# AUTONOMY
+- You MUST message the user to acknowledge their input.
+- You SHOULD message the provider if the user's input materially changes the job (scope, urgency) or if the user is explicitly asking for a status update that requires a nudge.
+`;
+
 module.exports = {
     TITLE_PROMPT,
     SUMMARY_PROMPT,
     SUBMIT_REQUEST_PROMPT,
     INCOMING_SMS_PROMPT,
-    CONFIRMATION_CHECK_PROMPT
+    CONFIRMATION_CHECK_PROMPT,
+    USER_RESPONSE_HANDLER_PROMPT,
+    INTAKE_DECISION_PROMPT
 };
