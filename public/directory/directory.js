@@ -140,27 +140,19 @@ const renderServices = (services) => {
         card.className = 'group bg-white p-8 rounded-sm shadow-card hover:shadow-hover transition-all duration-500 ease-out flex flex-col h-full relative fade-in border border-scandi-line/50';
         card.style.animationDelay = `${index * 0.05}s`;
 
-        let title = service.businessName || `${service.firstName} ${service.lastName}`;
+        const fullName = [service.firstName, service.lastName].filter(Boolean).join(' ');
+        let title = service.businessName || fullName;
         let subtitle = '';
-        if (service.businessName && service.firstName) {
-            subtitle = `${service.firstName} ${service.lastName}`;
+        if (service.businessName && fullName) {
+            subtitle = fullName;
         }
-
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        const isOldRec = new Date(service.lastRecommended) < oneYearAgo;
 
         // Icons
         const MapPinIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
         const ClockIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
         const ArrowRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
-        let recStatusHTML = '';
-        if (isOldRec) {
-            recStatusHTML = `<span class="flex items-center gap-2 text-xs text-red-800/60 font-medium">⚠️ Needs Update</span>`;
-        } else {
-            recStatusHTML = `<span class="flex items-center gap-2 text-xs text-scandi-muted"><span class="w-1.5 h-1.5 rounded-full bg-scandi-sage"></span> Rec: ${new Date(service.lastRecommended).toLocaleDateString([], {month:'short', day:'numeric'})}</span>`;
-        }
+        let recStatusHTML = `<span class="flex items-center gap-2 text-xs text-scandi-muted"><span class="w-1.5 h-1.5 rounded-full bg-scandi-sage"></span> Last Recommended: ${new Date(service.lastRecommended).toLocaleDateString([], {month:'short', day:'numeric', year: 'numeric'})}</span>`;
 
         const sunnyBadgeHTML = service.sunnyApproved ? 
             `<div class="absolute top-0 right-0 bg-scandi-bg text-scandi-clay text-[10px] uppercase tracking-widest font-bold px-3 py-2 border-l border-b border-scandi-line z-10">
@@ -175,7 +167,7 @@ const renderServices = (services) => {
              actionHTML = `<a href="mailto:${service.email}" class="text-sm font-medium text-scandi-text border-b border-scandi-clay/50 hover:border-scandi-clay transition-colors truncate max-w-full block">${service.email}</a>`;
         } else {
              actionHTML = `<a href="${generateGoogleSearchUrl(service)}" target="_blank" rel="noopener noreferrer" class="text-xs uppercase tracking-widest text-scandi-muted hover:text-scandi-text flex items-center gap-2 group-hover:gap-3 transition-all">
-                Google Search ${ArrowRightIcon}
+                Look Up Info on Google ${ArrowRightIcon}
              </a>`;
         }
 

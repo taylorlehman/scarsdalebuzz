@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  Scarsdale Buzz
+//  ScarsdaleBuzz
 //
 //  Created by Taylor Lehman on 12/17/25.
 //

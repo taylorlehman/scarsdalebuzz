@@ -6,41 +6,65 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D69059602EF32D6F00AEDE00 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = D690595F2EF32D6F00AEDE00 /* FirebaseAuth */; };
+		D69059622EF32D6F00AEDE00 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D69059612EF32D6F00AEDE00 /* FirebaseFirestore */; };
+		D69059652EF32E3400AEDE00 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = D69059642EF32E3400AEDE00 /* GoogleSignIn */; };
+		D69059672EF32E3400AEDE00 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D69059662EF32E3400AEDE00 /* GoogleSignInSwift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
-		D620271D2EF2FEFA00B250A7 /* Scarsdale Buzz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Scarsdale Buzz.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D67986D52EF32AA400DEA8D8 /* ScarsdaleBuzz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScarsdaleBuzz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D69059692EF32EAB00AEDE00 /* Exceptions for "ScarsdaleBuzz" folder in "ScarsdaleBuzz" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D67986D42EF32AA400DEA8D8 /* ScarsdaleBuzz */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D620271F2EF2FEFA00B250A7 /* Scarsdale Buzz */ = {
+		D67986D72EF32AA400DEA8D8 /* ScarsdaleBuzz */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Scarsdale Buzz";
+			exceptions = (
+				D69059692EF32EAB00AEDE00 /* Exceptions for "ScarsdaleBuzz" folder in "ScarsdaleBuzz" target */,
+			);
+			path = ScarsdaleBuzz;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D620271A2EF2FEFA00B250A7 /* Frameworks */ = {
+		D67986D22EF32AA400DEA8D8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D69059602EF32D6F00AEDE00 /* FirebaseAuth in Frameworks */,
+				D69059622EF32D6F00AEDE00 /* FirebaseFirestore in Frameworks */,
+				D69059652EF32E3400AEDE00 /* GoogleSignIn in Frameworks */,
+				D69059672EF32E3400AEDE00 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D62027142EF2FEFA00B250A7 = {
+		D67986CC2EF32AA400DEA8D8 = {
 			isa = PBXGroup;
 			children = (
-				D620271F2EF2FEFA00B250A7 /* Scarsdale Buzz */,
-				D620271E2EF2FEFA00B250A7 /* Products */,
+				D67986D72EF32AA400DEA8D8 /* ScarsdaleBuzz */,
+				D67986D62EF32AA400DEA8D8 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		D620271E2EF2FEFA00B250A7 /* Products */ = {
+		D67986D62EF32AA400DEA8D8 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D620271D2EF2FEFA00B250A7 /* Scarsdale Buzz.app */,
+				D67986D52EF32AA400DEA8D8 /* ScarsdaleBuzz.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,64 +72,72 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D620271C2EF2FEFA00B250A7 /* Scarsdale Buzz */ = {
+		D67986D42EF32AA400DEA8D8 /* ScarsdaleBuzz */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D62027282EF2FEFA00B250A7 /* Build configuration list for PBXNativeTarget "Scarsdale Buzz" */;
+			buildConfigurationList = D67986E02EF32AA400DEA8D8 /* Build configuration list for PBXNativeTarget "ScarsdaleBuzz" */;
 			buildPhases = (
-				D62027192EF2FEFA00B250A7 /* Sources */,
-				D620271A2EF2FEFA00B250A7 /* Frameworks */,
-				D620271B2EF2FEFA00B250A7 /* Resources */,
+				D67986D12EF32AA400DEA8D8 /* Sources */,
+				D67986D22EF32AA400DEA8D8 /* Frameworks */,
+				D67986D32EF32AA400DEA8D8 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				D620271F2EF2FEFA00B250A7 /* Scarsdale Buzz */,
+				D67986D72EF32AA400DEA8D8 /* ScarsdaleBuzz */,
 			);
-			name = "Scarsdale Buzz";
+			name = ScarsdaleBuzz;
 			packageProductDependencies = (
+				D690595F2EF32D6F00AEDE00 /* FirebaseAuth */,
+				D69059612EF32D6F00AEDE00 /* FirebaseFirestore */,
+				D69059642EF32E3400AEDE00 /* GoogleSignIn */,
+				D69059662EF32E3400AEDE00 /* GoogleSignInSwift */,
 			);
-			productName = "Scarsdale Buzz";
-			productReference = D620271D2EF2FEFA00B250A7 /* Scarsdale Buzz.app */;
+			productName = ScarsdaleBuzz;
+			productReference = D67986D52EF32AA400DEA8D8 /* ScarsdaleBuzz.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		D62027152EF2FEFA00B250A7 /* Project object */ = {
+		D67986CD2EF32AA400DEA8D8 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
-					D620271C2EF2FEFA00B250A7 = {
+					D67986D42EF32AA400DEA8D8 = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
-			buildConfigurationList = D62027182EF2FEFA00B250A7 /* Build configuration list for PBXProject "Scarsdale Buzz" */;
+			buildConfigurationList = D67986D02EF32AA400DEA8D8 /* Build configuration list for PBXProject "ScarsdaleBuzz" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = D62027142EF2FEFA00B250A7;
+			mainGroup = D67986CC2EF32AA400DEA8D8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D690595E2EF32D6F00AEDE00 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				D69059632EF32E3400AEDE00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = D620271E2EF2FEFA00B250A7 /* Products */;
+			productRefGroup = D67986D62EF32AA400DEA8D8 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D620271C2EF2FEFA00B250A7 /* Scarsdale Buzz */,
+				D67986D42EF32AA400DEA8D8 /* ScarsdaleBuzz */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		D620271B2EF2FEFA00B250A7 /* Resources */ = {
+		D67986D32EF32AA400DEA8D8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,7 +147,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D62027192EF2FEFA00B250A7 /* Sources */ = {
+		D67986D12EF32AA400DEA8D8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -125,7 +157,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D62027262EF2FEFA00B250A7 /* Debug */ = {
+		D67986DE2EF32AA400DEA8D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -178,16 +210,18 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		D62027272EF2FEFA00B250A7 /* Release */ = {
+		D67986DF2EF32AA400DEA8D8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -234,14 +268,17 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		D62027292EF2FEFA00B250A7 /* Debug */ = {
+		D67986E12EF32AA400DEA8D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -249,43 +286,32 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = S3TWX3Q6Z2;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_FILE = ScarsdaleBuzz/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "tl-labs.Scarsdale-Buzz";
+				PRODUCT_BUNDLE_IDENTIFIER = "tl-labs.ScarsdaleBuzz";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		D620272A2EF2FEFA00B250A7 /* Release */ = {
+		D67986E22EF32AA400DEA8D8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -293,64 +319,95 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = S3TWX3Q6Z2;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_FILE = ScarsdaleBuzz/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "tl-labs.Scarsdale-Buzz";
+				PRODUCT_BUNDLE_IDENTIFIER = "tl-labs.ScarsdaleBuzz";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D62027182EF2FEFA00B250A7 /* Build configuration list for PBXProject "Scarsdale Buzz" */ = {
+		D67986D02EF32AA400DEA8D8 /* Build configuration list for PBXProject "ScarsdaleBuzz" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D62027262EF2FEFA00B250A7 /* Debug */,
-				D62027272EF2FEFA00B250A7 /* Release */,
+				D67986DE2EF32AA400DEA8D8 /* Debug */,
+				D67986DF2EF32AA400DEA8D8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D62027282EF2FEFA00B250A7 /* Build configuration list for PBXNativeTarget "Scarsdale Buzz" */ = {
+		D67986E02EF32AA400DEA8D8 /* Build configuration list for PBXNativeTarget "ScarsdaleBuzz" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D62027292EF2FEFA00B250A7 /* Debug */,
-				D620272A2EF2FEFA00B250A7 /* Release */,
+				D67986E12EF32AA400DEA8D8 /* Debug */,
+				D67986E22EF32AA400DEA8D8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D690595E2EF32D6F00AEDE00 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.7.0;
+			};
+		};
+		D69059632EF32E3400AEDE00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D690595F2EF32D6F00AEDE00 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D690595E2EF32D6F00AEDE00 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		D69059612EF32D6F00AEDE00 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D690595E2EF32D6F00AEDE00 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		D69059642EF32E3400AEDE00 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D69059632EF32E3400AEDE00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		D69059662EF32E3400AEDE00 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D69059632EF32E3400AEDE00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = D62027152EF2FEFA00B250A7 /* Project object */;
+	rootObject = D67986CD2EF32AA400DEA8D8 /* Project object */;
 }
