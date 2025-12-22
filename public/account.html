@@ -75,22 +75,14 @@
     <div class="paper-texture"></div>
 
     <!-- Header -->
-    <header class="bg-scandi-bg border-b border-scandi-line p-6 sticky top-0 z-40">
-        <div class="max-w-2xl mx-auto flex items-center justify-between">
-            <a href="sunny/sunny2.html" class="flex items-center gap-2 text-scandi-muted hover:text-scandi-text font-serif transition-colors group">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="group-hover:-translate-x-1 transition-transform"><path d="M15 19l-7-7 7-7"/></svg>
-                <span class="text-sm tracking-wide">Back to Sunny</span>
-            </a>
-            <h1 class="font-serif text-xl text-scandi-text">Account Settings</h1>
-        </div>
-    </header>
+    <div id="header-container"></div>
 
-    <main class="flex-grow max-w-2xl w-full mx-auto p-6 relative z-10 fade-in">
+    <main class="flex-grow max-w-2xl w-full mx-auto p-6 pt-28 relative z-10 fade-in">
         
         <!-- Profile Card -->
         <div class="bg-white rounded-sm shadow-soft border border-scandi-line p-10 mb-8 flex flex-col items-center text-center">
-            <img id="user-photo" src="" alt="Profile" class="w-24 h-24 rounded-full mb-6 border border-scandi-line object-cover p-1 bg-scandi-bg">
-            <h2 id="user-name" class="font-serif text-3xl text-scandi-text mb-2">...</h2>
+            <img id="account-user-photo" src="" alt="Profile" class="w-24 h-24 rounded-full mb-6 border border-scandi-line object-cover p-1 bg-scandi-bg">
+            <h2 id="account-user-name" class="font-serif text-3xl text-scandi-text mb-2">...</h2>
             <p id="user-email" class="text-scandi-muted font-mono text-xs uppercase tracking-widest mb-8">...</p>
             
             <div class="inline-flex items-center gap-2 px-4 py-2 bg-scandi-bg border border-scandi-line rounded-full">
@@ -130,7 +122,7 @@
         </div>
         
         <div class="mt-12 mb-20 text-center">
-            <button id="sign-out-btn" class="text-scandi-muted hover:text-scandi-text text-xs font-mono uppercase tracking-widest border-b border-transparent hover:border-scandi-muted transition-all">Sign Out</button>
+            <button id="account-sign-out-btn" class="text-scandi-muted hover:text-scandi-text text-xs font-mono uppercase tracking-widest border-b border-transparent hover:border-scandi-muted transition-all">Sign Out</button>
         </div>
 
     </main>
@@ -140,8 +132,17 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="components/header.js"></script>
 
     <script>
+        // Initialize Shared Header
+        document.addEventListener('DOMContentLoaded', () => {
+            new SharedHeader({
+                activePage: 'account',
+                rootPath: './'
+            });
+        });
+
         firebase.initializeApp(window.firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -171,10 +172,10 @@
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // Display Basic Info
-                document.getElementById('user-name').textContent = user.displayName;
+                document.getElementById('account-user-name').textContent = user.displayName;
                 document.getElementById('user-email').textContent = user.email;
                 if (user.photoURL) {
-                    document.getElementById('user-photo').src = user.photoURL;
+                    document.getElementById('account-user-photo').src = user.photoURL;
                 }
                 
                 // Configure Delete Button
@@ -236,7 +237,7 @@
             }
         });
 
-        document.getElementById('sign-out-btn').addEventListener('click', () => {
+        document.getElementById('account-sign-out-btn').addEventListener('click', () => {
             auth.signOut().then(() => {
                 window.location.href = 'login.html';
             });

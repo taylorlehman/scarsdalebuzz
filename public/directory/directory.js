@@ -32,6 +32,10 @@ try {
 
 // --- RUNTIME DATA (from Firestore) ---
 let serviceData = [];
+let currentUser = null;
+let userLikedServices = new Set();
+let unsubscribeUser = null;
+const userCache = new Map(); // uid -> { displayName, photoURL }
 
 // Category groups for organizing the overflow menu
 const defaultCategoryGroups = {
@@ -77,6 +81,108 @@ async function loadCategoriesConfig() {
         console.warn('Could not load categories list from Firestore; will derive from services');
     }
 }
+
+// --- USER DATA FETCHING ---
+const fetchUser = async (uid) => {
+    if (userCache.has(uid)) return userCache.get(uid);
+    
+    try {
+        const doc = await db.collection('users').doc(uid).get();
+        if (doc.exists) {
+            const data = doc.data();
+            const profile = {
+                displayName: data.displayName || 'Neighbor',
+                photoURL: data.photoURL || null
+            };
+            userCache.set(uid, profile);
+            return profile;
+        }
+    } catch (e) {
+        console.warn(`Failed to fetch user ${uid}`, e);
+    }
+    return { displayName: 'Neighbor', photoURL: null };
+};
+
+const hydrateAvatars = async () => {
+    const avatars = document.querySelectorAll('.avatar-placeholder[data-uid]');
+    const uidsToFetch = new Set();
+    
+    avatars.forEach(el => {
+        if (!el.dataset.hydrated) uidsToFetch.add(el.dataset.uid);
+    });
+
+    if (uidsToFetch.size === 0) return;
+
+    // Fetch all missing users
+    const promises = Array.from(uidsToFetch).map(uid => fetchUser(uid));
+    await Promise.all(promises);
+
+    // Update DOM
+    avatars.forEach(el => {
+        if (el.dataset.hydrated) return;
+        const uid = el.dataset.uid;
+        const profile = userCache.get(uid);
+        if (profile) {
+            el.src = profile.photoURL || 'https://www.gravatar.com/avatar?d=mp';
+            el.title = profile.displayName;
+            el.alt = profile.displayName;
+            el.dataset.hydrated = 'true';
+            el.classList.remove('opacity-0');
+        }
+    });
+};
+
+const hydrateNames = async () => {
+    const names = document.querySelectorAll('.avatar-name-placeholder[data-uid]');
+    const uidsToFetch = new Set();
+    
+    names.forEach(el => {
+        if (!el.dataset.hydrated) uidsToFetch.add(el.dataset.uid);
+    });
+
+    if (uidsToFetch.size === 0) return;
+
+    // Fetch all missing users
+    const promises = Array.from(uidsToFetch).map(uid => fetchUser(uid));
+    await Promise.all(promises);
+
+    // Update DOM
+    names.forEach(el => {
+        if (el.dataset.hydrated) return;
+        const uid = el.dataset.uid;
+        const profile = userCache.get(uid);
+        if (profile) {
+            el.textContent = profile.displayName;
+            el.dataset.hydrated = 'true';
+        }
+    });
+};
+
+// --- AUTH LISTENER ---
+const initAuthListener = () => {
+    firebase.auth().onAuthStateChanged((user) => {
+        currentUser = user;
+        if (unsubscribeUser) {
+            unsubscribeUser();
+            unsubscribeUser = null;
+        }
+        
+        if (user) {
+            // Listen to real-time updates of user's liked services
+            unsubscribeUser = db.collection('users').doc(user.uid)
+                .onSnapshot((doc) => {
+                    userLikedServices.clear();
+                    if (doc.exists && doc.data().likedServices) {
+                        doc.data().likedServices.forEach(id => userLikedServices.add(id));
+                    }
+                    filterAndRender();
+                });
+        } else {
+            userLikedServices.clear();
+            filterAndRender();
+        }
+    });
+};
 
 // Subscribe to Firestore and keep a warm in-memory cache for instant filtering
 let unsubscribeServices = null;
@@ -127,18 +233,40 @@ const IndexNumber = (num) => {
 
 // --- RENDER FUNCTIONS ---
 const renderServices = (services) => {
-    serviceList.innerHTML = '';
+    // Hide/Show No Results
     if (services.length === 0) {
         noResults.classList.remove('hidden');
+        serviceList.innerHTML = '';
         return;
     }
     noResults.classList.add('hidden');
 
+    // Map existing cards for reconciliation
+    const existingCards = new Map();
+    Array.from(serviceList.children).forEach(card => {
+        if (card.dataset.id) existingCards.set(card.dataset.id, card);
+    });
+
+    // Keep track of IDs processed in this render to handle removals later
+    const processedIds = new Set();
+
     services.forEach((service, index) => {
-        const card = document.createElement('div');
-        // Scandi Card Style
-        card.className = 'group bg-white p-8 rounded-sm shadow-card hover:shadow-hover transition-all duration-500 ease-out flex flex-col h-full relative fade-in border border-scandi-line/50';
-        card.style.animationDelay = `${index * 0.05}s`;
+        processedIds.add(service.id);
+        const safeId = service.id.replace(/'/g, "\\'");
+        
+        let card = existingCards.get(service.id);
+        const isNew = !card;
+
+        if (isNew) {
+            card = document.createElement('div');
+            card.dataset.id = service.id;
+            card.className = 'group bg-white p-8 rounded-sm shadow-card hover:shadow-hover transition-all duration-500 ease-out flex flex-col h-full relative fade-in border border-scandi-line/50';
+            card.style.animationDelay = `${index * 0.05}s`;
+        } else {
+             // Reset animation for existing cards to prevent re-triggering
+             card.style.animationDelay = '0s';
+             card.classList.remove('fade-in');
+        }
 
         const fullName = [service.firstName, service.lastName].filter(Boolean).join(' ');
         let title = service.businessName || fullName;
@@ -148,15 +276,24 @@ const renderServices = (services) => {
         }
 
         // Icons
-        const MapPinIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
-        const ClockIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+        const ThumbsUpIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
+        const ThumbsUpFilled = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
         const ArrowRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
-        let recStatusHTML = `<span class="flex items-center gap-2 text-xs text-scandi-muted"><span class="w-1.5 h-1.5 rounded-full bg-scandi-sage"></span> Last Recommended: ${new Date(service.lastRecommended).toLocaleDateString([], {month:'short', day:'numeric', year: 'numeric'})}</span>`;
+        let recStatusHTML = '';
+        if (service.lastRecommended) {
+            recStatusHTML = `<span class="text-[10px] text-scandi-muted uppercase tracking-wider">Last Recommended: ${new Date(service.lastRecommended).toLocaleDateString([], {month:'short', day:'numeric', year: 'numeric'})}</span>`;
+        }
 
-        const sunnyBadgeHTML = service.sunnyApproved ? 
-            `<div class="absolute top-0 right-0 bg-scandi-bg text-scandi-clay text-[10px] uppercase tracking-widest font-bold px-3 py-2 border-l border-b border-scandi-line z-10">
-                ☀️ Sunny Approved
+        const sunnyBadgeHTML = ''; // Removed badge
+
+        const bookingButtonHTML = service.sunnyApproved ? `
+            <div class="mt-auto pt-2">
+                <a href="../sunny/index.html" 
+                   class="flex items-center justify-center gap-2 w-full bg-scandi-clay text-white text-xs font-bold uppercase tracking-wider py-2 px-3 rounded-sm hover:bg-scandi-text transition-all duration-300 shadow-sm hover:shadow-md group/btn">
+                   <span>Ask Sunny to Book</span>
+                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transform group-hover/btn:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
             </div>` : '';
 
         // Contact Actions
@@ -171,37 +308,223 @@ const renderServices = (services) => {
              </a>`;
         }
 
-        card.innerHTML = `
-            ${sunnyBadgeHTML}
+        // Like Button State
+        const isLiked = userLikedServices.has(service.id);
+        const likeBtnClass = isLiked ? 'text-scandi-clay hover:text-scandi-text' : 'text-scandi-muted hover:text-scandi-clay';
+        const likeIcon = isLiked ? ThumbsUpFilled : ThumbsUpIcon;
+
+        // Recently Recommended Logic
+        let recentlyRecommendedHTML = '';
+        if (service.recentRecommenders && service.recentRecommenders.length > 0) {
+            const avatars = service.recentRecommenders.map(rec => 
+                `<img src="https://www.gravatar.com/avatar?d=mp" data-uid="${rec.uid}" class="avatar-placeholder opacity-0 w-6 h-6 rounded-full border border-white -ml-2 first:ml-0 object-cover bg-gray-100 transition-opacity duration-300">`
+            ).join('');
             
-            <div class="flex justify-between items-start mb-6 pb-6 border-b border-scandi-line/50">
+            recentlyRecommendedHTML = `
+                <div class="flex flex-col gap-1 cursor-pointer" onclick="openRecommendersModal('${safeId}')">
+                    <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommended By:</span>
+                    <div class="flex items-center pl-2">
+                        ${avatars}
+                        ${service.recommendations > service.recentRecommenders.length ? `<span class="text-[10px] text-scandi-muted ml-2">+${service.recommendations - service.recentRecommenders.length} more</span>` : ''}
+                    </div>
+                </div>
+            `;
+        } else if (service.recommendations > 0) {
+            recentlyRecommendedHTML = `
+                <div class="flex flex-col gap-1 cursor-pointer" onclick="openLegacyModal()">
+                    <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommended By:</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-scandi-text font-medium underline decoration-scandi-muted/30">🐝 Scarsdale Buzz community</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        const newHTML = `
+            <!-- 1. Header: Index & Category -->
+            <div class="flex justify-between items-start mb-4 pb-2 border-b border-scandi-line/30 h-10">
                 ${IndexNumber(index)}
-                <span class="text-xs uppercase tracking-widest font-medium text-scandi-sage">${service.category}</span>
+                <span class="text-[10px] uppercase tracking-widest font-semibold text-scandi-sage truncate max-w-[150px] text-right" title="${service.category}">${service.category}</span>
             </div>
             
-            <div class="flex-grow mb-6">
-                <h3 class="font-serif text-2xl text-scandi-text mb-2 group-hover:text-scandi-clay transition-colors duration-300">${title}</h3>
-                ${subtitle ? `<p class="text-sm text-scandi-muted italic mb-4">${subtitle}</p>` : ''}
-                
-                <div class="flex items-center gap-3 mt-4">
-                     <div class="w-8 h-8 rounded-full bg-scandi-bg flex flex-col items-center justify-center text-center border border-scandi-line">
-                        <span class="text-sm font-serif font-bold text-scandi-text leading-none">${service.recommendations}</span>
-                    </div>
-                    <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommendations</span>
+            <!-- 2. Contact Info -->
+            <div class="mb-4 h-32 flex flex-col">
+                <h3 class="font-serif text-2xl text-scandi-text leading-tight mb-1 group-hover:text-scandi-clay transition-colors duration-300 line-clamp-2" title="${title}">${title}</h3>
+                ${subtitle ? `<p class="text-sm text-scandi-muted italic mb-3 line-clamp-1" title="${subtitle}">${subtitle}</p>` : ''}
+                <div class="mt-auto">
+                    ${actionHTML}
                 </div>
             </div>
 
-            <div class="pt-4 flex justify-between items-end">
-                <div class="flex flex-col gap-2">
-                    ${recStatusHTML}
-                    <div class="mt-1">
-                        ${actionHTML}
+            <!-- 3. Recommendation Info -->
+            <div class="bg-scandi-bg/40 p-4 rounded-sm border border-scandi-line/30 flex flex-col gap-3 mb-4 h-48 justify-between">
+                <!-- Count & Like -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                         <div class="w-8 h-8 rounded-full bg-white flex flex-col items-center justify-center text-center border border-scandi-line shadow-sm">
+                            <span class="text-sm font-serif font-bold text-scandi-text leading-none">${service.recommendations}</span>
+                        </div>
+                        <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommendations</span>
                     </div>
+                    <button onclick="toggleLike('${safeId}')" class="${likeBtnClass} transition-colors p-2 -mr-2 rounded-full hover:bg-white border border-transparent hover:border-scandi-line" title="${isLiked ? 'Undo Recommendation' : 'Recommend this provider'}">
+                        ${likeIcon}
+                    </button>
+                </div>
+
+                <!-- Recent Avatars -->
+                <div class="flex-grow flex flex-col justify-center">
+                    ${recentlyRecommendedHTML ? `
+                    <div class="pt-2 border-t border-dashed border-scandi-line/30">
+                        ${recentlyRecommendedHTML}
+                    </div>` : ''}
+                </div>
+                
+                <!-- Last Recommended Date -->
+                <div class="pt-2 border-t border-dashed border-scandi-line/30 min-h-[25px] flex items-center">
+                    ${recStatusHTML}
                 </div>
             </div>
+
+            <!-- 4. Booking Button -->
+            ${bookingButtonHTML}
         `;
+        
+        // Only update innerHTML if it has changed to avoid unnecessary repaints/flickering
+        if (card.innerHTML !== newHTML) {
+            card.innerHTML = newHTML;
+        }
+        
         serviceList.appendChild(card);
     });
+
+    // Remove cards that are no longer in the filtered list
+    existingCards.forEach((card, id) => {
+        if (!processedIds.has(id)) {
+            card.remove();
+        }
+    });
+
+    // Hydrate avatars after render
+    hydrateAvatars();
+};
+
+// --- INTERACTION HANDLERS ---
+const toggleLike = async (serviceId) => {
+    if (!currentUser) {
+        openAuthModal();
+        return;
+    }
+
+    const serviceRef = db.collection('services').doc(serviceId);
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const likeRef = serviceRef.collection('recommendations').doc(currentUser.uid);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const serviceDoc = await transaction.get(serviceRef);
+            const likeDoc = await transaction.get(likeRef);
+
+            if (!serviceDoc.exists) throw "Service does not exist!";
+            
+            const currentRecs = serviceDoc.data().recommendations || 0;
+            const currentRecent = serviceDoc.data().recentRecommenders || [];
+
+            if (!likeDoc.exists) {
+                // ADD LIKE
+                const newRec = {
+                    uid: currentUser.uid,
+                    timestamp: new Date()
+                };
+
+                // Add to recent list (keep max 3)
+                const newRecent = [newRec, ...currentRecent].slice(0, 3);
+
+                transaction.update(serviceRef, {
+                    recommendations: currentRecs + 1,
+                    lastRecommended: firebase.firestore.FieldValue.serverTimestamp(),
+                    recentRecommenders: newRecent
+                });
+
+                transaction.set(likeRef, newRec);
+                
+                transaction.set(userRef, {
+                    likedServices: firebase.firestore.FieldValue.arrayUnion(serviceId)
+                }, { merge: true });
+
+            } else {
+                // REMOVE LIKE
+                const newRecent = currentRecent.filter(r => r.uid !== currentUser.uid);
+
+                transaction.update(serviceRef, {
+                    recommendations: Math.max(0, currentRecs - 1),
+                    recentRecommenders: newRecent
+                });
+
+                transaction.delete(likeRef);
+
+                transaction.set(userRef, {
+                    likedServices: firebase.firestore.FieldValue.arrayRemove(serviceId)
+                }, { merge: true });
+            }
+        });
+        // Optimistic update not needed as onSnapshot will fire
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+        alert("Could not update recommendation. Please try again.");
+    }
+};
+
+const openRecommendersModal = async (serviceId) => {
+    const modal = document.getElementById('recommenders-modal');
+    const list = document.getElementById('recommenders-list');
+    list.innerHTML = '<div class="text-center py-8 text-scandi-muted">Loading...</div>';
+    modal.classList.remove('hidden');
+
+    try {
+        const snapshot = await db.collection('services').doc(serviceId).collection('recommendations').orderBy('timestamp', 'desc').limit(50).get();
+        
+        if (snapshot.empty) {
+            list.innerHTML = '<div class="text-center py-8 text-scandi-muted italic">No specific user recommendations yet.</div>';
+            return;
+        }
+
+        list.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.timestamp ? data.timestamp.toDate().toLocaleDateString() : '';
+            return `
+                <div class="flex items-center gap-4 p-2 border-b border-scandi-line/50 last:border-0">
+                    <img src="https://www.gravatar.com/avatar?d=mp" data-uid="${data.uid}" class="avatar-placeholder opacity-0 w-10 h-10 rounded-full object-cover bg-gray-100 transition-opacity duration-300">
+                    <div>
+                        <div class="font-medium text-scandi-text avatar-name-placeholder" data-uid="${data.uid}">Loading...</div>
+                        <div class="text-xs text-scandi-muted">Recommended on ${date}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        hydrateAvatars();
+        hydrateNames(); // Helper to update names in modal
+
+    } catch (e) {
+        console.error(e);
+        list.innerHTML = '<div class="text-center py-8 text-red-600">Error loading recommendations.</div>';
+    }
+};
+
+const openLegacyModal = () => {
+    document.getElementById('legacy-modal').classList.remove('hidden');
+};
+
+const openAuthModal = () => {
+    const modal = document.getElementById('auth-prompt-modal');
+    if (modal) {
+        const loginBtn = modal.querySelector('a[href*="login.html"]');
+        if (loginBtn) {
+            const currentUrl = encodeURIComponent(window.location.href);
+            loginBtn.href = `../login.html?redirect=${currentUrl}`;
+        }
+        modal.classList.remove('hidden');
+    }
 };
 
 const renderCategoryButtons = () => {
@@ -382,25 +705,38 @@ categoryFilters.addEventListener('click', (e) => {
 });
 
 // --- PASSWORD PROTECTION ---
+const checkPassword = () => {
+    if (localStorage.getItem('scarsdale_access') === 'true') {
+        passwordModal.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        Promise.all([
+            loadCategoryGroupsConfig(),
+            loadCategoriesConfig(),
+            startServicesSubscription(),
+        ]).then(() => {
+            initAuthListener();
+            renderCategoryButtons();
+            filterAndRender();
+        });
+        return true;
+    }
+    return false;
+};
+
+// Check immediately on load
+checkPassword();
+
 passwordForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const enteredPassword = passwordInput.value;
     const correctPassword = 'raiders';
 
     if (enteredPassword === correctPassword) {
+        localStorage.setItem('scarsdale_access', 'true');
         passwordError.classList.add('hidden');
         passwordModal.style.opacity = '0';
         setTimeout(() => {
-            passwordModal.classList.add('hidden');
-            mainContent.classList.remove('hidden');
-            Promise.all([
-                loadCategoryGroupsConfig(),
-                loadCategoriesConfig(),
-                startServicesSubscription(),
-            ]).then(() => {
-                renderCategoryButtons();
-                filterAndRender();
-            });
+            checkPassword();
         }, 500);
     } else {
         passwordError.classList.remove('hidden');
