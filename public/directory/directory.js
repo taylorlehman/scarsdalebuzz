@@ -35,6 +35,7 @@ try {
 
 // --- RUNTIME DATA (from Firestore) ---
 let serviceData = [];
+let fuse;
 let currentUser = null;
 let userLikedServices = new Set();
 let unsubscribeUser = null;
@@ -205,6 +206,22 @@ const startServicesSubscription = () => {
                     const iso = last instanceof Date && !isNaN(last) ? last.toISOString().slice(0, 10) : '';
                     return { id: doc.id, ...d, lastRecommended: iso };
                 });
+
+                // Initialize Fuse.js for robust search
+                const fuseOptions = {
+                    keys: [
+                        { name: 'businessName', weight: 0.7 },
+                        { name: 'category', weight: 0.6 },
+                        { name: 'firstName', weight: 0.3 },
+                        { name: 'lastName', weight: 0.3 }
+                    ],
+                    threshold: 0.4,
+                    ignoreLocation: true
+                };
+                if (window.Fuse) {
+                    fuse = new Fuse(serviceData, fuseOptions);
+                }
+
                 if (!passwordModal || passwordModal.classList.contains('hidden')) {
                     renderCategoryButtons();
                     filterAndRender();
@@ -678,25 +695,28 @@ const showOverflowDialog = (overflowCategories, categoryTotals) => {
 
 // --- EVENT HANDLERS ---
 const filterAndRender = () => {
-    const searchTerm = searchInput.value.toLowerCase();
-    let filteredServices = serviceData;
+    const searchTerm = searchInput.value.trim();
+    let filteredServices = [];
+
+    // 1. Search Logic (Fuse.js)
+    if (searchTerm && fuse) {
+        const results = fuse.search(searchTerm);
+        filteredServices = results.map(result => result.item);
+    } else {
+        filteredServices = [...serviceData];
+    }
+
+    // 2. Category Filter
     if (activeCategory !== 'All') {
         filteredServices = filteredServices.filter(service => service.category === activeCategory);
     }
-    if (searchTerm) {
-        filteredServices = filteredServices.filter(service => 
-            (service.businessName && service.businessName.toLowerCase().includes(searchTerm)) ||
-            (service.firstName && service.firstName.toLowerCase().includes(searchTerm)) ||
-            (service.lastName && service.lastName.toLowerCase().includes(searchTerm)) ||
-            (service.phone && service.phone.toLowerCase().includes(searchTerm)) ||
-            (service.email && service.email.toLowerCase().includes(searchTerm)) ||
-            (service.category && service.category.toLowerCase().includes(searchTerm))
-        );
-    }
+
+    // 3. Sort (Recommendations > Date)
     filteredServices.sort((a, b) => {
         if (b.recommendations !== a.recommendations) return b.recommendations - a.recommendations;
         return new Date(b.lastRecommended) - new Date(a.lastRecommended);
     });
+
     renderServices(filteredServices);
 };
 
