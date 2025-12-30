@@ -8,7 +8,10 @@ const serviceList = document.getElementById('serviceList');
 const searchInput = document.getElementById('searchInput');
 const categoryFilters = document.getElementById('categoryFilters');
 const noResults = document.getElementById('noResults');
-let activeCategory = 'All';
+
+// Initialize activeCategory from URL parameter if present
+const urlParams = new URLSearchParams(window.location.search);
+let activeCategory = urlParams.get('category') || 'All';
 
 // --- FIREBASE INIT ---
 // Expect window.firebaseConfig to be defined in firebase-config.js
@@ -542,6 +545,15 @@ const renderCategoryButtons = () => {
     }
 
     const sortedCategories = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a]);
+    
+    // Normalize activeCategory casing if needed (e.g. url param 'plumber' -> 'Plumber')
+    if (activeCategory !== 'All') {
+        const canonical = sortedCategories.find(c => c.toLowerCase() === activeCategory.toLowerCase());
+        if (canonical && canonical !== activeCategory) {
+            activeCategory = canonical;
+        }
+    }
+
     const topCategories = ['All', ...sortedCategories.slice(0, 5)];
     const overflowCategories = sortedCategories.slice(5);
     const isActiveInOverflow = overflowCategories.includes(activeCategory);
@@ -632,6 +644,12 @@ const showOverflowDialog = (overflowCategories, categoryTotals) => {
             `;
             btn.addEventListener('click', () => {
                 activeCategory = cat;
+                
+                // Update URL
+                const url = new URL(window.location);
+                url.searchParams.set('category', cat);
+                window.history.replaceState({}, '', url);
+
                 renderCategoryButtons();
                 filterAndRender();
                 document.body.removeChild(modal);
@@ -700,6 +718,16 @@ categoryFilters.addEventListener('click', (e) => {
     if (newCategory === activeCategory) return;
 
     activeCategory = newCategory;
+
+    // Update URL
+    const url = new URL(window.location);
+    if (newCategory === 'All') {
+        url.searchParams.delete('category');
+    } else {
+        url.searchParams.set('category', newCategory);
+    }
+    window.history.replaceState({}, '', url);
+
     renderCategoryButtons();
     filterAndRender();
 });
