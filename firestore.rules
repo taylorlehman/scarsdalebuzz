@@ -5,7 +5,18 @@ service cloud.firestore {
     // Services: Public read, Admin write
     match /services/{serviceId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.admin == true;
+      
+      // Admins can create/delete/update anything
+      allow create, delete: if request.auth != null && request.auth.token.admin == true;
+      
+      // Update logic: Admin OR regular user updating specific fields
+      allow update: if request.auth != null && (
+        request.auth.token.admin == true || 
+        (
+           // Allow regular users to update ONLY these specific fields for likes
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recommendations', 'recentRecommenders', 'lastRecommended'])
+        )
+      );
       
       // Allow users to manage their own recommendation in the subcollection
       match /recommendations/{userId} {
