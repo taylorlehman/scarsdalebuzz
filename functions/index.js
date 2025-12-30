@@ -30,7 +30,62 @@ const verifyAuthToken = async (req) => {
     }
 };
 
-// Helper function to extract a JSON string from a Markdown code block
+// --- ADMIN CONFIGURATION ---
+// Add emails here to grant admin access. 
+// These users will receive the 'admin' custom claim upon calling verifyAdminRole.
+const ADMIN_EMAILS = [
+    'taylor@tl-labs.com'
+];
+
+exports.verifyAdminRole = functions.https.onRequest(async (req, res) => {
+    cors(req, res, async () => {
+        if (req.method !== 'POST') {
+            res.status(405).send('Method Not Allowed');
+            return;
+        }
+
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            res.status(401).json({ error: 'Unauthenticated' });
+            return;
+        }
+        
+        const idToken = authHeader.split('Bearer ')[1];
+        let decodedToken;
+        try {
+            decodedToken = await admin.auth().verifyIdToken(idToken);
+        } catch (error) {
+            logger.error("Error verifying ID token:", error);
+            res.status(401).json({ error: 'Invalid token' });
+            return;
+        }
+
+        const email = decodedToken.email;
+        logger.info(`Verifying admin role for email: ${email} (uid: ${decodedToken.uid})`);
+
+        if (ADMIN_EMAILS.includes(email)) {
+            // Grant admin claim if not already present
+            if (decodedToken.admin !== true) {
+                try {
+                    logger.info(`Attempting to grant admin privileges (setCustomUserClaims) to ${email}...`);
+                    await admin.auth().setCustomUserClaims(decodedToken.uid, { admin: true });
+                    logger.info(`Successfully granted admin privileges to ${email}`);
+                    res.json({ isAdmin: true, message: 'Admin privileges granted.' });
+                } catch (error) {
+                    logger.error(`Failed to set custom user claims for ${email}. Ensure the Service Account has 'Firebase Authentication Admin' role. Error details:`, error);
+                    res.status(500).json({ error: 'Failed to grant admin privileges due to internal permissions error.' });
+                }
+            } else {
+                logger.info(`User ${email} is already an admin.`);
+                res.json({ isAdmin: true, message: 'Already an admin.' });
+            }
+        } else {
+            logger.warn(`Access denied for email: ${email} - Not in ADMIN_EMAILS list.`);
+            res.json({ isAdmin: false, message: 'Not authorized.' });
+        }
+    });
+});
+
 // Helper function to generate and save a summary for a request
 const generateAndSaveSummary = async (requestId) => {
     const requestRef = admin.firestore().collection('requests').doc(requestId);
@@ -827,3 +882,4 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
         }
     });
 });
+
