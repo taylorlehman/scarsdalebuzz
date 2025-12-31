@@ -209,13 +209,15 @@ const startServicesSubscription = () => {
 
                 // Initialize Fuse.js for robust search
                 const fuseOptions = {
+                    includeScore: true, // Agent: Enable scoring for debug
                     keys: [
                         { name: 'businessName', weight: 0.7 },
                         { name: 'category', weight: 0.6 },
                         { name: 'firstName', weight: 0.3 },
                         { name: 'lastName', weight: 0.3 }
                     ],
-                    threshold: 0.4,
+                    threshold: 0.3,
+                    minMatchCharLength: 3,
                     ignoreLocation: true
                 };
                 if (window.Fuse) {
@@ -701,6 +703,11 @@ const filterAndRender = () => {
     // 1. Search Logic (Fuse.js)
     if (searchTerm && fuse) {
         const results = fuse.search(searchTerm);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/a53a61ef-db23-43ee-a58e-5e2131912298',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'directory.js:filterAndRender',message:'Fuse search results',data:{term:searchTerm, top3Results: results.slice(0,3).map(r => ({id: r.item.id, name: r.item.businessName, score: r.score, matches: r.matches}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A/B'})}).catch(()=>{});
+        // #endregion
+
         filteredServices = results.map(result => result.item);
     } else {
         filteredServices = [...serviceData];
