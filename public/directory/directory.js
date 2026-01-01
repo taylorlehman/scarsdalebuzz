@@ -258,6 +258,18 @@ const renderServices = (services) => {
     // Hide/Show No Results
     if (services.length === 0) {
         noResults.classList.remove('hidden');
+        // Add "Suggest a Provider" button to No Results
+        const existingBtn = noResults.querySelector('.suggest-btn-placeholder');
+        if (!existingBtn) {
+            const btnContainer = document.createElement('div');
+            btnContainer.className = 'suggest-btn-placeholder mt-6';
+            btnContainer.innerHTML = `
+                <a href="suggest.html" class="inline-block px-8 py-3 bg-scandi-text text-white font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-clay transition-all duration-300 shadow-soft">
+                    Suggest a Provider
+                </a>
+            `;
+            noResults.appendChild(btnContainer);
+        }
         serviceList.innerHTML = '';
         return;
     }
@@ -425,9 +437,31 @@ const renderServices = (services) => {
             card.remove();
         }
     });
+    
+    // Remove existing suggestion cards to prevent duplicates
+    const existingSuggestCards = serviceList.querySelectorAll('.suggest-card-placeholder');
+    existingSuggestCards.forEach(card => card.remove());
 
     // Hydrate avatars after render
     hydrateAvatars();
+
+    // Append "Suggest a Provider" card
+    const suggestCard = document.createElement('div');
+    suggestCard.className = 'suggest-card-placeholder group bg-scandi-bg/50 p-8 rounded-sm border-2 border-dashed border-scandi-line hover:border-scandi-clay transition-all duration-300 flex flex-col items-center justify-center text-center h-full min-h-[400px] cursor-pointer';
+    suggestCard.innerHTML = `
+        <div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+            <svg class="w-8 h-8 text-scandi-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </div>
+        <h3 class="font-serif text-xl text-scandi-text mb-2">Know someone great?</h3>
+        <p class="text-sm text-scandi-muted mb-6">Suggest a new provider to help your neighbors.</p>
+        <a href="suggest.html" class="px-6 py-2 border border-scandi-text text-scandi-text font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-text hover:text-white transition-colors relative z-10">
+            Suggest Provider
+        </a>
+    `;
+    suggestCard.addEventListener('click', (e) => {
+         window.location.href = 'suggest.html';
+    });
+    serviceList.appendChild(suggestCard);
 };
 
 // --- INTERACTION HANDLERS ---

@@ -18,11 +18,17 @@ service cloud.firestore {
         )
       );
       
-      // Allow users to manage their own recommendation in the subcollection
+      // Allow users to manage their own recommendation in the subcollection, or admins
       match /recommendations/{userId} {
         allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
       }
+    }
+
+    // Suggested Services: Authenticated users create, Admin read/write
+    match /suggested_services/{suggestionId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.token.admin == true;
     }
 
     // Config: Public read, Admin write
@@ -37,9 +43,9 @@ service cloud.firestore {
       allow write: if false; // Writes should only come from the backend
     }
 
-    // Allow users to read and write their own profile
+    // Allow users to read and write their own profile, Admins can read/write any profile
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
     }
 
     // Default deny for everything else

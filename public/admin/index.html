@@ -109,6 +109,7 @@
         <div class="flex items-center gap-3">
             <button id="toggleServices" class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest transition-colors bg-scandi-text text-white">Services</button>
             <button id="toggleCategories" class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest transition-colors border border-scandi-line text-scandi-muted hover:text-scandi-text hover:bg-scandi-bg">Categories</button>
+            <button id="toggleSuggestions" class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest transition-colors border border-scandi-line text-scandi-muted hover:text-scandi-text hover:bg-scandi-bg">Suggestions</button>
         </div>
       </div>
     </div>
@@ -176,6 +177,32 @@
           </form>
         </div>
       </div>
+    </div>
+
+    <!-- SUGGESTIONS PANEL -->
+    <div id="suggestionsPanel" class="hidden">
+        <div class="bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden">
+            <div class="p-6 border-b border-scandi-line bg-scandi-bg/20">
+                <h2 class="font-serif text-xl text-scandi-text">Pending Suggestions</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-scandi-bg border-b border-scandi-line">
+                        <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                            <th class="py-4 px-6 font-medium">Business / Name</th>
+                            <th class="py-4 px-6 font-medium">Category</th>
+                            <th class="py-4 px-6 font-medium">Contact</th>
+                            <th class="py-4 px-6 font-medium">Suggested By</th>
+                            <th class="py-4 px-6 font-medium text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suggestionsTableBody" class="divide-y divide-scandi-line/50">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+                <div id="noSuggestionsMsg" class="hidden text-center py-12 text-scandi-muted italic">No pending suggestions.</div>
+            </div>
+        </div>
     </div>
 
     <!-- SERVICES PANEL -->

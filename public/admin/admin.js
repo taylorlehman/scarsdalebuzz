@@ -14,8 +14,14 @@ const tableBody = document.getElementById('adminTableBody');
 // Toggle elements
 const toggleServicesBtn = document.getElementById('toggleServices');
 const toggleCategoriesBtn = document.getElementById('toggleCategories');
+const toggleSuggestionsBtn = document.getElementById('toggleSuggestions');
 const servicesPanel = document.getElementById('servicesPanel');
 const categoriesPanel = document.getElementById('categoriesPanel');
+const suggestionsPanel = document.getElementById('suggestionsPanel');
+
+// Suggestions Elements
+const suggestionsTableBody = document.getElementById('suggestionsTableBody');
+const noSuggestionsMsg = document.getElementById('noSuggestionsMsg');
 
 // Form elements
 const form = document.getElementById('listingForm');
@@ -219,24 +225,195 @@ function populateCategorySelects() {
 function showServices() {
   servicesPanel.classList.remove('hidden');
   categoriesPanel.classList.add('hidden');
+  suggestionsPanel.classList.add('hidden');
   
   toggleServicesBtn.classList.remove('border', 'border-scandi-line', 'text-scandi-muted', 'bg-scandi-bg');
   toggleServicesBtn.classList.add('bg-scandi-text', 'text-white');
   
   toggleCategoriesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
   toggleCategoriesBtn.classList.remove('bg-scandi-text', 'text-white');
+
+  toggleSuggestionsBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
+  toggleSuggestionsBtn.classList.remove('bg-scandi-text', 'text-white');
 }
 
 function showCategories() {
   servicesPanel.classList.add('hidden');
   categoriesPanel.classList.remove('hidden');
+  suggestionsPanel.classList.add('hidden');
   
   toggleCategoriesBtn.classList.remove('border', 'border-scandi-line', 'text-scandi-muted', 'bg-scandi-bg');
   toggleCategoriesBtn.classList.add('bg-scandi-text', 'text-white');
   
   toggleServicesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
   toggleServicesBtn.classList.remove('bg-scandi-text', 'text-white');
+
+  toggleSuggestionsBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
+  toggleSuggestionsBtn.classList.remove('bg-scandi-text', 'text-white');
 }
+
+function showSuggestions() {
+    servicesPanel.classList.add('hidden');
+    categoriesPanel.classList.add('hidden');
+    suggestionsPanel.classList.remove('hidden');
+
+    toggleSuggestionsBtn.classList.remove('border', 'border-scandi-line', 'text-scandi-muted', 'bg-scandi-bg');
+    toggleSuggestionsBtn.classList.add('bg-scandi-text', 'text-white');
+
+    toggleServicesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
+    toggleServicesBtn.classList.remove('bg-scandi-text', 'text-white');
+
+    toggleCategoriesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
+    toggleCategoriesBtn.classList.remove('bg-scandi-text', 'text-white');
+
+    loadSuggestions();
+}
+
+// -- Suggestions Logic --
+
+async function loadSuggestions() {
+    suggestionsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-scandi-muted">Loading...</td></tr>';
+    
+    try {
+        const snap = await db.collection('suggested_services')
+            .where('status', '==', 'pending')
+            .orderBy('suggestedAt', 'desc')
+            .get();
+        
+        if (snap.empty) {
+            suggestionsTableBody.innerHTML = '';
+            noSuggestionsMsg.classList.remove('hidden');
+            return;
+        }
+
+        noSuggestionsMsg.classList.add('hidden');
+        suggestionsTableBody.innerHTML = '';
+
+        const userIds = new Set(snap.docs.map(d => d.data().suggestedBy));
+        const userProfiles = new Map();
+        
+        await Promise.all(Array.from(userIds).map(async uid => {
+            try {
+                const doc = await db.collection('users').doc(uid).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    userProfiles.set(uid, {
+                        name: data.displayName || 'Unknown User',
+                        photoURL: data.photoURL || null
+                    });
+                }
+            } catch(e) {}
+        }));
+
+        snap.forEach(doc => {
+            const data = doc.data();
+            const suggester = userProfiles.get(data.suggestedBy) || { name: 'Unknown User', photoURL: null };
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
+            
+            const name = data.businessName || `${data.firstName || ''} ${data.lastName || ''}`.trim();
+            const contact = [data.phone, data.email].filter(Boolean).join('<br>');
+
+            tr.innerHTML = `
+                <td class="py-4 px-6 font-medium text-scandi-text">${name || '-'}</td>
+                <td class="py-4 px-6 text-scandi-muted">${data.category || '-'}</td>
+                <td class="py-4 px-6 text-scandi-muted text-xs">${contact || '-'}</td>
+                <td class="py-4 px-6">
+                    <div class="flex items-center gap-3">
+                        <img src="${suggester.photoURL || 'https://www.gravatar.com/avatar?d=mp'}" alt="${suggester.name}" class="w-8 h-8 rounded-full bg-gray-100 object-cover border border-scandi-line">
+                        <div class="text-xs text-scandi-muted">
+                            <span class="font-medium text-scandi-text block">${suggester.name}</span>
+                            <span class="opacity-50 text-[10px]">${data.suggestedBy.slice(0, 8)}...</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-4 px-6 text-right space-x-2">
+                    <button class="text-xs font-bold text-green-600 hover:text-green-800 uppercase tracking-widest" onclick="approveSuggestion('${doc.id}')">Approve</button>
+                    <button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest" onclick="rejectSuggestion('${doc.id}')">Reject</button>
+                </td>
+            `;
+            suggestionsTableBody.appendChild(tr);
+        });
+
+    } catch (e) {
+        console.error("Failed to load suggestions:", e);
+        suggestionsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-600">Error loading suggestions.</td></tr>';
+    }
+}
+
+window.approveSuggestion = async (suggestionId) => {
+    if (!confirm('Approve this suggestion? This will create a new service listing and credit the user.')) return;
+
+    try {
+        const suggestionDoc = await db.collection('suggested_services').doc(suggestionId).get();
+        if (!suggestionDoc.exists) throw "Suggestion not found";
+        
+        const data = suggestionDoc.data();
+        
+        // 1. Create payload for new service
+        const payload = {
+            businessName: data.businessName,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            email: data.email,
+            category: data.category,
+            recommendations: 1, // Start with 1 rec from the suggester
+            lastRecommended: firebase.firestore.FieldValue.serverTimestamp(),
+            recentRecommenders: [{
+                uid: data.suggestedBy,
+                timestamp: new Date()
+            }]
+        };
+
+        // Generate ID
+        const id = slugifyId(payload);
+        const serviceRef = id ? db.collection('services').doc(id) : db.collection('services').doc();
+        
+        // Batch write to ensure atomicity
+        const batch = db.batch();
+
+        // 2. Create Service
+        batch.set(serviceRef, payload);
+
+        // 3. Add Recommendation Subcollection
+        const recRef = serviceRef.collection('recommendations').doc(data.suggestedBy);
+        batch.set(recRef, {
+            uid: data.suggestedBy,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 4. Update User's Liked Services
+        const userRef = db.collection('users').doc(data.suggestedBy);
+        batch.set(userRef, {
+            likedServices: firebase.firestore.FieldValue.arrayUnion(serviceRef.id)
+        }, { merge: true });
+
+        // 5. Update Suggestion Status
+        batch.update(suggestionDoc.ref, { status: 'approved' });
+
+        await batch.commit();
+
+        alert('Suggestion approved and service created!');
+        loadSuggestions();
+        loadServicesOnce(); // Refresh main list
+        
+    } catch (e) {
+        console.error("Approval failed:", e);
+        alert("Failed to approve: " + e.message);
+    }
+};
+
+window.rejectSuggestion = async (suggestionId) => {
+    if (!confirm('Reject this suggestion?')) return;
+    try {
+        await db.collection('suggested_services').doc(suggestionId).update({ status: 'rejected' });
+        loadSuggestions();
+    } catch (e) {
+        console.error("Rejection failed:", e);
+        alert("Failed to reject: " + e.message);
+    }
+};
 
 // -- Render Functions --
 
@@ -407,6 +584,7 @@ function setupEventListeners() {
     // Toggles
     toggleServicesBtn.addEventListener('click', showServices);
     toggleCategoriesBtn.addEventListener('click', showCategories);
+    toggleSuggestionsBtn.addEventListener('click', showSuggestions);
 
     // Filter/Search
     searchEl.addEventListener('input', renderTable);

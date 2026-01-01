@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suggest a Provider • Scarsdale Buzz</title>
+    <link rel="icon" type="image/png" href="../images/logos/bee_favicon.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', 
+                        'scandi-surface': '#FFFCF5', 
+                        'scandi-text': '#282624', 
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', 
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-dark': '#1A1918',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 20px rgba(40, 38, 36, 0.02)',
+                        'card': '0 1px 3px rgba(0,0,0,0.05)',
+                        'hover': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+        }
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.5;
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative antialiased selection:bg-scandi-sage selection:text-white">
+    <div class="paper-texture"></div>
+
+    <!-- Header (Fixed) -->
+    <div id="header-container"></div>
+
+    <!-- Auth Prompt Modal -->
+    <div id="auth-prompt-modal" class="fixed inset-0 bg-scandi-dark/20 backdrop-blur-sm flex items-center justify-center z-[70] p-4 hidden">
+        <div class="bg-white p-8 rounded-sm shadow-hover border border-scandi-line max-w-sm w-full text-center relative">
+            <h3 class="font-serif text-xl text-scandi-text mb-4">Sign In Required</h3>
+            <p class="text-scandi-muted mb-6 text-sm">Please sign in to suggest a new provider.</p>
+            <div class="flex flex-col gap-3">
+                <a href="../login.html" id="login-link" class="w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-widest py-3 rounded-sm hover:bg-scandi-clay transition-colors">
+                    Sign In
+                </a>
+                <a href="./index.html" class="text-xs uppercase tracking-widest text-scandi-muted hover:text-scandi-text py-2">
+                    Back to Directory
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-2xl mx-auto w-full px-6 pt-32 pb-12 relative z-10 flex-grow">
+        
+        <div class="mb-8 text-center fade-in">
+            <span class="text-xs font-mono font-medium tracking-[0.2em] uppercase text-scandi-muted mb-2 block">Community Contribution</span>
+            <h1 class="font-serif text-3xl md:text-4xl text-scandi-text leading-tight mb-4">Suggest a Provider</h1>
+            <p class="text-scandi-muted font-light max-w-md mx-auto">
+                Know a great local service provider? Add them to the directory so your neighbors can find them too.
+            </p>
+        </div>
+
+        <form id="suggestForm" class="bg-white p-8 rounded-sm shadow-card border border-scandi-line space-y-6 fade-in" style="animation-delay: 0.1s;">
+            
+            <!-- Category -->
+            <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">Category *</label>
+                <select id="category" required class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors">
+                    <option value="">Select a category...</option>
+                </select>
+            </div>
+
+            <!-- Business Name -->
+            <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">Business Name</label>
+                <input type="text" id="businessName" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors" placeholder="e.g. Joe's Plumbing">
+            </div>
+
+            <!-- Contact Name -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">First Name</label>
+                    <input type="text" id="firstName" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">Last Name</label>
+                    <input type="text" id="lastName" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors">
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">Phone</label>
+                <input type="tel" id="phone" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors" placeholder="e.g. 914-555-0123">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">Email</label>
+                <input type="email" id="email" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors" placeholder="e.g. contact@example.com">
+            </div>
+
+            <div class="pt-4 border-t border-scandi-line/50">
+                <button type="submit" id="submitBtn" class="w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-[0.2em] py-4 rounded-sm hover:bg-scandi-clay transition-all duration-300 shadow-soft">
+                    Submit Suggestion
+                </button>
+            </div>
+            
+            <p class="text-[10px] text-center text-scandi-muted italic">
+                By submitting, you agree that you have used this provider and recommend them to the community.
+            </p>
+        </form>
+
+        <!-- Success Message (Hidden) -->
+        <div id="successMessage" class="hidden bg-white p-8 rounded-sm shadow-card border border-scandi-line text-center fade-in">
+            <div class="w-16 h-16 bg-scandi-sage text-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h3 class="font-serif text-2xl text-scandi-text mb-4">Thank You!</h3>
+            <p class="text-scandi-muted mb-8">
+                Your suggestion has been submitted for review. Once approved, it will be added to the directory and you will be listed as a recommender.
+            </p>
+            <a href="./index.html" class="inline-block px-8 py-3 border border-scandi-line text-scandi-text font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-bg transition-colors">
+                Return to Directory
+            </a>
+        </div>
+
+    </main>
+
+    <footer class="py-12 border-t border-scandi-line text-center mt-auto">
+        <div class="text-[10px] text-scandi-muted font-mono uppercase tracking-widest mb-4">Scarsdale Buzz • Est. 2024</div>
+        <p class="text-xs text-scandi-muted font-light italic">Curated by the community, for the community.</p>
+    </footer>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+    <script src="../firebase-config.js"></script>
+    <script src="../components/header.js"></script>
+    <script src="suggest.js"></script>
+    
+    <script>
+        // Initialize Shared Header
+        document.addEventListener('DOMContentLoaded', () => {
+            new SharedHeader({
+                activePage: 'directory',
+                rootPath: '../'
+            });
+        });
+    </script>
+</body>
+</html>
