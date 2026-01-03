@@ -209,8 +209,8 @@ def clear_datastore(client, collections_to_clear: List[str]) -> None:
             print(f"Deleted {count} documents from '{collection_name}' collection.")
 
 
-def generate_doc_id(service: Dict) -> str:
-    """Generate deterministic document ID from service data."""
+def generate_import_key(service: Dict) -> str:
+    """Generate deterministic import key from service data."""
     key_parts = [
         (service.get('businessName') or '').strip().lower().replace(' ', '-'),
         (service.get('firstName') or '').strip().lower(),
@@ -310,12 +310,13 @@ def main():
                 except ValueError as e:
                     print(f"Warning: Skipping invalid date for service {service}: {e}")
 
-            # Generate document ID and create reference
-            doc_id = generate_doc_id(service)
-            if doc_id:
-                ref = client.collection(args.collection).document(doc_id)
-            else:
-                ref = client.collection(args.collection).document()
+            # Generate import key and add to doc
+            import_key = generate_import_key(service)
+            if import_key:
+                doc['importKey'] = import_key
+            
+            # Create new document reference with auto-generated ID
+            ref = client.collection(args.collection).document()
             
             batch.set(ref, doc)
             count += 1

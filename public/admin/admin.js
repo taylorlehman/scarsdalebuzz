@@ -198,16 +198,6 @@ async function loadServicesOnce() {
 
 // -- UI Helpers --
 
-function slugifyId({ businessName, firstName, lastName, phone }) {
-  const parts = [
-    (businessName || '').trim().toLowerCase().replace(/\s+/g, '-'),
-    (firstName || '').trim().toLowerCase(),
-    (lastName || '').trim().toLowerCase(),
-    (phone || '').trim().replace(/[+\s-]/g, ''),
-  ].filter(Boolean);
-  return parts.join('-') || null;
-}
-
 function getAllCategories() {
   if (categoriesList && categoriesList.length) return categoriesList.slice();
   const set = new Set(allServices.map(s => s.category).filter(Boolean));
@@ -366,9 +356,8 @@ window.approveSuggestion = async (suggestionId) => {
             }]
         };
 
-        // Generate ID
-        const id = slugifyId(payload);
-        const serviceRef = id ? db.collection('services').doc(id) : db.collection('services').doc();
+        // Generate ID (Auto-ID)
+        const serviceRef = db.collection('services').doc();
         
         // Batch write to ensure atomicity
         const batch = db.batch();
@@ -624,10 +613,8 @@ function setupEventListeners() {
             if (existingId) {
                 await db.collection('services').doc(existingId).set(payload, { merge: true });
             } else {
-                const id = slugifyId(payload);
-                const ref = id ? db.collection('services').doc(id) : db.collection('services').doc();
-                await ref.set(payload);
-                docIdEl.value = ref.id;
+                await db.collection('services').add(payload);
+                resetFormToNew(); // Clear form after add
             }
             await loadServicesOnce();
             renderTable();
