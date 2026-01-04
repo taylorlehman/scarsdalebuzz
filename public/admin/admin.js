@@ -1,31 +1,60 @@
-// Admin panel script: Firestore CRUD for services and category groups/categories
+// Admin panel script: Firestore CRUD for services, users, and category groups
 // Includes Auth & Role Verification
 
 let db;
 let functions;
 let currentUser = null;
+let currentView = 'services'; // services, users, suggestions, categories, groups
+let allUsers = []; // Cache for users
 
 // -- DOM Elements --
 const loadingOverlay = document.getElementById('loading-overlay');
+
+// Navigation Elements
+const navItems = {
+    users: document.getElementById('navUsers'),
+    services: document.getElementById('navServices'),
+    suggestions: document.getElementById('navSuggestions'),
+    categories: document.getElementById('navCategories'),
+    groups: document.getElementById('navGroups')
+};
+
+const views = {
+    users: document.getElementById('usersView'),
+    services: document.getElementById('servicesView'),
+    suggestions: document.getElementById('suggestionsView'),
+    categories: document.getElementById('categoriesView'),
+    groups: document.getElementById('groupsView')
+};
+
+// Count Elements
+const counts = {
+    users: document.getElementById('usersCount'),
+    services: document.getElementById('servicesCount'),
+    suggestions: document.getElementById('suggestionsCount'),
+    categories: document.getElementById('categoriesCount'),
+    groups: document.getElementById('groupsCount')
+}
+
+// User Management Elements
+const userSearchEl = document.getElementById('userSearch');
+const usersTableBody = document.getElementById('usersTableBody');
+
+// Service Management Elements
 const searchEl = document.getElementById('adminSearch');
 const filterEl = document.getElementById('adminCategoryFilter');
 const tableBody = document.getElementById('adminTableBody');
-
-// Toggle elements
-const toggleServicesBtn = document.getElementById('toggleServices');
-const toggleCategoriesBtn = document.getElementById('toggleCategories');
-const toggleSuggestionsBtn = document.getElementById('toggleSuggestions');
-const servicesPanel = document.getElementById('servicesPanel');
-const categoriesPanel = document.getElementById('categoriesPanel');
-const suggestionsPanel = document.getElementById('suggestionsPanel');
+const addServiceBtn = document.getElementById('addServiceBtn');
+const serviceModal = document.getElementById('serviceModal');
+const closeServiceModal = document.getElementById('closeServiceModal');
+const serviceModalTitle = document.getElementById('serviceModalTitle');
 
 // Suggestions Elements
 const suggestionsTableBody = document.getElementById('suggestionsTableBody');
 const noSuggestionsMsg = document.getElementById('noSuggestionsMsg');
 
-// Form elements
+// Form elements (Service)
 const form = document.getElementById('listingForm');
-const formTitle = document.getElementById('formTitle');
 const docIdEl = document.getElementById('docId');
 const businessNameEl = document.getElementById('businessName');
 const firstNameEl = document.getElementById('firstName');
@@ -37,28 +66,33 @@ const sunnyApprovedEl = document.getElementById('sunnyApproved');
 const lastRecommendedEl = document.getElementById('lastRecommended');
 const recommendationsEl = document.getElementById('recommendations');
 const cancelBtn = document.getElementById('cancelBtn');
-const deleteBtn = document.getElementById('deleteBtn');
 
 // Categories UI elements
-const groupListEl = document.getElementById('groupList');
-const addGroupForm = document.getElementById('addGroupForm');
-const newGroupNameEl = document.getElementById('newGroupName');
-const editGroupForm = document.getElementById('editGroupForm');
-const editGroupOriginalNameEl = document.getElementById('editGroupOriginalName');
-const editGroupNameEl = document.getElementById('editGroupName');
-const groupCategoriesChooserEl = document.getElementById('groupCategoriesChooser');
-const deleteGroupBtn = document.getElementById('deleteGroupBtn');
-const clearGroupSelectionBtn = document.getElementById('clearGroupSelectionBtn');
-
-const categoryListEl = document.getElementById('categoryList');
-const addCategoryForm = document.getElementById('addCategoryForm');
-const newCategoryNameEl = document.getElementById('newCategoryName');
+const categorySearchEl = document.getElementById('categorySearch');
+const categoryTableBody = document.getElementById('categoryTableBody');
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const categoryModal = document.getElementById('categoryModal');
+const closeCategoryModal = document.getElementById('closeCategoryModal');
+const categoryModalTitle = document.getElementById('categoryModalTitle');
 const editCategoryForm = document.getElementById('editCategoryForm');
 const editCategoryOriginalNameEl = document.getElementById('editCategoryOriginalName');
 const editCategoryNameEl = document.getElementById('editCategoryName');
 const editCategoryGroupEl = document.getElementById('editCategoryGroup');
-const deleteCategoryBtn = document.getElementById('deleteCategoryBtn');
-const clearCategorySelectionBtn = document.getElementById('clearCategorySelectionBtn');
+const cancelCategoryBtn = document.getElementById('cancelCategoryBtn');
+
+// Groups UI Elements
+const groupSearchEl = document.getElementById('groupSearch');
+const groupTableBody = document.getElementById('groupTableBody');
+const addGroupBtn = document.getElementById('addGroupBtn');
+const groupModal = document.getElementById('groupModal');
+const closeGroupModal = document.getElementById('closeGroupModal');
+const groupModalTitle = document.getElementById('groupModalTitle');
+const editGroupForm = document.getElementById('editGroupForm');
+const editGroupOriginalNameEl = document.getElementById('editGroupOriginalName');
+const editGroupNameEl = document.getElementById('editGroupName');
+const groupCategoriesChooserEl = document.getElementById('groupCategoriesChooser');
+const cancelGroupBtn = document.getElementById('cancelGroupBtn');
+
 
 // State
 let allServices = [];
@@ -95,7 +129,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkAdminAccess() {
     try {
-        // Get the ID token manually
         const idToken = await currentUser.getIdToken();
 
         // Call the Cloud Function via fetch (onRequest)
@@ -132,17 +165,60 @@ async function checkAdminAccess() {
 }
 
 async function initDashboard() {
-    await loadCategoryGroups();
-    await loadCategoriesList();
-    await loadServicesOnce();
+    setupNavigation();
+    
+    // Initial data load
+    await Promise.all([
+        loadCategoryGroups(),
+        loadCategoriesList(),
+        loadServicesOnce()
+    ]);
     
     populateCategorySelects();
     renderTable();
-    renderGroupList();
-    renderCategoryList();
+    renderGroupTable();
+    renderCategoryTable();
     
     setupEventListeners();
-    showServices(); // Default view
+    
+    // Default View
+    switchView('services');
+}
+
+// -- Navigation --
+
+function setupNavigation() {
+    Object.keys(navItems).forEach(key => {
+        if (navItems[key]) {
+            navItems[key].addEventListener('click', () => switchView(key));
+        }
+    });
+}
+
+function switchView(viewName) {
+    if (!views[viewName]) return;
+    
+    currentView = viewName;
+    
+    // Update Sidebar
+    Object.values(navItems).forEach(el => el.classList.remove('active'));
+    if (navItems[viewName]) navItems[viewName].classList.add('active');
+    
+    // Update Panels
+    Object.values(views).forEach(el => el.classList.add('hidden'));
+    views[viewName].classList.remove('hidden');
+    
+    // Trigger specific loads
+    if (viewName === 'users') loadUsers();
+    if (viewName === 'suggestions') loadSuggestions();
+}
+
+function updateCounts() {
+    if (allServices) counts.services.textContent = `(${allServices.length})`;
+    if (allUsers) counts.users.textContent = `(${allUsers.length})`;
+    if (categoriesList) counts.categories.textContent = `(${categoriesList.length})`;
+    if (categoryGroups) counts.groups.textContent = `(${Object.keys(categoryGroups).length})`;
+    // suggestions updated in loadSuggestions
 }
 
 // -- Data Loading --
@@ -156,6 +232,7 @@ async function loadCategoryGroups() {
         categoryGroups = data.groups;
       }
     }
+    updateCounts();
   } catch (e) {
     console.warn('Failed to load category groups', e);
   }
@@ -184,17 +261,92 @@ async function loadCategoriesList() {
       categoriesList = Array.from(set).sort();
     }
   }
+  updateCounts();
 }
 
 async function loadServicesOnce() {
   try {
       const snap = await db.collection('services').get();
       allServices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateCounts();
   } catch (e) {
       console.error("Failed to load services:", e);
       alert("Error loading services. Check console.");
   }
 }
+
+// -- User Management --
+
+async function loadUsers() {
+    usersTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-scandi-muted">Loading users...</td></tr>';
+    try {
+        // Note: Listing all users might be heavy if many users. Simple implementation for now.
+        const snap = await db.collection('users').orderBy('displayName').get();
+        allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        renderUserTable();
+        updateCounts();
+    } catch (e) {
+        console.error("Failed to load users:", e);
+        usersTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-600">Error loading users.</td></tr>';
+    }
+}
+
+function renderUserTable() {
+    const q = (userSearchEl.value || '').toLowerCase();
+    
+    const filtered = allUsers.filter(u => {
+        if (!q) return true;
+        const searchStr = `${u.displayName || ''} ${u.email || ''} ${u.uid}`.toLowerCase();
+        return searchStr.includes(q);
+    });
+    
+    usersTableBody.innerHTML = '';
+    filtered.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
+        tr.innerHTML = `
+            <td class="py-4 px-6 font-medium text-scandi-text flex items-center gap-3">
+                ${u.photoURL ? `<img src="${u.photoURL}" class="w-8 h-8 rounded-full bg-gray-200" />` : '<div class="w-8 h-8 rounded-full bg-scandi-line flex items-center justify-center text-xs">?</div>'}
+                ${u.displayName || 'Unknown'}
+            </td>
+            <td class="py-4 px-6 text-scandi-muted font-mono text-xs">${u.email || '-'}</td>
+            <td class="py-4 px-6 text-scandi-muted font-mono text-xs opacity-50">${u.uid}</td>
+            <td class="py-4 px-6 text-right">
+                <button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest border border-red-200 px-3 py-1 rounded hover:bg-red-50" onclick="handleDeleteUser('${u.uid}')">Delete</button>
+            </td>
+        `;
+        usersTableBody.appendChild(tr);
+    });
+}
+
+window.handleDeleteUser = async (uid) => {
+    if (!confirm('Are you sure you want to delete this user? This will also remove all their recommendations.')) return;
+    
+    try {
+        // Show loading state on row?
+        const idToken = await currentUser.getIdToken();
+        
+        const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/deleteUser', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ uid })
+        });
+        
+        if (!response.ok) throw new Error('Delete failed');
+        
+        alert('User deleted successfully.');
+        loadUsers(); // Reload list
+        loadServicesOnce(); // Refresh services as counts changed
+        
+    } catch (e) {
+        console.error("Delete user error:", e);
+        alert("Failed to delete user: " + e.message);
+    }
+};
+
 
 // -- UI Helpers --
 
@@ -210,54 +362,6 @@ function populateCategorySelects() {
   categoryEl.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
-// -- View Toggles --
-
-function showServices() {
-  servicesPanel.classList.remove('hidden');
-  categoriesPanel.classList.add('hidden');
-  suggestionsPanel.classList.add('hidden');
-  
-  toggleServicesBtn.classList.remove('border', 'border-scandi-line', 'text-scandi-muted', 'bg-scandi-bg');
-  toggleServicesBtn.classList.add('bg-scandi-text', 'text-white');
-  
-  toggleCategoriesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
-  toggleCategoriesBtn.classList.remove('bg-scandi-text', 'text-white');
-
-  toggleSuggestionsBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
-  toggleSuggestionsBtn.classList.remove('bg-scandi-text', 'text-white');
-}
-
-function showCategories() {
-  servicesPanel.classList.add('hidden');
-  categoriesPanel.classList.remove('hidden');
-  suggestionsPanel.classList.add('hidden');
-  
-  toggleCategoriesBtn.classList.remove('border', 'border-scandi-line', 'text-scandi-muted', 'bg-scandi-bg');
-  toggleCategoriesBtn.classList.add('bg-scandi-text', 'text-white');
-  
-  toggleServicesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
-  toggleServicesBtn.classList.remove('bg-scandi-text', 'text-white');
-
-  toggleSuggestionsBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
-  toggleSuggestionsBtn.classList.remove('bg-scandi-text', 'text-white');
-}
-
-function showSuggestions() {
-    servicesPanel.classList.add('hidden');
-    categoriesPanel.classList.add('hidden');
-    suggestionsPanel.classList.remove('hidden');
-
-    toggleSuggestionsBtn.classList.remove('border', 'border-scandi-line', 'text-scandi-muted', 'bg-scandi-bg');
-    toggleSuggestionsBtn.classList.add('bg-scandi-text', 'text-white');
-
-    toggleServicesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
-    toggleServicesBtn.classList.remove('bg-scandi-text', 'text-white');
-
-    toggleCategoriesBtn.classList.add('border', 'border-scandi-line', 'text-scandi-muted');
-    toggleCategoriesBtn.classList.remove('bg-scandi-text', 'text-white');
-
-    loadSuggestions();
-}
 
 // -- Suggestions Logic --
 
@@ -269,6 +373,8 @@ async function loadSuggestions() {
             .where('status', '==', 'pending')
             .orderBy('suggestedAt', 'desc')
             .get();
+        
+        counts.suggestions.textContent = `(${snap.size})`;
         
         if (snap.empty) {
             suggestionsTableBody.innerHTML = '';
@@ -433,41 +539,75 @@ function renderTable() {
       </td>
       <td class="py-4 px-6 text-scandi-muted">${s.category || '-'}</td>
       <td class="py-4 px-6 text-scandi-muted">${s.recommendations ?? 0}</td>
-      <td class="py-4 px-6 text-right">
-        <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" data-id="${s.id}" data-action="edit">Edit</button>
+      <td class="py-4 px-6 text-right space-x-2">
+        <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editService('${s.id}')">Edit</button>
+        <button class="text-xs font-mono uppercase tracking-widest text-red-400 hover:text-red-600 border-b border-transparent hover:border-red-600 transition-all ml-2" onclick="deleteService('${s.id}')">Delete</button>
       </td>
     `;
     tableBody.appendChild(tr);
   });
 }
 
-function renderGroupList(selected = null) {
-  if (!groupListEl) return;
-  groupListEl.innerHTML = '';
-  const groups = categoryGroups ? Object.keys(categoryGroups).sort() : [];
-  groups.forEach(name => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-3 py-2 rounded-sm border text-xs font-medium transition-colors ' + 
-        (selected === name ? 'bg-scandi-text text-white border-scandi-text' : 'border-scandi-line text-scandi-muted hover:text-scandi-text hover:border-scandi-text');
-    btn.textContent = name;
-    btn.addEventListener('click', () => selectGroup(name));
-    groupListEl.appendChild(btn);
-  });
+function renderGroupTable() {
+    if (!groupTableBody) return;
+    
+    const q = (groupSearchEl.value || '').toLowerCase();
+    
+    groupTableBody.innerHTML = '';
+    const groups = categoryGroups ? Object.keys(categoryGroups).sort() : [];
+    
+    const filteredGroups = groups.filter(name => name.toLowerCase().includes(q));
+    
+    filteredGroups.forEach(name => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
+        const cats = categoryGroups[name] || [];
+        
+        tr.innerHTML = `
+            <td class="py-4 px-6 font-medium text-scandi-text">${name}</td>
+            <td class="py-4 px-6 text-scandi-muted text-xs">${cats.length} categories</td>
+            <td class="py-4 px-6 text-right space-x-2">
+                <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editGroup('${name}')">Edit</button>
+                <button class="text-xs font-mono uppercase tracking-widest text-red-400 hover:text-red-600 border-b border-transparent hover:border-red-600 transition-all ml-2" onclick="deleteGroup('${name}')">Delete</button>
+            </td>
+        `;
+        groupTableBody.appendChild(tr);
+    });
 }
 
-function renderCategoryList(selected = null) {
-  if (!categoryListEl) return;
-  categoryListEl.innerHTML = '';
-  getAllCategories().forEach(name => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-3 py-2 rounded-sm border text-xs font-medium transition-colors ' + 
-        (selected === name ? 'bg-scandi-text text-white border-scandi-text' : 'border-scandi-line text-scandi-muted hover:text-scandi-text hover:border-scandi-text');
-    btn.textContent = name;
-    btn.addEventListener('click', () => selectCategory(name));
-    categoryListEl.appendChild(btn);
-  });
+function renderCategoryTable() {
+    if (!categoryTableBody) return;
+    
+    const q = (categorySearchEl.value || '').toLowerCase();
+    
+    categoryTableBody.innerHTML = '';
+    const cats = getAllCategories();
+    
+    const filteredCats = cats.filter(name => name.toLowerCase().includes(q));
+    
+    filteredCats.forEach(name => {
+        let groupName = '-';
+        if (categoryGroups) {
+            for (const [g, arr] of Object.entries(categoryGroups)) {
+                if (arr.includes(name)) {
+                    groupName = g;
+                    break;
+                }
+            }
+        }
+        
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
+        tr.innerHTML = `
+            <td class="py-4 px-6 font-medium text-scandi-text">${name}</td>
+            <td class="py-4 px-6 text-scandi-muted">${groupName}</td>
+            <td class="py-4 px-6 text-right space-x-2">
+                <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editCategory('${name}')">Edit</button>
+                <button class="text-xs font-mono uppercase tracking-widest text-red-400 hover:text-red-600 border-b border-transparent hover:border-red-600 transition-all ml-2" onclick="deleteCategory('${name}')">Delete</button>
+            </td>
+        `;
+        categoryTableBody.appendChild(tr);
+    });
 }
 
 function buildChooserCategories(selectedSet) {
@@ -496,16 +636,34 @@ function buildChooserCategories(selectedSet) {
 
 // -- Selection Helpers --
 
-function selectGroup(name) {
+window.editGroup = (name) => {
   if (!categoryGroups) return;
   editGroupOriginalNameEl.value = name;
   editGroupNameEl.value = name;
   const selectedSet = new Set(categoryGroups[name] || []);
   buildChooserCategories(selectedSet);
-  renderGroupList(name); // Highlight
+  
+  groupModalTitle.textContent = 'Edit Group';
+  openModal(groupModal);
+};
+
+window.deleteGroup = async (name) => {
+    if (!categoryGroups) return;
+    const items = categoryGroups[name] || [];
+    if (items.length) {
+        alert('Cannot delete a group that has categories. Remove all associations first.');
+        return;
+    }
+    if (!confirm(`Delete group "${name}"?`)) return;
+    
+    delete categoryGroups[name];
+    await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
+    
+    renderGroupTable();
+    updateCounts();
 }
 
-function selectCategory(name) {
+window.editCategory = (name) => {
   editCategoryOriginalNameEl.value = name;
   editCategoryNameEl.value = name;
   // Populate group dropdown
@@ -521,11 +679,38 @@ function selectCategory(name) {
       }
     }
   }
-  renderCategoryList(name); // Highlight
+  
+  categoryModalTitle.textContent = 'Edit Category';
+  openModal(categoryModal);
+}
+
+window.deleteCategory = async (name) => {
+    const snap = await db.collection('services').where('category', '==', name).limit(1).get();
+    if (!snap.empty) {
+        alert('Cannot delete: there are services associated with this category.');
+        return;
+    }
+    
+    if (!confirm(`Delete category "${name}"?`)) return;
+    
+    categoriesList = categoriesList.filter(c => c !== name);
+    await db.collection('config').doc('categories').set({ list: categoriesList });
+    
+    if (categoryGroups) {
+        for (const [g, arr] of Object.entries(categoryGroups)) {
+            const idx = arr.indexOf(name);
+            if (idx !== -1) arr.splice(idx, 1);
+        }
+        await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
+    }
+    
+    renderCategoryTable();
+    renderGroupTable();
+    updateCounts();
 }
 
 function fillFormFromDoc(doc) {
-  formTitle.textContent = 'Edit Listing';
+  serviceModalTitle.textContent = 'Edit Listing';
   docIdEl.value = doc.id;
   businessNameEl.value = doc.businessName || '';
   firstNameEl.value = doc.firstName || '';
@@ -545,19 +730,16 @@ function fillFormFromDoc(doc) {
   }
   
   recommendationsEl.value = Number(doc.recommendations || 0);
-  deleteBtn.classList.remove('hidden');
   
-  // Scroll form into view if needed
-  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  openModal(serviceModal);
 }
 
 function resetFormToNew() {
-  formTitle.textContent = 'Add New Listing';
+  serviceModalTitle.textContent = 'Add New Listing';
   docIdEl.value = '';
   form.reset();
   sunnyApprovedEl.checked = false;
   recommendationsEl.value = 0;
-  deleteBtn.classList.add('hidden');
 }
 
 function parseDateToTimestamp(s) {
@@ -567,29 +749,99 @@ function parseDateToTimestamp(s) {
   return d;
 }
 
+// -- Modal Logic --
+function openModal(modal) {
+    modal.classList.remove('hidden');
+    // slight delay for transition
+    requestAnimationFrame(() => {
+        modal.classList.add('open');
+    });
+}
+
+function closeModal(modal) {
+    modal.classList.remove('open');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 200);
+}
+
+
 // -- Event Listeners --
 
 function setupEventListeners() {
-    // Toggles
-    toggleServicesBtn.addEventListener('click', showServices);
-    toggleCategoriesBtn.addEventListener('click', showCategories);
-    toggleSuggestionsBtn.addEventListener('click', showSuggestions);
+    // User Search
+    userSearchEl.addEventListener('input', renderUserTable);
 
     // Filter/Search
     searchEl.addEventListener('input', renderTable);
     filterEl.addEventListener('change', renderTable);
-
-    // Form Actions
-    cancelBtn.addEventListener('click', resetFormToNew);
     
-    tableBody.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.dataset.action === 'edit') {
-            const id = target.dataset.id;
-            const doc = allServices.find(s => s.id === id);
-            if (doc) fillFormFromDoc(doc);
-        }
+    // Category Search
+    categorySearchEl.addEventListener('input', renderCategoryTable);
+    
+    // Group Search
+    groupSearchEl.addEventListener('input', renderGroupTable);
+    
+    // Service Modal
+    addServiceBtn.addEventListener('click', () => {
+        resetFormToNew();
+        openModal(serviceModal);
     });
+    closeServiceModal.addEventListener('click', () => closeModal(serviceModal));
+    cancelBtn.addEventListener('click', () => closeModal(serviceModal));
+    
+    // Category Modal
+    addCategoryBtn.addEventListener('click', () => {
+        editCategoryOriginalNameEl.value = '';
+        editCategoryNameEl.value = '';
+        editCategoryGroupEl.innerHTML = '<option value="">(Ungrouped)</option>' +
+            (categoryGroups ? Object.keys(categoryGroups).sort().map(g => `<option value="${g}">${g}</option>`).join('') : '');
+        categoryModalTitle.textContent = 'Add Category';
+        openModal(categoryModal);
+    });
+    closeCategoryModal.addEventListener('click', () => closeModal(categoryModal));
+    cancelCategoryBtn.addEventListener('click', () => closeModal(categoryModal));
+    
+    // Group Modal
+    addGroupBtn.addEventListener('click', () => {
+        editGroupOriginalNameEl.value = '';
+        editGroupNameEl.value = '';
+        buildChooserCategories(new Set());
+        groupModalTitle.textContent = 'Add Group';
+        openModal(groupModal);
+    });
+    closeGroupModal.addEventListener('click', () => closeModal(groupModal));
+    cancelGroupBtn.addEventListener('click', () => closeModal(groupModal));
+    
+    // Inline Edit/Delete Service
+    window.editService = (id) => {
+        const doc = allServices.find(s => s.id === id);
+        if (doc) fillFormFromDoc(doc);
+    };
+    
+    window.deleteService = async (id) => {
+        if (!confirm('Delete this listing?')) return;
+        
+        try {
+            const idToken = await currentUser.getIdToken();
+            const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/deleteService', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ serviceId: id })
+            });
+
+            if (!response.ok) throw new Error('Delete failed');
+
+            await loadServicesOnce();
+            renderTable();
+        } catch (e) {
+            console.error('Delete failed', e);
+            alert('Delete failed: ' + e.message);
+        }
+    };
 
     // Listing Form Submit
     form.addEventListener('submit', async (e) => {
@@ -614,57 +866,25 @@ function setupEventListeners() {
                 await db.collection('services').doc(existingId).set(payload, { merge: true });
             } else {
                 await db.collection('services').add(payload);
-                resetFormToNew(); // Clear form after add
             }
+            closeModal(serviceModal);
             await loadServicesOnce();
             renderTable();
-            alert('Saved successfully');
+            // alert('Saved successfully');
         } catch (e) {
             console.error('Save failed', e);
             alert('Save failed: ' + e.message);
         }
     });
-
-    // Listing Delete
-    deleteBtn.addEventListener('click', async () => {
-        const id = docIdEl.value;
-        if (!id) return;
-        if (!confirm('Delete this listing?')) return;
-        try {
-            await db.collection('services').doc(id).delete();
-            resetFormToNew();
-            await loadServicesOnce();
-            renderTable();
-        } catch (e) {
-            console.error('Delete failed', e);
-            alert('Delete failed: ' + e.message);
-        }
-    });
     
-    // Group Add
-    addGroupForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = (newGroupNameEl.value || '').trim();
-        if (!name) return;
-        categoryGroups = categoryGroups || {};
-        if (categoryGroups[name]) {
-            alert('Group already exists');
-            return;
-        }
-        categoryGroups[name] = [];
-        await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups }, { merge: true });
-        renderGroupList(name);
-        selectGroup(name);
-        newGroupNameEl.value = '';
-    });
-    
-    // Group Edit
+    // Group Edit/Add Form
     editGroupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!categoryGroups) return;
+        if (!categoryGroups) categoryGroups = {};
+        
         const orig = editGroupOriginalNameEl.value;
         const newName = (editGroupNameEl.value || '').trim();
-        if (!orig) return;
+        
         if (!newName) {
             alert('Name required');
             return;
@@ -672,14 +892,23 @@ function setupEventListeners() {
         
         const selected = Array.from(groupCategoriesChooserEl.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
         
-        if (orig !== newName) {
+        if (orig && orig !== newName) {
+            // Rename
             if (categoryGroups[newName]) {
                 alert('A group with that name already exists');
                 return;
             }
             categoryGroups[newName] = selected;
             delete categoryGroups[orig];
+        } else if (!orig) {
+            // New
+             if (categoryGroups[newName]) {
+                alert('Group already exists');
+                return;
+            }
+            categoryGroups[newName] = selected;
         } else {
+            // Update existing same name
             categoryGroups[orig] = selected;
         }
         
@@ -691,69 +920,27 @@ function setupEventListeners() {
         categoriesList = Array.from(set).sort();
         await db.collection('config').doc('categories').set({ list: categoriesList });
         
-        renderGroupList(newName);
-        selectGroup(newName);
-        renderCategoryList();
+        closeModal(groupModal);
+        renderGroupTable();
+        renderCategoryTable();
+        updateCounts();
     });
     
-    // Group Delete
-    deleteGroupBtn.addEventListener('click', async () => {
-        if (!categoryGroups) return;
-        const name = editGroupOriginalNameEl.value;
-        if (!name) return;
-        const items = categoryGroups[name] || [];
-        if (items.length) {
-            alert('Cannot delete a group that has categories. Remove all associations first.');
-            return;
-        }
-        if (!confirm(`Delete group "${name}"?`)) return;
-        delete categoryGroups[name];
-        await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
-        editGroupOriginalNameEl.value = '';
-        editGroupNameEl.value = '';
-        groupCategoriesChooserEl.innerHTML = '';
-        renderGroupList();
-    });
-    
-    clearGroupSelectionBtn.addEventListener('click', () => {
-        editGroupOriginalNameEl.value = '';
-        editGroupNameEl.value = '';
-        groupCategoriesChooserEl.innerHTML = '';
-    });
-    
-    // Category Add
-    addCategoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = (newCategoryNameEl.value || '').trim();
-        if (!name) return;
-        if (categoriesList.includes(name)) {
-            alert('Category already exists');
-            return;
-        }
-        categoriesList.push(name);
-        categoriesList.sort();
-        await db.collection('config').doc('categories').set({ list: categoriesList });
-        newCategoryNameEl.value = '';
-        renderCategoryList(name);
-        selectCategory(name);
-        populateCategorySelects();
-    });
-    
-    // Category Edit
+    // Category Edit/Add Form
     editCategoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const orig = editCategoryOriginalNameEl.value;
         const newName = (editCategoryNameEl.value || '').trim();
         const group = editCategoryGroupEl.value || '';
         
-        if (!orig) return;
         if (!newName) {
             alert('Name required');
             return;
         }
         
-        if (newName !== orig) {
-            if (categoriesList.includes(newName)) {
+        // Add or Rename Logic
+        if (orig && newName !== orig) {
+             if (categoriesList.includes(newName)) {
                 alert('A category with that name already exists');
                 return;
             }
@@ -773,7 +960,7 @@ function setupEventListeners() {
             });
             await pending.commit();
             
-            // Update Groups
+            // Update Groups for Rename
             if (categoryGroups) {
                 for (const [g, arr] of Object.entries(categoryGroups)) {
                     const idx = arr.indexOf(orig);
@@ -781,75 +968,47 @@ function setupEventListeners() {
                         arr.splice(idx, 1, newName);
                     }
                 }
-                await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
             }
-            
             categoriesList = categoriesList.filter(c => c !== orig);
             categoriesList.push(newName);
-            categoriesList.sort();
+        } else if (!orig) {
+            // New
+            if (categoriesList.includes(newName)) {
+                alert('Category already exists');
+                return;
+            }
+            categoriesList.push(newName);
         }
         
-        // Update Group Association
+        categoriesList.sort();
+        
+        // Update Group Association (for both New and Edit)
         if (categoryGroups) {
-            // Remove from all
+            // Remove from all first
             for (const arr of Object.values(categoryGroups)) {
                 const idx = arr.indexOf(newName);
                 if (idx !== -1) arr.splice(idx, 1);
             }
-            // Add to new
+            // Add to new selected group
             if (group) {
                 categoryGroups[group] = categoryGroups[group] || [];
                 if (!categoryGroups[group].includes(newName)) categoryGroups[group].push(newName);
                 categoryGroups[group].sort();
-                await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
-            } else {
-                await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
-            }
-        }
-        
-        await db.collection('config').doc('categories').set({ list: categoriesList });
-        renderCategoryList(newName);
-        selectCategory(newName);
-        populateCategorySelects();
-        // Reload services to reflect name changes if any
-        if (newName !== orig) {
-            await loadServicesOnce();
-            renderTable();
-        }
-    });
-    
-    // Category Delete
-    deleteCategoryBtn.addEventListener('click', async () => {
-        const name = editCategoryOriginalNameEl.value;
-        if (!name) return;
-        
-        const snap = await db.collection('services').where('category', '==', name).limit(1).get();
-        if (!snap.empty) {
-            alert('Cannot delete: there are services associated with this category.');
-            return;
-        }
-        
-        if (!confirm(`Delete category "${name}"?`)) return;
-        
-        categoriesList = categoriesList.filter(c => c !== name);
-        await db.collection('config').doc('categories').set({ list: categoriesList });
-        
-        if (categoryGroups) {
-            for (const [g, arr] of Object.entries(categoryGroups)) {
-                const idx = arr.indexOf(name);
-                if (idx !== -1) arr.splice(idx, 1);
             }
             await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
         }
         
-        editCategoryOriginalNameEl.value = '';
-        editCategoryNameEl.value = '';
-        renderCategoryList();
+        await db.collection('config').doc('categories').set({ list: categoriesList });
+        
+        closeModal(categoryModal);
+        renderCategoryTable();
+        renderGroupTable();
         populateCategorySelects();
-    });
-    
-    clearCategorySelectionBtn.addEventListener('click', () => {
-        editCategoryOriginalNameEl.value = '';
-        editCategoryNameEl.value = '';
+        
+        if (orig && newName !== orig) {
+            await loadServicesOnce();
+            renderTable();
+        }
+        updateCounts();
     });
 }

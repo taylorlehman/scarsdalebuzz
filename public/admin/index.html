@@ -70,6 +70,45 @@
           opacity: 0;
           pointer-events: none;
       }
+      
+      /* Sidebar Active State */
+      .nav-item.active {
+          background-color: #FFFCF5;
+          border-left-color: #C29B8B;
+          color: #282624;
+          font-weight: 500;
+      }
+      .nav-item {
+          border-left: 3px solid transparent;
+      }
+
+      /* Modal */
+      .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(40, 38, 36, 0.5);
+          backdrop-filter: blur(2px);
+          z-index: 60;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.2s;
+      }
+      .modal-backdrop.open {
+          opacity: 1;
+          pointer-events: auto;
+      }
+      .modal-content {
+          transform: translateY(20px);
+          transition: transform 0.2s;
+          max-height: 90vh;
+          overflow-y: auto;
+      }
+      .modal-backdrop.open .modal-content {
+          transform: translateY(0);
+      }
   </style>
   
   <!-- Firebase compat SDKs -->
@@ -90,164 +129,17 @@
       </div>
   </div>
 
-  <!-- Header Container -->
-  <div id="header-container"></div>
-
-  <div class="max-w-7xl mx-auto px-6 pt-24 relative z-10">
-    <!-- Header -->
-    <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line mb-8">
-      <div class="flex flex-col md:flex-row md:items-center gap-6">
-        <div class="w-16 h-16 rounded-full bg-scandi-bg border border-scandi-line flex items-center justify-center shrink-0">
-           <img src="../images/logos/bee_favicon.png" alt="Logo" class="w-8 h-8 opacity-80" />
-        </div>
-
-        <div class="flex-1">
-          <h1 class="font-serif text-3xl text-scandi-text mb-1">Admin Dashboard</h1>
-          <p class="text-scandi-muted text-sm font-light">Manage services, categories, and groups.</p>
-        </div>
-
-        <div class="flex items-center gap-3">
-            <button id="toggleServices" class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest transition-colors bg-scandi-text text-white">Services</button>
-            <button id="toggleCategories" class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest transition-colors border border-scandi-line text-scandi-muted hover:text-scandi-text hover:bg-scandi-bg">Categories</button>
-            <button id="toggleSuggestions" class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest transition-colors border border-scandi-line text-scandi-muted hover:text-scandi-text hover:bg-scandi-bg">Suggestions</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- CATEGORIES PANEL -->
-    <div id="categoriesPanel" class="grid grid-cols-1 lg:grid-cols-2 gap-8 hidden">
-      <!-- Groups management -->
-      <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line">
-        <h2 class="font-serif text-xl text-scandi-text mb-6">Category Groups</h2>
-        <div id="groupList" class="flex flex-wrap gap-2 mb-6"></div>
-        <form id="addGroupForm" class="flex gap-2 mb-8">
-          <input id="newGroupName" type="text" class="flex-1 p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="New group name" />
-          <button class="bg-scandi-text text-white px-4 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark">Add</button>
-        </form>
-        
-        <div class="border-t border-scandi-line pt-6">
-          <h3 class="font-mono text-xs uppercase tracking-widest text-scandi-muted mb-4">Edit Selected Group</h3>
-          <form id="editGroupForm" class="space-y-4">
-            <input type="hidden" id="editGroupOriginalName" />
-            <div>
-              <label class="block text-xs font-medium text-scandi-text mb-2">Group Name</label>
-              <input id="editGroupName" type="text" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-scandi-text mb-2">Associated Categories</label>
-              <div id="groupCategoriesChooser" class="grid grid-cols-2 gap-2 max-h-64 overflow-auto border border-scandi-line rounded-sm p-2 bg-scandi-bg/20"></div>
-            </div>
-            <div class="flex items-center gap-3 pt-2">
-              <button class="bg-scandi-clay text-white px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:opacity-90" id="saveGroupBtn" type="submit">Save</button>
-              <button class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest border border-scandi-line text-scandi-muted hover:text-scandi-text" id="clearGroupSelectionBtn" type="button">Clear</button>
-              <button class="ml-auto text-red-600 text-xs font-mono uppercase tracking-widest hover:text-red-700" id="deleteGroupBtn" type="button">Delete</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- Categories management -->
-      <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line">
-        <h2 class="font-serif text-xl text-scandi-text mb-6">Categories</h2>
-        <div id="categoryList" class="flex flex-wrap gap-2 mb-6 max-h-48 overflow-y-auto"></div>
-        <form id="addCategoryForm" class="flex gap-2 mb-8">
-            <input id="newCategoryName" type="text" class="flex-1 p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="New Category Name" />
-            <button class="bg-scandi-text text-white px-4 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark">Add</button>
-        </form>
-
-        <div class="border-t border-scandi-line pt-6">
-          <h3 class="font-mono text-xs uppercase tracking-widest text-scandi-muted mb-4">Edit Selected Category</h3>
-          <form id="editCategoryForm" class="space-y-4">
-            <input type="hidden" id="editCategoryOriginalName" />
-            <div>
-              <label class="block text-xs font-medium text-scandi-text mb-2">Category Name</label>
-              <input id="editCategoryName" type="text" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-scandi-text mb-2">Group Association</label>
-              <select id="editCategoryGroup" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
-                <option value="">(Ungrouped)</option>
-              </select>
-            </div>
-            <div class="flex items-center gap-3 pt-2">
-              <button class="bg-scandi-clay text-white px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:opacity-90" id="saveCategoryBtn" type="submit">Save</button>
-              <button class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest border border-scandi-line text-scandi-muted hover:text-scandi-text" id="clearCategorySelectionBtn" type="button">Clear</button>
-              <button class="ml-auto text-red-600 text-xs font-mono uppercase tracking-widest hover:text-red-700" id="deleteCategoryBtn" type="button">Delete</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUGGESTIONS PANEL -->
-    <div id="suggestionsPanel" class="hidden">
-        <div class="bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden">
-            <div class="p-6 border-b border-scandi-line bg-scandi-bg/20">
-                <h2 class="font-serif text-xl text-scandi-text">Pending Suggestions</h2>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-scandi-bg border-b border-scandi-line">
-                        <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
-                            <th class="py-4 px-6 font-medium">Business / Name</th>
-                            <th class="py-4 px-6 font-medium">Category</th>
-                            <th class="py-4 px-6 font-medium">Contact</th>
-                            <th class="py-4 px-6 font-medium">Suggested By</th>
-                            <th class="py-4 px-6 font-medium text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="suggestionsTableBody" class="divide-y divide-scandi-line/50">
-                        <!-- Injected via JS -->
-                    </tbody>
-                </table>
-                <div id="noSuggestionsMsg" class="hidden text-center py-12 text-scandi-muted italic">No pending suggestions.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SERVICES PANEL -->
-    <div id="servicesPanel">
-        <!-- Services Controls -->
-        <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line mb-6">
-            <div class="flex flex-col md:flex-row gap-4 items-end">
-                <div class="flex-1 w-full">
-                    <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Search</label>
-                    <div class="relative">
-                         <input id="adminSearch" type="text" class="w-full p-3 pl-10 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="Name, business, phone, email..." />
-                         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-scandi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </div>
-                </div>
-                <div class="w-full md:w-64">
-                    <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Filter</label>
-                    <select id="adminCategoryFilter" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
-                        <option value="">All Categories</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Services list -->
-            <div class="lg:col-span-2 bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden">
-                <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-scandi-bg border-b border-scandi-line">
-                    <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
-                        <th class="py-4 px-6 font-medium">Name / Business</th>
-                        <th class="py-4 px-6 font-medium">Category</th>
-                        <th class="py-4 px-6 font-medium">Recs</th>
-                        <th class="py-4 px-6 font-medium text-right">Action</th>
-                    </tr>
-                    </thead>
-                    <tbody id="adminTableBody" class="divide-y divide-scandi-line/50"></tbody>
-                </table>
-                </div>
-            </div>
-
-            <!-- Editor form -->
-            <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line h-fit sticky top-24">
-                <h2 id="formTitle" class="font-serif text-xl text-scandi-text mb-6">Add New Listing</h2>
-                <form id="listingForm" class="space-y-4">
+  <!-- SERVICE MODAL -->
+  <div id="serviceModal" class="modal-backdrop">
+      <div class="bg-white rounded-sm shadow-card border border-scandi-line w-full max-w-2xl mx-4 modal-content">
+          <div class="p-6 border-b border-scandi-line bg-scandi-bg/20 flex justify-between items-center">
+              <h2 id="serviceModalTitle" class="font-serif text-xl text-scandi-text">Add New Listing</h2>
+              <button id="closeServiceModal" class="text-scandi-muted hover:text-scandi-text transition-colors">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+          </div>
+          <div class="p-8">
+            <form id="listingForm" class="space-y-4">
                 <input type="hidden" id="docId" />
                 <div>
                     <label class="block text-xs font-medium text-scandi-text mb-2">Business Name</label>
@@ -292,11 +184,262 @@
                 <div class="flex items-center gap-3 pt-4 border-t border-scandi-line mt-4">
                     <button type="submit" class="bg-scandi-text text-white px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark shadow-soft">Save</button>
                     <button id="cancelBtn" type="button" class="px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest border border-scandi-line text-scandi-muted hover:text-scandi-text">Cancel</button>
-                    <button id="deleteBtn" type="button" class="ml-auto text-red-600 text-xs font-mono uppercase tracking-widest hover:text-red-700 hidden">Delete</button>
                 </div>
-                </form>
+            </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- CATEGORY MODAL -->
+  <div id="categoryModal" class="modal-backdrop">
+      <div class="bg-white rounded-sm shadow-card border border-scandi-line w-full max-w-lg mx-4 modal-content">
+          <div class="p-6 border-b border-scandi-line bg-scandi-bg/20 flex justify-between items-center">
+              <h2 id="categoryModalTitle" class="font-serif text-xl text-scandi-text">Add Category</h2>
+              <button id="closeCategoryModal" class="text-scandi-muted hover:text-scandi-text transition-colors">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+          </div>
+          <div class="p-8">
+            <form id="editCategoryForm" class="space-y-4">
+                <input type="hidden" id="editCategoryOriginalName" />
+                <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2">Category Name</label>
+                <input id="editCategoryName" type="text" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" />
+                </div>
+                <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2">Group Association</label>
+                <select id="editCategoryGroup" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
+                    <option value="">(Ungrouped)</option>
+                </select>
+                </div>
+                <div class="flex items-center gap-3 pt-4 border-t border-scandi-line mt-4">
+                <button class="bg-scandi-clay text-white px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:opacity-90" type="submit">Save</button>
+                <button class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest border border-scandi-line text-scandi-muted hover:text-scandi-text" id="cancelCategoryBtn" type="button">Cancel</button>
+                </div>
+            </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- GROUP MODAL -->
+  <div id="groupModal" class="modal-backdrop">
+      <div class="bg-white rounded-sm shadow-card border border-scandi-line w-full max-w-lg mx-4 modal-content">
+          <div class="p-6 border-b border-scandi-line bg-scandi-bg/20 flex justify-between items-center">
+              <h2 id="groupModalTitle" class="font-serif text-xl text-scandi-text">Add Group</h2>
+              <button id="closeGroupModal" class="text-scandi-muted hover:text-scandi-text transition-colors">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+          </div>
+          <div class="p-8">
+            <form id="editGroupForm" class="space-y-4">
+                <input type="hidden" id="editGroupOriginalName" />
+                <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2">Group Name</label>
+                <input id="editGroupName" type="text" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" />
+                </div>
+                <div>
+                <label class="block text-xs font-medium text-scandi-text mb-2">Associated Categories</label>
+                <div id="groupCategoriesChooser" class="grid grid-cols-2 gap-2 max-h-64 overflow-auto border border-scandi-line rounded-sm p-2 bg-scandi-bg/20"></div>
+                </div>
+                <div class="flex items-center gap-3 pt-4 border-t border-scandi-line mt-4">
+                <button class="bg-scandi-clay text-white px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:opacity-90" type="submit">Save</button>
+                <button class="px-6 py-2 rounded-sm text-xs font-mono uppercase tracking-widest border border-scandi-line text-scandi-muted hover:text-scandi-text" id="cancelGroupBtn" type="button">Cancel</button>
+                </div>
+            </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- Header Container -->
+  <div id="header-container"></div>
+
+  <div class="max-w-7xl mx-auto px-6 pt-24 relative z-10">
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-full lg:w-64 shrink-0 bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden sticky top-24">
+            <div class="p-6 border-b border-scandi-line bg-scandi-bg/20">
+                <h1 class="font-serif text-lg text-scandi-text">Admin</h1>
+                <p class="text-xs text-scandi-muted">Management Console</p>
             </div>
-        </div>
+            
+            <nav class="flex flex-col py-6 space-y-1">
+                <!-- User Management -->
+                <div class="px-6 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest">User Management</div>
+                <button id="navUsers" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Users</button>
+
+                <!-- Service Management -->
+                <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Service Management</div>
+                <button id="navServices" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors active rounded-r-md">Services</button>
+                <button id="navSuggestions" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Suggestions</button>
+
+                <!-- Category Management -->
+                <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Category Management</div>
+                <button id="navCategories" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Categories</button>
+                <button id="navGroups" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Category Groups</button>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 w-full min-w-0">
+            
+            <!-- VIEW: USERS -->
+            <div id="usersView" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-serif text-xl text-scandi-text">Users <span id="usersCount" class="text-sm text-scandi-muted font-normal ml-2"></span></h2>
+                    </div>
+                    <p class="text-scandi-muted text-sm mb-6">Manage registered users. Deleting a user will remove them and all their recommendations.</p>
+                    
+                    <div class="relative mb-6">
+                         <input id="userSearch" type="text" class="w-full p-3 pl-10 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="Search by name or email..." />
+                         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-scandi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-scandi-bg border-b border-scandi-line">
+                                <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                                    <th class="py-4 px-6 font-medium">User</th>
+                                    <th class="py-4 px-6 font-medium">Email</th>
+                                    <th class="py-4 px-6 font-medium">UID</th>
+                                    <th class="py-4 px-6 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="divide-y divide-scandi-line/50">
+                                <!-- Users injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SERVICES -->
+            <div id="servicesView" class="space-y-6">
+                <!-- Services Controls -->
+                <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-serif text-xl text-scandi-text">Services <span id="servicesCount" class="text-sm text-scandi-muted font-normal ml-2"></span></h2>
+                        <button id="addServiceBtn" class="bg-scandi-text text-white px-4 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark">Add New</button>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Search Services</label>
+                            <div class="relative">
+                                 <input id="adminSearch" type="text" class="w-full p-3 pl-10 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="Name, business, phone, email..." />
+                                 <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-scandi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-64">
+                            <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Filter Category</label>
+                            <select id="adminCategoryFilter" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services list -->
+                <div class="bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden">
+                    <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-scandi-bg border-b border-scandi-line">
+                        <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                            <th class="py-4 px-6 font-medium">Name / Business</th>
+                            <th class="py-4 px-6 font-medium">Category</th>
+                            <th class="py-4 px-6 font-medium">Recs</th>
+                            <th class="py-4 px-6 font-medium text-right">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-scandi-line/50"></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SUGGESTIONS -->
+            <div id="suggestionsView" class="hidden">
+                <div class="bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden">
+                    <div class="p-6 border-b border-scandi-line bg-scandi-bg/20">
+                        <h2 class="font-serif text-xl text-scandi-text">Pending Suggestions <span id="suggestionsCount" class="text-sm text-scandi-muted font-normal ml-2"></span></h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-scandi-bg border-b border-scandi-line">
+                                <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                                    <th class="py-4 px-6 font-medium">Business / Name</th>
+                                    <th class="py-4 px-6 font-medium">Category</th>
+                                    <th class="py-4 px-6 font-medium">Contact</th>
+                                    <th class="py-4 px-6 font-medium">Suggested By</th>
+                                    <th class="py-4 px-6 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suggestionsTableBody" class="divide-y divide-scandi-line/50">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                        <div id="noSuggestionsMsg" class="hidden text-center py-12 text-scandi-muted italic">No pending suggestions.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: CATEGORIES -->
+            <div id="categoriesView" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-serif text-xl text-scandi-text">Categories <span id="categoriesCount" class="text-sm text-scandi-muted font-normal ml-2"></span></h2>
+                        <button id="addCategoryBtn" class="bg-scandi-text text-white px-4 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark">Add New</button>
+                    </div>
+
+                    <div class="relative mb-6">
+                         <input id="categorySearch" type="text" class="w-full p-3 pl-10 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="Search categories..." />
+                         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-scandi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-scandi-bg border-b border-scandi-line">
+                                <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                                    <th class="py-4 px-6 font-medium">Category Name</th>
+                                    <th class="py-4 px-6 font-medium">Group</th>
+                                    <th class="py-4 px-6 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody" class="divide-y divide-scandi-line/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: GROUPS -->
+            <div id="groupsView" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-serif text-xl text-scandi-text">Category Groups <span id="groupsCount" class="text-sm text-scandi-muted font-normal ml-2"></span></h2>
+                        <button id="addGroupBtn" class="bg-scandi-text text-white px-4 py-2 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark">Add New</button>
+                    </div>
+                    
+                    <div class="relative mb-6">
+                         <input id="groupSearch" type="text" class="w-full p-3 pl-10 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="Search groups..." />
+                         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-scandi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-scandi-bg border-b border-scandi-line">
+                                <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                                    <th class="py-4 px-6 font-medium">Group Name</th>
+                                    <th class="py-4 px-6 font-medium">Categories</th>
+                                    <th class="py-4 px-6 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupTableBody" class="divide-y divide-scandi-line/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
   </div>
 
@@ -306,7 +449,7 @@
     // Initialize Header
     document.addEventListener('DOMContentLoaded', () => {
         new SharedHeader({
-            activePage: 'admin', // Not a standard page, but works for styling defaults
+            activePage: 'admin',
             rootPath: '../'
         });
     });

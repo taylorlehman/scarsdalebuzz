@@ -179,11 +179,11 @@ const initAuthListener = () => {
                     if (doc.exists && doc.data().likedServices) {
                         doc.data().likedServices.forEach(id => userLikedServices.add(id));
                     }
-                    filterAndRender();
+                    filterAndRender({ keepOrder: true });
                 });
         } else {
             userLikedServices.clear();
-            filterAndRender();
+            filterAndRender({ keepOrder: true });
         }
     });
 };
@@ -226,7 +226,7 @@ const startServicesSubscription = () => {
 
                 if (!passwordModal || passwordModal.classList.contains('hidden')) {
                     renderCategoryButtons();
-                    filterAndRender();
+                    filterAndRender({ keepOrder: true });
                 }
                 resolve();
             }, (err) => {
@@ -730,7 +730,7 @@ const showOverflowDialog = (overflowCategories, categoryTotals) => {
 };
 
 // --- EVENT HANDLERS ---
-const filterAndRender = () => {
+const filterAndRender = (options = { keepOrder: false }) => {
     const searchTerm = searchInput.value.trim();
     let filteredServices = [];
 
@@ -752,11 +752,32 @@ const filterAndRender = () => {
         filteredServices = filteredServices.filter(service => service.category === activeCategory);
     }
 
-    // 3. Sort (Recommendations > Date)
-    filteredServices.sort((a, b) => {
-        if (b.recommendations !== a.recommendations) return b.recommendations - a.recommendations;
-        return new Date(b.lastRecommended) - new Date(a.lastRecommended);
-    });
+    // 3. Sort (Recommendations > Date) or Keep Order
+    if (options.keepOrder && serviceList.children.length > 0) {
+        // Preserve DOM order for existing items to prevent jumping
+        const currentOrder = new Map();
+        Array.from(serviceList.children).forEach((el, index) => {
+            if (el.dataset.id) currentOrder.set(el.dataset.id, index);
+        });
+
+        filteredServices.sort((a, b) => {
+            const idxA = currentOrder.has(a.id) ? currentOrder.get(a.id) : -1;
+            const idxB = currentOrder.has(b.id) ? currentOrder.get(b.id) : -1;
+
+            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+            if (idxA !== -1) return -1; // Existing items first
+            if (idxB !== -1) return 1;
+
+            // Default sort for new items
+            if (b.recommendations !== a.recommendations) return b.recommendations - a.recommendations;
+            return new Date(b.lastRecommended) - new Date(a.lastRecommended);
+        });
+    } else {
+        filteredServices.sort((a, b) => {
+            if (b.recommendations !== a.recommendations) return b.recommendations - a.recommendations;
+            return new Date(b.lastRecommended) - new Date(a.lastRecommended);
+        });
+    }
 
     renderServices(filteredServices);
 };
