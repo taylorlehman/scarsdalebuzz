@@ -157,6 +157,37 @@ Analyze the user's latest message and decide the appropriate action.
 - You SHOULD message the provider if the user's input materially changes the job (scope, urgency) or if the user is explicitly asking for a status update that requires a nudge.
 `;
 
+const FIND_CONTACT_INFO_PROMPT = (businessName, category, address) => `You are a research assistant tasked with finding official contact information for a local business in Scarsdale or Westchester County, NY.
+
+Business: "${businessName}"
+Category: "${category}"
+Location: "${address || 'Scarsdale area'}"
+
+GOAL:
+Find the single BEST phone number and single BEST email address for this business using Google Search.
+Verify that the contact info belongs to this specific business.
+
+OUTPUT FORMAT:
+Respond with strictly valid JSON:
+{
+  "phone": { 
+    "value": "string (formatted phone number)", 
+    "confidence": "High" | "Medium" | "Low",
+    "source": "string (URL or description of where found, e.g. 'Official Website footer')"
+  } | null,
+  "email": { 
+    "value": "string (email address)", 
+    "confidence": "High" | "Medium" | "Low",
+    "source": "string (URL or description of where found)"
+  } | null
+}
+
+RULES:
+- Only provide "High" confidence if you found it on the business's own website or a verified Google Business profile.
+- If you find multiple numbers, prefer the local (914) number over 800 numbers if it looks like a direct line.
+- If you cannot find a reliable value, return null for that field.
+`;
+
 module.exports = {
     TITLE_PROMPT,
     SUMMARY_PROMPT,
@@ -164,5 +195,6 @@ module.exports = {
     INCOMING_SMS_PROMPT,
     CONFIRMATION_CHECK_PROMPT,
     USER_RESPONSE_HANDLER_PROMPT,
-    INTAKE_DECISION_PROMPT
+    INTAKE_DECISION_PROMPT,
+    FIND_CONTACT_INFO_PROMPT
 };

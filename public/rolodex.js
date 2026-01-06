@@ -17,6 +17,25 @@ const db = firebase.firestore();
 
 auth.onAuthStateChanged(async (user) => {
     if (user) {
+        // Ensure user profile exists (fixes missing avatar/name issues)
+        const profileUpdate = {
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            email: user.email,
+            lastActive: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // 1. Sync to private user doc
+        db.collection('users').doc(user.uid).set(profileUpdate, { merge: true })
+            .catch(e => console.log('Error syncing private profile', e));
+
+        // 2. Sync to public profile (for others to see)
+        db.collection('public_profiles').doc(user.uid).set({
+            displayName: user.displayName,
+            photoURL: user.photoURL
+        }, { merge: true })
+            .catch(e => console.log('Error syncing public profile', e));
+
         // Initialize Rolodex
         loadRolodex(user.uid);
 

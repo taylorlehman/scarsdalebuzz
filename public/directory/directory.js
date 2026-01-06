@@ -184,6 +184,25 @@ const initAuthListener = () => {
         }
         
         if (user) {
+            // Ensure user profile exists (fixes missing avatar/name for non-onboarded users)
+            const profileUpdate = {
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                email: user.email,
+                lastActive: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // 1. Sync to private user doc
+            db.collection('users').doc(user.uid).set(profileUpdate, { merge: true })
+                .catch(e => console.log('Error syncing private profile', e));
+
+            // 2. Sync to public profile (for other users to see)
+            db.collection('public_profiles').doc(user.uid).set({
+                displayName: user.displayName,
+                photoURL: user.photoURL
+            }, { merge: true })
+                .catch(e => console.log('Error syncing public profile', e));
+
             // Listen to real-time updates of user's liked services
             unsubscribeUser = db.collection('users').doc(user.uid)
                 .onSnapshot((doc) => {
@@ -583,7 +602,11 @@ const toggleLike = async (serviceId, btnElement) => {
                 transaction.set(likeRef, newRec);
                 
                 transaction.set(userRef, {
-                    likedServices: firebase.firestore.FieldValue.arrayUnion(serviceId)
+                    likedServices: firebase.firestore.FieldValue.arrayUnion(serviceId),
+                    displayName: currentUser.displayName,
+                    photoURL: currentUser.photoURL,
+                    email: currentUser.email,
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
             } else {
