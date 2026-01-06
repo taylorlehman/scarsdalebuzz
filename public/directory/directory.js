@@ -12,6 +12,9 @@ const noResults = document.getElementById('noResults');
 // Initialize activeCategory from URL parameter if present
 const urlParams = new URLSearchParams(window.location.search);
 let activeCategory = urlParams.get('category') || 'All';
+let recommendedByUid = urlParams.get('recommendedBy');
+let recommendedServiceIds = null; // Set<string> | null
+let recommendedByUserProfile = null;
 
 // --- FIREBASE INIT ---
 // Expect window.firebaseConfig to be defined in firebase-config.js
@@ -91,7 +94,16 @@ const fetchUser = async (uid) => {
     if (userCache.has(uid)) return userCache.get(uid);
     
     try {
-        const doc = await db.collection('users').doc(uid).get();
+        // Try fetching from public_profiles first (faster, safer)
+        let doc = await db.collection('public_profiles').doc(uid).get();
+        
+        if (!doc.exists) {
+            // Fallback to 'users' collection IF the user is authenticated and rules allow it (or for legacy)
+            // But for public view, public_profiles should be the source.
+            // keeping this for backward compatibility if migration isn't instant
+            doc = await db.collection('users').doc(uid).get();
+        }
+
         if (doc.exists) {
             const data = doc.data();
             const profile = {
@@ -400,7 +412,7 @@ const renderServices = (services) => {
                         </div>
                         <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommendations</span>
                     </div>
-                    <button onclick="toggleLike('${safeId}')" class="${likeBtnClass} transition-colors p-2 -mr-2 rounded-full hover:bg-white border border-transparent hover:border-scandi-line" title="${isLiked ? 'Undo Recommendation' : 'Recommend this provider'}">
+                    <button onclick="toggleLike('${safeId}', this)" class="${likeBtnClass} transition-colors p-2 -mr-2 rounded-full hover:bg-white border border-transparent hover:border-scandi-line" title="${isLiked ? 'Undo Recommendation' : 'Recommend this provider'}">
                         ${likeIcon}
                     </button>
                 </div>
@@ -464,11 +476,78 @@ const renderServices = (services) => {
     serviceList.appendChild(suggestCard);
 };
 
+// --- ONBOARDING ANIMATION ---
+const runRolodexAnimation = (startEl) => {
+    const targetEl = document.getElementById('user-menu-btn') || document.getElementById('mobile-menu-btn');
+    if (!targetEl) return;
+
+    const startRect = startEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+
+    // Create flying thumbs up
+    const flyer = document.createElement('div');
+    flyer.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="text-scandi-clay"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
+    flyer.style.position = 'fixed';
+    flyer.style.left = `${startRect.left + startRect.width / 2 - 12}px`;
+    flyer.style.top = `${startRect.top + startRect.height / 2 - 12}px`;
+    flyer.style.zIndex = '9999';
+    flyer.style.pointerEvents = 'none';
+    flyer.style.transition = 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
+    document.body.appendChild(flyer);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        flyer.style.left = `${targetRect.left + targetRect.width / 2 - 12}px`;
+        flyer.style.top = `${targetRect.top + targetRect.height / 2 - 12}px`;
+        flyer.style.opacity = '0';
+        flyer.style.transform = 'scale(0.5)';
+    });
+
+    // Cleanup and Show Tooltip
+    setTimeout(() => {
+        flyer.remove();
+        showRolodexTooltip(targetEl);
+    }, 800);
+};
+
+const showRolodexTooltip = (targetEl) => {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'fixed z-[100] bg-scandi-text text-white p-4 rounded-sm shadow-xl max-w-xs text-sm font-light text-center fade-in cursor-pointer';
+    tooltip.innerHTML = `
+        <div class="font-serif text-lg mb-1">Saved to your Rolodex!</div>
+        <p class="text-xs opacity-90">Find and share all your recommended providers here.</p>
+        <div class="absolute -top-1 right-6 w-3 h-3 bg-scandi-text transform rotate-45"></div>
+    `;
+    
+    const rect = targetEl.getBoundingClientRect();
+    tooltip.style.top = `${rect.bottom + 12}px`;
+    tooltip.style.right = '20px'; // Align roughly with right edge
+
+    document.body.appendChild(tooltip);
+
+    const close = () => {
+        tooltip.style.opacity = '0';
+        setTimeout(() => tooltip.remove(), 300);
+    };
+
+    tooltip.addEventListener('click', close);
+    setTimeout(close, 6000); // Auto close after 6s
+};
+
 // --- INTERACTION HANDLERS ---
-const toggleLike = async (serviceId) => {
+const toggleLike = async (serviceId, btnElement) => {
     if (!currentUser) {
         openAuthModal();
         return;
+    }
+
+    // Onboarding Check
+    if (btnElement && !userLikedServices.has(serviceId)) {
+        const hasSeen = localStorage.getItem('rolodex_onboarded');
+        if (!hasSeen) {
+            runRolodexAnimation(btnElement);
+            localStorage.setItem('rolodex_onboarded', 'true');
+        }
     }
 
     const serviceRef = db.collection('services').doc(serviceId);
@@ -752,6 +831,16 @@ const filterAndRender = (options = { keepOrder: false }) => {
         filteredServices = filteredServices.filter(service => service.category === activeCategory);
     }
 
+    // 2b. Recommended By Filter (Rolodex)
+    if (recommendedByUid) {
+        if (recommendedServiceIds) {
+             filteredServices = filteredServices.filter(service => recommendedServiceIds.has(service.id));
+        } else {
+             // Still loading or empty, show nothing to prevent leak of other services
+             filteredServices = [];
+        }
+    }
+
     // 3. Sort (Recommendations > Date) or Keep Order
     if (options.keepOrder && serviceList.children.length > 0) {
         // Preserve DOM order for existing items to prevent jumping
@@ -823,7 +912,10 @@ const checkPassword = () => {
             loadCategoryGroupsConfig(),
             loadCategoriesConfig(),
             startServicesSubscription(),
-        ]).then(() => {
+        ]).then(async () => {
+            if (recommendedByUid) {
+                await loadRolodex(recommendedByUid);
+            }
             initAuthListener();
             renderCategoryButtons();
             filterAndRender();
@@ -832,6 +924,72 @@ const checkPassword = () => {
     }
     return false;
 };
+
+// --- ROLODEX LOGIC ---
+async function loadRolodex(uid) {
+    if (!db) return;
+    try {
+        // 1. Fetch user profile
+        recommendedByUserProfile = await fetchUser(uid);
+        
+        // 2. Fetch recommendations
+        const snapshot = await db.collectionGroup('recommendations')
+            .where('uid', '==', uid)
+            .get();
+            
+        recommendedServiceIds = new Set();
+        snapshot.docs.forEach(doc => {
+            // doc.ref.parent is CollectionReference
+            // doc.ref.parent.parent is DocumentReference (the service)
+            if (doc.ref.parent && doc.ref.parent.parent) {
+                recommendedServiceIds.add(doc.ref.parent.parent.id);
+            }
+        });
+        
+        renderRolodexBanner();
+        
+    } catch (e) {
+        console.error("Error loading rolodex", e);
+    }
+}
+
+function renderRolodexBanner() {
+    const filterBar = document.getElementById('filter-bar');
+    if (!filterBar) return;
+
+    // Remove existing if any
+    const existing = document.getElementById('rolodex-banner');
+    if (existing) existing.remove();
+
+    const name = recommendedByUserProfile ? recommendedByUserProfile.displayName : 'A Neighbor';
+    const photo = recommendedByUserProfile && recommendedByUserProfile.photoURL 
+        ? recommendedByUserProfile.photoURL 
+        : 'https://www.gravatar.com/avatar?d=mp';
+
+    const banner = document.createElement('div');
+    banner.id = 'rolodex-banner';
+    banner.className = 'mb-8 bg-white border border-scandi-clay/30 rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-soft relative overflow-hidden fade-in';
+    
+    // Background flair
+    banner.innerHTML = `
+        <div class="absolute top-0 right-0 w-32 h-32 bg-scandi-clay/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+        
+        <div class="flex items-center gap-4 relative z-10">
+            <img src="${photo}" class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm bg-scandi-bg">
+            <div>
+                <div class="text-[10px] uppercase tracking-widest text-scandi-clay font-bold mb-1">Viewing Rolodex</div>
+                <h2 class="font-serif text-2xl text-scandi-text">${name}'s Top Picks</h2>
+                <p class="text-sm text-scandi-muted">Browsing ${recommendedServiceIds ? recommendedServiceIds.size : 0} recommended providers</p>
+            </div>
+        </div>
+        
+        <a href="directory.html" class="relative z-10 px-6 py-3 border border-scandi-line bg-white text-scandi-text font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-bg transition-colors shadow-sm whitespace-nowrap">
+            View All Providers
+        </a>
+    `;
+    
+    filterBar.parentNode.insertBefore(banner, filterBar);
+}
 
 // Check immediately on load
 checkPassword();

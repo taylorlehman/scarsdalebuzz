@@ -24,6 +24,11 @@ service cloud.firestore {
         allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
       }
     }
+    
+    // Allow collection group queries on recommendations
+    match /{path=**}/recommendations/{recId} {
+      allow read: if true;
+    }
 
     // Suggested Services: Authenticated users create, Admin read/write
     match /suggested_services/{suggestionId} {
@@ -43,9 +48,29 @@ service cloud.firestore {
       allow write: if false; // Writes should only come from the backend
     }
 
+    // Public Profiles: Read-only for everyone, Write only by backend (Cloud Functions)
+    match /public_profiles/{userId} {
+      allow read: if true;
+      allow write: if false; 
+    }
+
     // Allow users to read and write their own profile, Admins can read/write any profile
     match /users/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+      allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+      allow write: if request.auth != null && (
+        request.auth.token.admin == true ||
+        (
+            request.auth.uid == userId && 
+            (
+                // Allow if not setting the field at all
+                !('sunnyBetaStatus' in request.resource.data) ||
+                // Allow if setting to pending
+                request.resource.data.sunnyBetaStatus == 'pending' ||
+                // Allow if maintaining existing status (e.g. approved user updating profile)
+                (resource != null && request.resource.data.sunnyBetaStatus == resource.data.sunnyBetaStatus)
+            )
+        )
+      );
     }
 
     // Default deny for everything else

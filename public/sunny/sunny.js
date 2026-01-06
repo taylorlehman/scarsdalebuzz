@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Onboarding Elements
     const onboardingModal = document.getElementById('onboarding-modal');
+    const onboardingCard = document.getElementById('onboarding-card');
     const onboardStep0 = document.getElementById('onboard-step-0');
     const onboardStepHow = document.getElementById('onboard-step-how');
     const onboardStep1 = document.getElementById('onboard-step-1');
@@ -80,6 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const onboardPhoneInput = document.getElementById('onboard-phone');
     const onboardStep2Back = document.getElementById('onboard-step-2-back');
     const onboardFinishBtn = document.getElementById('onboard-finish-btn');
+    
+    // Beta Waitlist
+    const betaWaitlistModal = document.getElementById('beta-waitlist-modal');
 
     // --- Helper Functions ---
 
@@ -617,11 +621,17 @@ document.addEventListener('DOMContentLoaded', () => {
     onboardStartBtn.addEventListener('click', () => {
         onboardStep0.classList.add('hidden');
         onboardStepHow.classList.remove('hidden');
+        // Expand modal for "How it Works" step
+        onboardingCard.classList.remove('max-w-md');
+        onboardingCard.classList.add('max-w-2xl');
     });
 
     onboardHowNextBtn.addEventListener('click', () => {
         onboardStepHow.classList.add('hidden');
         onboardStep1.classList.remove('hidden');
+        // Revert modal width
+        onboardingCard.classList.remove('max-w-2xl');
+        onboardingCard.classList.add('max-w-md');
     });
 
     onboardStep1Next.addEventListener('click', () => {
@@ -659,16 +669,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 address: onboardAddressInput.value.trim(),
                 phoneNumber: window.formatPhoneNumber ? window.formatPhoneNumber(onboardPhoneInput.value.trim()) : onboardPhoneInput.value.trim(),
                 onboardingCompleted: true,
+                sunnyBetaStatus: 'pending',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
             
             onboardingModal.classList.add('hidden');
+            betaWaitlistModal.classList.remove('hidden');
             
         } catch (error) {
             console.error("Error saving profile:", error);
             alert("Error saving profile. Please try again.");
             onboardFinishBtn.disabled = false;
-            onboardFinishBtn.textContent = 'Complete Setup';
+            onboardFinishBtn.textContent = 'Apply for Beta';
         }
     });
 
@@ -678,88 +690,112 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const startApp = (userId) => {
+        if (unsubscribeFirestore) unsubscribeFirestore();
+            
+        unsubscribeFirestore = db.collection('requests')
+            .where('userId', '==', userId)
+            .orderBy('timestamp', 'desc')
+            .onSnapshot((snapshot) => {
+                renderRequestsList(snapshot);
+
+                if (snapshot.empty && !isCreatingNew) {
+                    activeRequestId = null;
+                    emptyState.classList.remove('hidden');
+                    confirmationView.classList.add('hidden');
+                    chatMessages.classList.add('hidden');
+                    chatHeader.classList.add('hidden');
+                    chatInputArea.classList.add('hidden');
+                    mobileChatOverlay.classList.add('hidden');
+                    return;
+                }
+                
+                if (isCreatingNew && activeRequestId && activeRequestId !== 'new' && requestsCache[activeRequestId]) {
+                    isCreatingNew = false;
+                }
+
+                if (activeRequestId && !isCreatingNew) {
+                    const data = requestsCache[activeRequestId];
+                    if (data) {
+                        if (data.status === 'scheduled') {
+                            chatMessages.classList.add('hidden');
+                            chatInputArea.classList.add('hidden');
+                            confirmationView.classList.remove('hidden');
+                            
+                            confirmProvider.textContent = data.providerName || 'Service Provider';
+                            confirmProviderContact.textContent = data.providerName || 'the provider';
+                            if (data.providerPhoneNumber) {
+                                confirmPhone.textContent = data.providerPhoneNumber;
+                                confirmPhone.href = `tel:${data.providerPhoneNumber}`;
+                            } else {
+                                confirmPhone.textContent = 'support';
+                                confirmPhone.href = '#';
+                            }
+                            
+                            let dateStr = 'TBD';
+                            if (data.serviceDate) {
+                                const d = new Date(data.serviceDate);
+                                dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                            }
+                            confirmTime.textContent = dateStr;
+                        } else {
+                            confirmationView.classList.add('hidden');
+                            chatMessages.classList.remove('hidden');
+                            chatInputArea.classList.remove('hidden');
+                            renderChatHistory(data.chat_history);
+                        }
+                        
+                        chatTitle.textContent = data.title || 'Request';
+                        chatDescription.textContent = data.summary || 'Details...';
+                        chatHeaderStatusBadge.textContent = data.status || 'Active';
+                        
+                        // Update Mobile Status too if visible
+                        if (window.innerWidth < 768) {
+                            mobileChatStatus.textContent = data.status;
+                        }
+                    }
+                }
+            }, (error) => {
+                console.error("Error fetching requests: ", error);
+                requestsList.innerHTML = '<p class="text-red-500 p-4 text-center">Could not connect to ledger.</p>';
+            });
+    }
+
     auth.onAuthStateChanged((user) => {
         if (user) {
             currentUser = user;
+            
             db.collection('users').doc(user.uid).get().then(doc => {
                 const data = doc.data();
-                if (!doc.exists || !data || !data.address || !data.phoneNumber) {
-                    onboardingModal.classList.remove('hidden');
-                    if (data && data.address) onboardAddressInput.value = data.address;
-                    if (data && data.phoneNumber) onboardPhoneInput.value = data.phoneNumber;
+                
+                const isApproved = data && data.sunnyBetaStatus === 'approved';
+                const isPending = data && (data.sunnyBetaStatus === 'pending' || data.sunnyBetaStatus === 'rejected');
+                const hasOnboarded = data && data.address && data.phoneNumber;
+
+                if (isApproved) {
+                    // Show Main UI
+                    onboardingModal.classList.add('hidden');
+                    betaWaitlistModal.classList.add('hidden');
+                    startApp(user.uid);
+                } else if (isPending) {
+                     // Show Waitlist
+                     onboardingModal.classList.add('hidden');
+                     betaWaitlistModal.classList.remove('hidden');
+                } else {
+                    // Not applied or no status
+                    if (!hasOnboarded) {
+                        onboardingModal.classList.remove('hidden');
+                        if (data && data.address) onboardAddressInput.value = data.address;
+                        if (data && data.phoneNumber) onboardPhoneInput.value = data.phoneNumber;
+                    } else {
+                        // Has onboarded but no status -> Show waitlist (implied applied)
+                        onboardingModal.classList.add('hidden');
+                        betaWaitlistModal.classList.remove('hidden');
+                    }
                 }
             }).catch(err => {
                 console.error("Error fetching user profile:", err);
             });
-
-            if (unsubscribeFirestore) unsubscribeFirestore();
-            
-            unsubscribeFirestore = db.collection('requests')
-                .where('userId', '==', user.uid)
-                .orderBy('timestamp', 'desc')
-                .onSnapshot((snapshot) => {
-                    renderRequestsList(snapshot);
-
-                    if (snapshot.empty && !isCreatingNew) {
-                        activeRequestId = null;
-                        emptyState.classList.remove('hidden');
-                        confirmationView.classList.add('hidden');
-                        chatMessages.classList.add('hidden');
-                        chatHeader.classList.add('hidden');
-                        chatInputArea.classList.add('hidden');
-                        mobileChatOverlay.classList.add('hidden');
-                        return;
-                    }
-                    
-                    if (isCreatingNew && activeRequestId && activeRequestId !== 'new' && requestsCache[activeRequestId]) {
-                        isCreatingNew = false;
-                    }
-
-                    if (activeRequestId && !isCreatingNew) {
-                        const data = requestsCache[activeRequestId];
-                        if (data) {
-                            if (data.status === 'scheduled') {
-                                chatMessages.classList.add('hidden');
-                                chatInputArea.classList.add('hidden');
-                                confirmationView.classList.remove('hidden');
-                                
-                                confirmProvider.textContent = data.providerName || 'Service Provider';
-                                confirmProviderContact.textContent = data.providerName || 'the provider';
-                                if (data.providerPhoneNumber) {
-                                    confirmPhone.textContent = data.providerPhoneNumber;
-                                    confirmPhone.href = `tel:${data.providerPhoneNumber}`;
-                                } else {
-                                    confirmPhone.textContent = 'support';
-                                    confirmPhone.href = '#';
-                                }
-                                
-                                let dateStr = 'TBD';
-                                if (data.serviceDate) {
-                                    const d = new Date(data.serviceDate);
-                                    dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                                }
-                                confirmTime.textContent = dateStr;
-                            } else {
-                                confirmationView.classList.add('hidden');
-                                chatMessages.classList.remove('hidden');
-                                chatInputArea.classList.remove('hidden');
-                                renderChatHistory(data.chat_history);
-                            }
-                            
-                            chatTitle.textContent = data.title || 'Request';
-                            chatDescription.textContent = data.summary || 'Details...';
-                            chatHeaderStatusBadge.textContent = data.status || 'Active';
-                            
-                            // Update Mobile Status too if visible
-                            if (window.innerWidth < 768) {
-                                mobileChatStatus.textContent = data.status;
-                            }
-                        }
-                    }
-                }, (error) => {
-                    console.error("Error fetching requests: ", error);
-                    requestsList.innerHTML = '<p class="text-red-500 p-4 text-center">Could not connect to ledger.</p>';
-                });
 
         } else {
             window.location.href = '../login.html';

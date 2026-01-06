@@ -577,6 +577,36 @@ exports.onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
     }
 });
 
+/**
+ * SYNC USER PROFILE TO PUBLIC
+ * Listens for changes to the 'users' collection and updates a restricted public copy
+ * in 'public_profiles'. This allows safe public access for the rolodex feature.
+ * Uses v1 syntax for consistency with other triggers.
+ */
+exports.syncPublicProfile = functionsV1.firestore
+    .document('users/{userId}')
+    .onWrite(async (change, context) => {
+        const userId = context.params.userId;
+        const publicProfileRef = admin.firestore().collection('public_profiles').doc(userId);
+
+        if (!change.after.exists) {
+            // User deleted, delete public profile
+            await publicProfileRef.delete();
+            logger.info(`Deleted public profile for ${userId}`);
+            return;
+        }
+
+        const data = change.after.data();
+        const publicData = {
+            displayName: data.displayName || 'Neighbor',
+            photoURL: data.photoURL || null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        await publicProfileRef.set(publicData, { merge: true });
+        logger.info(`Synced public profile for ${userId}`);
+    });
+
 exports.submitRequest = functions.https.onRequest((req, res) => {
     cors(req, res, async () => {
         logger.info("HTTP Function called: submitRequest");

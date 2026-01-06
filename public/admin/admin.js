@@ -4,7 +4,7 @@
 let db;
 let functions;
 let currentUser = null;
-let currentView = 'services'; // services, users, suggestions, categories, groups
+let currentView = 'services'; // services, users, beta, suggestions, categories, groups
 let allUsers = []; // Cache for users
 
 // -- DOM Elements --
@@ -15,6 +15,7 @@ const navItems = {
     users: document.getElementById('navUsers'),
     services: document.getElementById('navServices'),
     suggestions: document.getElementById('navSuggestions'),
+    beta: document.getElementById('navBeta'),
     categories: document.getElementById('navCategories'),
     groups: document.getElementById('navGroups')
 };
@@ -23,6 +24,7 @@ const views = {
     users: document.getElementById('usersView'),
     services: document.getElementById('servicesView'),
     suggestions: document.getElementById('suggestionsView'),
+    beta: document.getElementById('betaView'),
     categories: document.getElementById('categoriesView'),
     groups: document.getElementById('groupsView')
 };
@@ -32,6 +34,7 @@ const counts = {
     users: document.getElementById('usersCount'),
     services: document.getElementById('servicesCount'),
     suggestions: document.getElementById('suggestionsCount'),
+    beta: document.getElementById('betaCount'),
     categories: document.getElementById('categoriesCount'),
     groups: document.getElementById('groupsCount')
 }
@@ -39,6 +42,11 @@ const counts = {
 // User Management Elements
 const userSearchEl = document.getElementById('userSearch');
 const usersTableBody = document.getElementById('usersTableBody');
+
+// Beta Management Elements
+const betaSearchEl = document.getElementById('betaSearch');
+const betaFilterEl = document.getElementById('betaFilter');
+const betaTableBody = document.getElementById('betaTableBody');
 
 // Service Management Elements
 const searchEl = document.getElementById('adminSearch');
@@ -210,12 +218,19 @@ function switchView(viewName) {
     
     // Trigger specific loads
     if (viewName === 'users') loadUsers();
+    if (viewName === 'beta') loadUsers(); // Reuse user loader but renders differently
     if (viewName === 'suggestions') loadSuggestions();
 }
 
 function updateCounts() {
     if (allServices) counts.services.textContent = `(${allServices.length})`;
-    if (allUsers) counts.users.textContent = `(${allUsers.length})`;
+    if (allUsers) {
+        counts.users.textContent = `(${allUsers.length})`;
+        // Count beta applicants (pending)
+        const pendingCount = allUsers.filter(u => u.sunnyBetaStatus === 'pending').length;
+        const approvedCount = allUsers.filter(u => u.sunnyBetaStatus === 'approved').length;
+        counts.beta.textContent = `(${pendingCount} pending, ${approvedCount} approved)`;
+    }
     if (categoriesList) counts.categories.textContent = `(${categoriesList.length})`;
     if (categoryGroups) counts.groups.textContent = `(${Object.keys(categoryGroups).length})`;
     // suggestions updated in loadSuggestions
@@ -283,11 +298,13 @@ async function loadUsers() {
         // Note: Listing all users might be heavy if many users. Simple implementation for now.
         const snap = await db.collection('users').orderBy('displayName').get();
         allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-        renderUserTable();
+        if (currentView === 'users') renderUserTable();
+        if (currentView === 'beta') renderBetaTable();
         updateCounts();
     } catch (e) {
         console.error("Failed to load users:", e);
         usersTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-600">Error loading users.</td></tr>';
+        if (betaTableBody) betaTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-600">Error loading users.</td></tr>';
     }
 }
 
@@ -318,6 +335,99 @@ function renderUserTable() {
         usersTableBody.appendChild(tr);
     });
 }
+
+function renderBetaTable() {
+    const q = (betaSearchEl.value || '').toLowerCase();
+    const filter = betaFilterEl.value;
+
+    const filtered = allUsers.filter(u => {
+        // Status Filter
+        const status = u.sunnyBetaStatus || 'none'; // none implies not applied
+        if (filter && status !== filter) return false;
+        if (!filter && status === 'none') return false; // Hide non-applicants by default in Beta view unless specifically looking for them? No, let's show all if no filter, or maybe just applicants. Let's show only those with status != undefined/null usually, but for "All" let's show everyone who has at least applied (pending/approved/rejected).
+        
+        // If filter is empty ("All"), only show those with ANY status (meaning they interacted with beta flow)
+        if (!filter && !u.sunnyBetaStatus) return false;
+
+        // Search Filter
+        if (!q) return true;
+        const searchStr = `${u.displayName || ''} ${u.email || ''} ${u.uid}`.toLowerCase();
+        return searchStr.includes(q);
+    });
+
+    betaTableBody.innerHTML = '';
+    if (filtered.length === 0) {
+        betaTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-scandi-muted">No applicants found.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
+
+        const status = u.sunnyBetaStatus || 'none';
+        let statusBadge = '';
+        if (status === 'approved') statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>';
+        else if (status === 'pending') statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>';
+        else if (status === 'rejected') statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>';
+        else statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">None</span>';
+
+        let betaActions = '';
+        if (status !== 'approved') {
+            betaActions += `<button class="text-xs font-bold text-green-600 hover:text-green-800 uppercase tracking-widest border border-green-200 px-3 py-1 rounded hover:bg-green-50 mr-2" onclick="handleAdmitUser('${u.uid}')">Admit</button>`;
+        }
+        if (status === 'approved' || status === 'pending') {
+             betaActions += `<button class="text-xs font-bold text-orange-600 hover:text-orange-800 uppercase tracking-widest border border-orange-200 px-3 py-1 rounded hover:bg-orange-50 mr-2" onclick="handleKickUser('${u.uid}')">Kick</button>`;
+        }
+
+        tr.innerHTML = `
+            <td class="py-4 px-6 font-medium text-scandi-text flex items-center gap-3">
+                ${u.photoURL ? `<img src="${u.photoURL}" class="w-8 h-8 rounded-full bg-gray-200" />` : '<div class="w-8 h-8 rounded-full bg-scandi-line flex items-center justify-center text-xs">?</div>'}
+                ${u.displayName || 'Unknown'}
+            </td>
+            <td class="py-4 px-6 text-scandi-muted font-mono text-xs">${u.email || '-'}</td>
+            <td class="py-4 px-6">${statusBadge}</td>
+            <td class="py-4 px-6 text-right">
+                ${betaActions}
+            </td>
+        `;
+        betaTableBody.appendChild(tr);
+    });
+}
+
+window.handleAdmitUser = async (uid) => {
+    if (!confirm('Admit this user to Sunny Beta?')) return;
+    try {
+        await db.collection('users').doc(uid).update({
+            sunnyBetaStatus: 'approved'
+        });
+        // Optimistic update
+        const user = allUsers.find(u => u.uid === uid);
+        if (user) user.sunnyBetaStatus = 'approved';
+        renderBetaTable();
+        updateCounts();
+    } catch (e) {
+        console.error("Admit failed", e);
+        alert("Failed to admit user: " + e.message);
+    }
+};
+
+window.handleKickUser = async (uid) => {
+    if (!confirm('Kick this user from Sunny Beta?')) return;
+    try {
+        await db.collection('users').doc(uid).update({
+            sunnyBetaStatus: 'rejected'
+        });
+        // Optimistic update
+        const user = allUsers.find(u => u.uid === uid);
+        if (user) user.sunnyBetaStatus = 'rejected';
+        renderBetaTable();
+        updateCounts();
+    } catch (e) {
+        console.error("Kick failed", e);
+        alert("Failed to kick user: " + e.message);
+    }
+};
 
 window.handleDeleteUser = async (uid) => {
     if (!confirm('Are you sure you want to delete this user? This will also remove all their recommendations.')) return;
@@ -771,6 +881,10 @@ function closeModal(modal) {
 function setupEventListeners() {
     // User Search
     userSearchEl.addEventListener('input', renderUserTable);
+
+    // Beta Search & Filter
+    betaSearchEl.addEventListener('input', renderBetaTable);
+    betaFilterEl.addEventListener('change', renderBetaTable);
 
     // Filter/Search
     searchEl.addEventListener('input', renderTable);

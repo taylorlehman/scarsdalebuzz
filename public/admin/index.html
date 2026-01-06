@@ -267,6 +267,7 @@
                 <!-- User Management -->
                 <div class="px-6 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest">User Management</div>
                 <button id="navUsers" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Users</button>
+                <button id="navBeta" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Beta Access</button>
 
                 <!-- Service Management -->
                 <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Service Management</div>
@@ -308,6 +309,51 @@
                             </thead>
                             <tbody id="usersTableBody" class="divide-y divide-scandi-line/50">
                                 <!-- Users injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: BETA MANAGEMENT -->
+            <div id="betaView" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-serif text-xl text-scandi-text">Beta Access <span id="betaCount" class="text-sm text-scandi-muted font-normal ml-2"></span></h2>
+                    </div>
+                    <p class="text-scandi-muted text-sm mb-6">Manage admission to the Sunny Beta program.</p>
+                    
+                    <div class="flex flex-col md:flex-row gap-4 items-end mb-6">
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Search Applicants</label>
+                            <div class="relative">
+                                 <input id="betaSearch" type="text" class="w-full p-3 pl-10 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="Search by name or email..." />
+                                 <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-scandi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-64">
+                            <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Filter Status</label>
+                            <select id="betaFilter" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
+                                <option value="">All</option>
+                                <option value="pending" selected>Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-scandi-bg border-b border-scandi-line">
+                                <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                                    <th class="py-4 px-6 font-medium">User</th>
+                                    <th class="py-4 px-6 font-medium">Email</th>
+                                    <th class="py-4 px-6 font-medium">Status</th>
+                                    <th class="py-4 px-6 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="betaTableBody" class="divide-y divide-scandi-line/50">
+                                <!-- Beta users injected here -->
                             </tbody>
                         </table>
                     </div>
