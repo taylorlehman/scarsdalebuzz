@@ -17,7 +17,8 @@ const navItems = {
     suggestions: document.getElementById('navSuggestions'),
     beta: document.getElementById('navBeta'),
     categories: document.getElementById('navCategories'),
-    groups: document.getElementById('navGroups')
+    groups: document.getElementById('navGroups'),
+    cleanup: document.getElementById('navCleanup')
 };
 
 const views = {
@@ -26,7 +27,8 @@ const views = {
     suggestions: document.getElementById('suggestionsView'),
     beta: document.getElementById('betaView'),
     categories: document.getElementById('categoriesView'),
-    groups: document.getElementById('groupsView')
+    groups: document.getElementById('groupsView'),
+    cleanup: document.getElementById('cleanupView')
 };
 
 // Count Elements
@@ -220,6 +222,7 @@ function switchView(viewName) {
     if (viewName === 'users') loadUsers();
     if (viewName === 'beta') loadUsers(); // Reuse user loader but renders differently
     if (viewName === 'suggestions') loadSuggestions();
+    if (viewName === 'cleanup') initCleanup();
 }
 
 function updateCounts() {
@@ -588,11 +591,11 @@ window.approveSuggestion = async (suggestionId) => {
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 4. Update User's Liked Services
-        const userRef = db.collection('users').doc(data.suggestedBy);
-        batch.set(userRef, {
-            likedServices: firebase.firestore.FieldValue.arrayUnion(serviceRef.id)
-        }, { merge: true });
+        // 4. Update User's Liked Services - REMOVED (deprecated)
+        // const userRef = db.collection('users').doc(data.suggestedBy);
+        // batch.set(userRef, {
+        //     likedServices: firebase.firestore.FieldValue.arrayUnion(serviceRef.id)
+        // }, { merge: true });
 
         // 5. Update Suggestion Status
         batch.update(suggestionDoc.ref, { status: 'approved' });
@@ -1125,4 +1128,272 @@ function setupEventListeners() {
         }
         updateCounts();
     });
+
+    // Cleanup Events
+    const cleanupNextBtn = document.getElementById('cleanupNextBtn');
+    const acceptPhoneBtn = document.getElementById('acceptPhoneBtn');
+    const rejectPhoneBtn = document.getElementById('rejectPhoneBtn');
+    const acceptEmailBtn = document.getElementById('acceptEmailBtn');
+    const rejectEmailBtn = document.getElementById('rejectEmailBtn');
+
+    if (cleanupNextBtn) {
+        cleanupNextBtn.addEventListener('click', () => {
+            currentCleanupIndex++;
+            renderCleanupItem();
+        });
+    }
+
+    if (acceptPhoneBtn) acceptPhoneBtn.addEventListener('click', () => handleAccept('phone'));
+    if (rejectPhoneBtn) rejectPhoneBtn.addEventListener('click', () => handleReject('phone'));
+    if (acceptEmailBtn) acceptEmailBtn.addEventListener('click', () => handleAccept('email'));
+    if (rejectEmailBtn) rejectEmailBtn.addEventListener('click', () => handleReject('email'));
+}
+
+
+// -- Data Cleanup Logic --
+
+function initCleanup() {
+    // 1. Filter services missing phone OR email
+    cleanupQueue = allServices.filter(s => !s.phone || !s.email);
+    currentCleanupIndex = 0;
+    renderCleanupItem();
+}
+
+function renderCleanupItem() {
+    const els = {
+        name: document.getElementById('cleanupName'),
+        category: document.getElementById('cleanupCategory'),
+        address: document.getElementById('cleanupAddress'),
+        progress: document.getElementById('cleanupProgress'),
+        loading: document.getElementById('cleanupLoading'),
+        content: document.getElementById('cleanupContent'),
+        empty: document.getElementById('cleanupEmptyState'),
+        results: document.getElementById('cleanupResults'),
+        
+        // Phone
+        phoneVal: document.getElementById('phoneValue'),
+        phoneSrc: document.getElementById('phoneSource'),
+        phoneBadge: document.getElementById('phoneBadge'),
+        phoneActions: document.getElementById('phoneActions'),
+        phoneStatus: document.getElementById('phoneStatus'),
+        
+        // Email
+        emailVal: document.getElementById('emailValue'),
+        emailSrc: document.getElementById('emailSource'),
+        emailBadge: document.getElementById('emailBadge'),
+        emailActions: document.getElementById('emailActions'),
+        emailStatus: document.getElementById('emailStatus'),
+    };
+
+    if (cleanupQueue.length === 0) {
+        els.content.classList.add('hidden');
+        els.empty.classList.remove('hidden');
+        els.progress.textContent = "0/0";
+        return;
+    }
+
+    if (currentCleanupIndex >= cleanupQueue.length) {
+        // Finished loop? Restart or show done?
+        // Let's just wrap or show empty
+        currentCleanupIndex = 0; // Simple loop for now
+    }
+
+    const service = cleanupQueue[currentCleanupIndex];
+    els.content.classList.remove('hidden');
+    els.empty.classList.add('hidden');
+    
+    els.name.textContent = service.businessName || `${service.firstName || ''} ${service.lastName || ''}`;
+    els.category.textContent = service.category || 'Uncategorized';
+    els.address.textContent = 'Scarsdale Area'; // Placeholder as address isn't in model yet
+    els.progress.textContent = `${currentCleanupIndex + 1}/${cleanupQueue.length}`;
+
+    // Reset Cards
+    resetCleanupCard(els.phoneVal, els.phoneSrc, els.phoneBadge, els.phoneActions, els.phoneStatus);
+    resetCleanupCard(els.emailVal, els.emailSrc, els.emailBadge, els.emailActions, els.emailStatus);
+    
+    // Auto-Trigger Search
+    triggerCleanupSearch(service);
+}
+
+function resetCleanupCard(valEl, srcEl, badgeEl, actionsEl, statusEl) {
+    valEl.textContent = '-';
+    valEl.classList.remove('text-scandi-text', 'text-scandi-muted');
+    valEl.classList.add('text-scandi-muted');
+    srcEl.textContent = '';
+    badgeEl.classList.add('hidden');
+    badgeEl.className = 'hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide'; // Reset colors
+    actionsEl.classList.add('hidden');
+    statusEl.textContent = '';
+    statusEl.className = 'hidden mt-2 text-xs font-bold uppercase tracking-wide';
+}
+
+async function triggerCleanupSearch(service) {
+    const loadingEl = document.getElementById('cleanupLoading');
+    const resultsEl = document.getElementById('cleanupResults');
+    
+    loadingEl.classList.remove('hidden');
+    resultsEl.classList.add('opacity-50', 'pointer-events-none'); // Dim existing
+
+    try {
+        const idToken = await currentUser.getIdToken();
+        
+        // Use direct fetch to ensure Auth header is passed correctly
+        // 'onCall' functions require the body to be wrapped in { "data": ... }
+        const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/findBusinessContactInfo', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                data: {
+                    businessName: service.businessName || `${service.firstName} ${service.lastName}`,
+                    category: service.category,
+                    address: 'Scarsdale, NY' 
+                }
+            })
+        });
+
+        if (!response.ok) {
+            // Try to parse error details from onCall standard error format
+            const errJson = await response.json().catch(() => ({}));
+            const errMsg = errJson.error ? errJson.error.message : response.statusText;
+            throw new Error(errMsg || `Server error: ${response.status}`);
+        }
+
+        const json = await response.json();
+        const result = json.result; // onCall returns { result: ... }
+
+        // RACE CONDITION CHECK:
+        // Ensure this result matches the service currently being viewed.
+        const currentService = cleanupQueue[currentCleanupIndex];
+        if (!currentService || currentService.id !== service.id) {
+            console.log('Cleanup result discarded (stale request)', service.businessName);
+            return;
+        }
+
+        currentCleanupResult = result;
+        displayCleanupResult(result, service);
+
+    } catch (e) {
+        console.error("Cleanup search failed:", e);
+        const errorData = { 
+            value: "Error searching", 
+            confidence: "None", 
+            source: e.message || "Unknown error" 
+        };
+        updateCleanupCard('phone', errorData, service.phone);
+        updateCleanupCard('email', errorData, service.email);
+    } finally {
+        loadingEl.classList.add('hidden');
+        resultsEl.classList.remove('opacity-50', 'pointer-events-none');
+    }
+}
+
+function displayCleanupResult(result, service) {
+    // Phone
+    updateCleanupCard(
+        'phone', 
+        result.phone, 
+        service.phone // existing value
+    );
+    
+    // Email
+    updateCleanupCard(
+        'email', 
+        result.email, 
+        service.email // existing value
+    );
+}
+
+function updateCleanupCard(type, data, existingValue) {
+    const els = {
+        val: document.getElementById(`${type}Value`),
+        src: document.getElementById(`${type}Source`),
+        badge: document.getElementById(`${type}Badge`),
+        actions: document.getElementById(`${type}Actions`),
+        status: document.getElementById(`${type}Status`),
+    };
+
+    if (existingValue) {
+        els.val.textContent = existingValue;
+        els.src.textContent = '(Existing in database)';
+        els.badge.textContent = 'EXISTING';
+        els.badge.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-yellow-100', 'text-yellow-800', 'bg-red-100', 'text-red-800');
+        els.badge.classList.add('bg-gray-100', 'text-gray-800');
+        els.val.classList.remove('text-scandi-muted');
+        els.val.classList.add('text-scandi-text');
+        // No actions needed if existing? Or maybe allow replace?
+        // Requirement says "for services... that have no contact info".
+        // So if we have it, we skip searching for it?
+        // Actually the prompt searches for both. If we have it, let's just show it and disable actions.
+        return; 
+    }
+
+    if (!data || !data.value) {
+        els.val.textContent = 'Not found';
+        els.src.textContent = 'AI could not verify a reliable number.';
+        return;
+    }
+
+    els.val.textContent = data.value;
+    els.val.classList.remove('text-scandi-muted');
+    els.val.classList.add('text-scandi-text');
+    els.src.textContent = data.source || 'No source provided';
+    
+    // Badge
+    els.badge.textContent = data.confidence || 'UNKNOWN';
+    els.badge.classList.remove('hidden');
+    if (data.confidence === 'High') els.badge.classList.add('bg-green-100', 'text-green-800');
+    else if (data.confidence === 'Medium') els.badge.classList.add('bg-yellow-100', 'text-yellow-800');
+    else els.badge.classList.add('bg-red-100', 'text-red-800');
+
+    // Actions
+    els.actions.classList.remove('hidden');
+}
+
+async function handleAccept(type) {
+    if (!currentCleanupResult || !currentCleanupResult[type]) return;
+    
+    const service = cleanupQueue[currentCleanupIndex];
+    const newValue = currentCleanupResult[type].value;
+    
+    const actionsEl = document.getElementById(`${type}Actions`);
+    const statusEl = document.getElementById(`${type}Status`);
+    
+    actionsEl.classList.add('hidden');
+    statusEl.textContent = 'Saving...';
+    statusEl.classList.remove('hidden');
+    statusEl.classList.add('text-scandi-muted');
+
+    try {
+        await db.collection('services').doc(service.id).update({
+            [type]: newValue
+        });
+        
+        // Update local state
+        const idx = allServices.findIndex(s => s.id === service.id);
+        if (idx !== -1) allServices[idx][type] = newValue;
+        
+        statusEl.textContent = 'Accepted & Saved';
+        statusEl.classList.remove('text-scandi-muted');
+        statusEl.classList.add('text-green-600');
+        
+    } catch (e) {
+        console.error("Save failed", e);
+        statusEl.textContent = 'Error Saving';
+        statusEl.classList.remove('text-scandi-muted');
+        statusEl.classList.add('text-red-600');
+        actionsEl.classList.remove('hidden'); // Allow retry
+    }
+}
+
+function handleReject(type) {
+    const actionsEl = document.getElementById(`${type}Actions`);
+    const statusEl = document.getElementById(`${type}Status`);
+    
+    actionsEl.classList.add('hidden');
+    statusEl.textContent = 'Rejected';
+    statusEl.classList.remove('hidden');
+    statusEl.classList.add('text-gray-500');
 }

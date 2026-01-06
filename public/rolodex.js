@@ -63,10 +63,17 @@ const loadRolodex = async (uid) => {
     content.classList.add('hidden');
 
     try {
-        // 1. Get liked service IDs from user's private profile
-        // (Authenticated users can still read their own full profile)
-        const userDoc = await db.collection('users').doc(uid).get();
-        const likedIds = userDoc.data()?.likedServices || [];
+        // 1. Get liked service IDs via collectionGroup query (more robust)
+        const recsSnapshot = await db.collectionGroup('recommendations')
+            .where('uid', '==', uid)
+            .get();
+
+        const likedIds = [];
+        recsSnapshot.forEach(doc => {
+            if (doc.ref.parent && doc.ref.parent.parent) {
+                likedIds.push(doc.ref.parent.parent.id);
+            }
+        });
         
         if (likedIds.length === 0) {
             loading.classList.add('hidden');
@@ -183,10 +190,6 @@ window.removeFromRolodex = async (serviceId) => {
                 });
 
                 transaction.delete(likeRef);
-
-                transaction.set(userRef, {
-                    likedServices: firebase.firestore.FieldValue.arrayRemove(serviceId)
-                }, { merge: true });
             }
         });
         

@@ -278,6 +278,10 @@
                 <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Category Management</div>
                 <button id="navCategories" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Categories</button>
                 <button id="navGroups" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Category Groups</button>
+                
+                <!-- Data Cleanup -->
+                <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Maintenance</div>
+                <button id="navCleanup" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Data Clean Up</button>
             </nav>
         </aside>
 
@@ -481,6 +485,98 @@
                             </thead>
                             <tbody id="groupTableBody" class="divide-y divide-scandi-line/50"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: DATA CLEANUP -->
+            <div id="cleanupView" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line relative">
+                    <div class="flex justify-between items-center mb-6 border-b border-scandi-line pb-4">
+                        <div>
+                            <h2 class="font-serif text-xl text-scandi-text">Data Clean Up</h2>
+                            <p class="text-xs text-scandi-muted mt-1">Reviewing Service <span id="cleanupProgress" class="font-bold text-scandi-text">0/0</span></p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button id="cleanupNextBtn" class="px-4 py-2 bg-scandi-bg text-scandi-text text-xs font-mono uppercase tracking-widest rounded-sm border border-scandi-line hover:bg-scandi-line/50">Skip / Next</button>
+                        </div>
+                    </div>
+
+                    <!-- No Data State -->
+                    <div id="cleanupEmptyState" class="hidden py-12 text-center text-scandi-muted">
+                        <p class="mb-2 text-lg">All services have contact info!</p>
+                        <p class="text-sm">Great job keeping the directory clean.</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div id="cleanupContent">
+                        <!-- Service Context -->
+                        <div class="bg-scandi-bg/30 p-6 rounded-sm mb-8 border border-scandi-line/50">
+                            <h3 id="cleanupName" class="font-serif text-2xl text-scandi-text mb-2">Business Name</h3>
+                            <div class="flex gap-4 text-sm text-scandi-muted">
+                                <span id="cleanupCategory" class="px-2 py-1 bg-white border border-scandi-line rounded-sm">Category</span>
+                                <span id="cleanupAddress" class="px-2 py-1 bg-white border border-scandi-line rounded-sm">Location</span>
+                            </div>
+                        </div>
+
+                        <!-- Search Status -->
+                        <div id="cleanupLoading" class="hidden flex flex-col items-center justify-center py-12">
+                            <div class="w-8 h-8 border-2 border-scandi-clay border-t-transparent rounded-full animate-spin mb-3"></div>
+                            <p class="text-sm text-scandi-muted animate-pulse">Sunny is searching Google for contact info...</p>
+                        </div>
+
+                        <!-- Cards Container -->
+                        <div id="cleanupResults" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <!-- Phone Card -->
+                            <div class="bg-white border border-scandi-line rounded-sm shadow-sm overflow-hidden flex flex-col h-full">
+                                <div class="bg-scandi-bg/20 px-4 py-3 border-b border-scandi-line flex justify-between items-center">
+                                    <span class="font-mono text-xs uppercase tracking-widest text-scandi-muted font-bold">Phone Number</span>
+                                    <div id="phoneBadge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"></div>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
+                                    <div id="phoneValue" class="text-xl font-medium text-scandi-text mb-2 break-all">-</div>
+                                    <p id="phoneSource" class="text-xs text-scandi-muted italic max-w-xs mx-auto mb-4 min-h-[1.5em]"></p>
+                                    
+                                    <div id="phoneActions" class="flex gap-2 w-full justify-center hidden">
+                                        <button id="acceptPhoneBtn" class="flex-1 max-w-[120px] py-2 bg-green-50 text-green-700 border border-green-200 rounded-sm hover:bg-green-100 transition-colors text-xs font-bold uppercase flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            Accept
+                                        </button>
+                                        <button id="rejectPhoneBtn" class="flex-1 max-w-[120px] py-2 bg-gray-50 text-gray-600 border border-gray-200 rounded-sm hover:bg-gray-100 transition-colors text-xs font-bold uppercase flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            Reject
+                                        </button>
+                                    </div>
+                                    <div id="phoneStatus" class="text-xs font-bold uppercase tracking-wide hidden mt-2"></div>
+                                </div>
+                            </div>
+
+                            <!-- Email Card -->
+                            <div class="bg-white border border-scandi-line rounded-sm shadow-sm overflow-hidden flex flex-col h-full">
+                                <div class="bg-scandi-bg/20 px-4 py-3 border-b border-scandi-line flex justify-between items-center">
+                                    <span class="font-mono text-xs uppercase tracking-widest text-scandi-muted font-bold">Email Address</span>
+                                    <div id="emailBadge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"></div>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
+                                    <div id="emailValue" class="text-xl font-medium text-scandi-text mb-2 break-all">-</div>
+                                    <p id="emailSource" class="text-xs text-scandi-muted italic max-w-xs mx-auto mb-4 min-h-[1.5em]"></p>
+                                    
+                                    <div id="emailActions" class="flex gap-2 w-full justify-center hidden">
+                                        <button id="acceptEmailBtn" class="flex-1 max-w-[120px] py-2 bg-green-50 text-green-700 border border-green-200 rounded-sm hover:bg-green-100 transition-colors text-xs font-bold uppercase flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            Accept
+                                        </button>
+                                        <button id="rejectEmailBtn" class="flex-1 max-w-[120px] py-2 bg-gray-50 text-gray-600 border border-gray-200 rounded-sm hover:bg-gray-100 transition-colors text-xs font-bold uppercase flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            Reject
+                                        </button>
+                                    </div>
+                                    <div id="emailStatus" class="text-xs font-bold uppercase tracking-wide hidden mt-2"></div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </div>

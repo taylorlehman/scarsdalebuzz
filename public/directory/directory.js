@@ -203,14 +203,20 @@ const initAuthListener = () => {
             }, { merge: true })
                 .catch(e => console.log('Error syncing public profile', e));
 
-            // Listen to real-time updates of user's liked services
-            unsubscribeUser = db.collection('users').doc(user.uid)
-                .onSnapshot((doc) => {
+            // Listen to real-time updates of user's liked services (via collectionGroup)
+            unsubscribeUser = db.collectionGroup('recommendations')
+                .where('uid', '==', user.uid)
+                .onSnapshot((snapshot) => {
                     userLikedServices.clear();
-                    if (doc.exists && doc.data().likedServices) {
-                        doc.data().likedServices.forEach(id => userLikedServices.add(id));
-                    }
+                    snapshot.forEach(doc => {
+                        // Parent is recommendations col, Parent.Parent is service doc
+                        if (doc.ref.parent && doc.ref.parent.parent) {
+                            userLikedServices.add(doc.ref.parent.parent.id);
+                        }
+                    });
                     filterAndRender({ keepOrder: true });
+                }, error => {
+                    console.error("Error listening to likes:", error);
                 });
         } else {
             userLikedServices.clear();
@@ -602,7 +608,6 @@ const toggleLike = async (serviceId, btnElement) => {
                 transaction.set(likeRef, newRec);
                 
                 transaction.set(userRef, {
-                    likedServices: firebase.firestore.FieldValue.arrayUnion(serviceId),
                     displayName: currentUser.displayName,
                     photoURL: currentUser.photoURL,
                     email: currentUser.email,
@@ -621,7 +626,7 @@ const toggleLike = async (serviceId, btnElement) => {
                 transaction.delete(likeRef);
 
                 transaction.set(userRef, {
-                    likedServices: firebase.firestore.FieldValue.arrayRemove(serviceId)
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
             }
         });
@@ -839,11 +844,6 @@ const filterAndRender = (options = { keepOrder: false }) => {
     // 1. Search Logic (Fuse.js)
     if (searchTerm && fuse) {
         const results = fuse.search(searchTerm);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/a53a61ef-db23-43ee-a58e-5e2131912298',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'directory.js:filterAndRender',message:'Fuse search results',data:{term:searchTerm, top3Results: results.slice(0,3).map(r => ({id: r.item.id, name: r.item.businessName, score: r.score, matches: r.matches}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A/B'})}).catch(()=>{});
-        // #endregion
-
         filteredServices = results.map(result => result.item);
     } else {
         filteredServices = [...serviceData];
