@@ -40,6 +40,7 @@ try {
 let serviceData = [];
 let fuse;
 let currentUser = null;
+let currentIsAdmin = false;
 let userLikedServices = new Set();
 let unsubscribeUser = null;
 const userCache = new Map(); // uid -> { displayName, photoURL }
@@ -176,14 +177,24 @@ const hydrateNames = async () => {
 
 // --- AUTH LISTENER ---
 const initAuthListener = () => {
-    firebase.auth().onAuthStateChanged((user) => {
+    firebase.auth().onAuthStateChanged(async (user) => {
         currentUser = user;
+        currentIsAdmin = false;
         if (unsubscribeUser) {
             unsubscribeUser();
             unsubscribeUser = null;
         }
         
         if (user) {
+            try {
+                const tokenResult = await user.getIdTokenResult();
+                currentIsAdmin = !!tokenResult.claims.admin;
+                // Re-render if we are admin to show test providers
+                if (currentIsAdmin) filterAndRender({ keepOrder: true });
+            } catch (e) {
+                console.warn("Error fetching admin claim", e);
+            }
+
             // Ensure user profile exists (fixes missing avatar/name for non-onboarded users)
             const profileUpdate = {
                 displayName: user.displayName,
@@ -847,6 +858,11 @@ const filterAndRender = (options = { keepOrder: false }) => {
         filteredServices = results.map(result => result.item);
     } else {
         filteredServices = [...serviceData];
+    }
+
+    // 1b. Test Provider Filter (Security/Visibility)
+    if (!currentIsAdmin) {
+        filteredServices = filteredServices.filter(s => !s.isTestProvider);
     }
 
     // 2. Category Filter

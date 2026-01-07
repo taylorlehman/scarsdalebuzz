@@ -31,6 +31,21 @@ const verifyAuthToken = async (req) => {
     }
 };
 
+const verifyAuthAndGetClaims = async (req) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        return { uid: decodedToken.uid, isAdmin: !!decodedToken.admin };
+    } catch (error) {
+        logger.error("Error verifying ID token:", error);
+        return null;
+    }
+};
+
 // --- ADMIN CONFIGURATION ---
 // Add emails here to grant admin access. 
 // These users will receive the 'admin' custom claim upon calling verifyAdminRole.
@@ -338,8 +353,8 @@ const addMessageToChatHistory = async (requestId, sender, receiver, message, pho
  * NEW: Intake Processing Helper
  * Decides whether to ask more questions or proceed to finding a provider.
  */
-const processIntake = async (requestRef, userContext, chatHistory, intakeCount) => {
-    logger.info(`Processing intake for request ${requestRef.id}, count: ${intakeCount}`);
+const processIntake = async (requestRef, userContext, chatHistory, intakeCount, isAdmin) => {
+    logger.info(`Processing intake for request ${requestRef.id}, count: ${intakeCount}, isAdmin: ${isAdmin}`);
     
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
     const tools = [TOOLS.ASK_CLARIFYING_QUESTION_TOOL, TOOLS.PROCEED_TO_PROVIDER_TOOL];
@@ -384,7 +399,7 @@ const processIntake = async (requestRef, userContext, chatHistory, intakeCount) 
                 await addMessageToChatHistory(requestRef.id, 'Sunny', 'User', transitionMsg, null);
 
                 // Call the provider logic
-                responseMessage = await findAndContactProvider(requestRef, userContext, chatHistory, args.scope, args.urgency, args.availability);
+                responseMessage = await findAndContactProvider(requestRef, userContext, chatHistory, args.scope, args.urgency, args.availability, isAdmin);
             }
         } else {
             // Fallback: Model replied with text? Treat as question.
@@ -404,8 +419,8 @@ const processIntake = async (requestRef, userContext, chatHistory, intakeCount) 
  * NEW: Provider Outreach Helper
  * Extracted logic for finding and messaging a plumber.
  */
-const findAndContactProvider = async (requestRef, userContext, chatHistory, scope, urgency, availability) => {
-    logger.info(`Finding provider for request ${requestRef.id}`);
+const findAndContactProvider = async (requestRef, userContext, chatHistory, scope, urgency, availability, isAdmin) => {
+    logger.info(`Finding provider for request ${requestRef.id}, isAdmin: ${isAdmin}`);
 
     // Update status to searching/in progress
     await requestRef.update({ status: 'in progress' });
@@ -419,14 +434,29 @@ const findAndContactProvider = async (requestRef, userContext, chatHistory, scop
         const snapshot = await servicesRef
             .where('category', '==', 'Plumbing')
             .where('sunnyApproved', '==', true)
-            .limit(1)
+            .limit(5) // Fetch more to allow for filtering
             .get();
 
         if (!snapshot.empty) {
-            const doc = snapshot.docs[0].data();
-            providerName = doc.businessName || `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
-            providerPhone = doc.phone;
-            logger.info(`Found sunny approved provider: ${providerName}`);
+            // Filter logic:
+            // If !isAdmin, filter out test providers.
+            // If isAdmin, allow all (prioritize test providers? No, treating like any other as per user instruction).
+            
+            const candidates = snapshot.docs.map(d => d.data());
+            
+            let filteredCandidates = candidates;
+            if (!isAdmin) {
+                filteredCandidates = candidates.filter(c => !c.isTestProvider);
+            }
+
+            if (filteredCandidates.length > 0) {
+                const doc = filteredCandidates[0];
+                providerName = doc.businessName || `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+                providerPhone = doc.phone;
+                logger.info(`Found sunny approved provider: ${providerName}`);
+            } else {
+                logger.warn("No sunny approved plumber found after filtering.");
+            }
         } else {
             logger.warn("No sunny approved plumber found.");
         }
@@ -617,11 +647,12 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             return;
         }
 
-        const userId = await verifyAuthToken(req);
-        if (!userId) {
+        const auth = await verifyAuthAndGetClaims(req);
+        if (!auth) {
              res.status(401).send('Unauthorized');
              return;
         }
+        const { uid: userId, isAdmin } = auth;
 
         // Fetch User Profile for context
         const userDoc = await admin.firestore().collection('users').doc(userId).get();
@@ -695,7 +726,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
                 phoneNumber: null
             }];
 
-            const responseMessage = await processIntake(newRequestRef, userContext, initialHistory, 0);
+            const responseMessage = await processIntake(newRequestRef, userContext, initialHistory, 0, isAdmin);
 
             await generateAndSaveSummary(newRequestRef.id);
 
@@ -740,6 +771,15 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         // Fetch User Context for Incoming SMS
         const userId = updatedRequestData.userId;
         const userDoc = await admin.firestore().collection('users').doc(userId).get();
+        
+        let isAdmin = false;
+        try {
+            const userRecord = await admin.auth().getUser(userId);
+            isAdmin = !!(userRecord.customClaims && userRecord.customClaims.admin);
+        } catch(e) {
+            logger.warn(`Failed to fetch user record for ${userId} to check admin status`, e);
+        }
+
         const userData = userDoc.data() || {};
         const userContext = `
         Homeowner Name: ${userData.displayName || 'The Homeowner'}
@@ -920,10 +960,11 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
             return res.status(405).send('Method Not Allowed');
         }
 
-        const userId = await verifyAuthToken(req);
-        if (!userId) {
+        const auth = await verifyAuthAndGetClaims(req);
+        if (!auth) {
              return res.status(401).send('Unauthorized');
         }
+        const { uid: userId, isAdmin } = auth;
 
         const { requestId, response } = req.body;
         if (!requestId || !response) {
@@ -976,7 +1017,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 // Add the user message to our local history for the prompt
                 const updatedHistory = [...currentHistory, userMessage];
                 
-                const responseMessage = await processIntake(requestRef, userContext, updatedHistory, requestData.intakeCount || 0);
+                const responseMessage = await processIntake(requestRef, userContext, updatedHistory, requestData.intakeCount || 0, isAdmin);
                 
                 await generateAndSaveSummary(requestId);
                 return res.status(200).json({ success: true, message: responseMessage });

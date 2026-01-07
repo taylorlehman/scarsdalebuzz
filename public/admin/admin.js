@@ -71,10 +71,11 @@ const firstNameEl = document.getElementById('firstName');
 const lastNameEl = document.getElementById('lastName');
 const phoneEl = document.getElementById('phone');
 const emailEl = document.getElementById('email');
-const categoryEl = document.getElementById('category');
-const sunnyApprovedEl = document.getElementById('sunnyApproved');
-const lastRecommendedEl = document.getElementById('lastRecommended');
-const recommendationsEl = document.getElementById('recommendations');
+    const categoryEl = document.getElementById('category');
+    const sunnyApprovedEl = document.getElementById('sunnyApproved');
+    const isTestProviderEl = document.getElementById('isTestProvider');
+    const lastRecommendedEl = document.getElementById('lastRecommended');
+    const recommendationsEl = document.getElementById('recommendations');
 const cancelBtn = document.getElementById('cancelBtn');
 
 // Categories UI elements
@@ -649,6 +650,7 @@ function renderTable() {
       <td class="py-4 px-6 font-medium text-scandi-text">
         ${name || '-'}
         ${s.sunnyApproved ? '<span title="Sunny Approved" class="ml-2">☀️</span>' : ''}
+        ${s.isTestProvider ? '<span title="Test Provider" class="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono uppercase tracking-wide">TEST</span>' : ''}
       </td>
       <td class="py-4 px-6 text-scandi-muted">${s.category || '-'}</td>
       <td class="py-4 px-6 text-scandi-muted">${s.recommendations ?? 0}</td>
@@ -832,6 +834,7 @@ function fillFormFromDoc(doc) {
   emailEl.value = doc.email || '';
   categoryEl.value = doc.category || '';
   sunnyApprovedEl.checked = !!doc.sunnyApproved;
+  isTestProviderEl.checked = !!doc.isTestProvider;
   
   if (doc.lastRecommended) {
     const d = typeof doc.lastRecommended.toDate === 'function' ? doc.lastRecommended.toDate() : new Date(doc.lastRecommended);
@@ -852,6 +855,7 @@ function resetFormToNew() {
   docIdEl.value = '';
   form.reset();
   sunnyApprovedEl.checked = false;
+  isTestProviderEl.checked = false;
   recommendationsEl.value = 0;
 }
 
@@ -972,6 +976,7 @@ function setupEventListeners() {
             email: emailEl.value.trim() || null,
             category: categoryEl.value || null,
             sunnyApproved: sunnyApprovedEl.checked,
+            isTestProvider: isTestProviderEl.checked,
             recommendations: Number(recommendationsEl.value || 0),
         };
         const ts = parseDateToTimestamp(lastRecommendedEl.value.trim());
