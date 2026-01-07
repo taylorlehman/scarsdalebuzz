@@ -283,8 +283,9 @@
                 <button id="navCategories" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Categories</button>
                 <button id="navGroups" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Category Groups</button>
                 
-                <!-- Data Cleanup -->
-                <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Maintenance</div>
+                <!-- Data Quality -->
+                <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Data Quality</div>
+                <button id="navQualityDashboard" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Dashboard</button>
                 <button id="navCleanup" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Data Clean Up</button>
             </nav>
         </aside>
@@ -493,6 +494,87 @@
                 </div>
             </div>
 
+            <!-- VIEW: DATA QUALITY DASHBOARD -->
+            <div id="qualityDashboardView" class="hidden space-y-8">
+                <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line">
+                    <h2 class="font-serif text-xl text-scandi-text mb-6">Data Quality Overview</h2>
+                    
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-scandi-bg/20 p-6 rounded-sm border border-scandi-line flex flex-col items-center text-center">
+                            <span class="text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Total Services</span>
+                            <span id="statTotalServices" class="font-serif text-3xl text-scandi-text">0</span>
+                        </div>
+                        <div class="bg-scandi-bg/20 p-6 rounded-sm border border-scandi-line flex flex-col items-center text-center">
+                            <span class="text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Missing Contact Info</span>
+                            <span id="statMissingContact" class="font-serif text-3xl text-scandi-text">0%</span>
+                            <span id="statMissingContactCount" class="text-xs text-scandi-muted mt-1">0 providers</span>
+                        </div>
+                        <div class="bg-scandi-bg/20 p-6 rounded-sm border border-scandi-line flex flex-col items-center text-center">
+                            <span class="text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Sunny Approved</span>
+                            <span id="statSunnyApproved" class="font-serif text-3xl text-scandi-text">0%</span>
+                            <span id="statSunnyApprovedCount" class="text-xs text-scandi-muted mt-1">0 providers</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        
+                        <!-- Highest Completeness -->
+                        <div>
+                            <h3 class="font-serif text-lg text-scandi-text mb-3">Highest Data Completeness</h3>
+                            <p class="text-xs text-scandi-muted mb-4">Categories with the most complete contact info.</p>
+                            <div class="overflow-hidden border border-scandi-line rounded-sm">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-scandi-bg text-xs font-mono uppercase text-scandi-muted">
+                                        <tr>
+                                            <th class="p-3 text-left font-medium">Category</th>
+                                            <th class="p-3 text-right font-medium">Complete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listMostComplete" class="divide-y divide-scandi-line/50"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Lowest Completeness -->
+                        <div>
+                            <h3 class="font-serif text-lg text-scandi-text mb-3">Lowest Data Completeness</h3>
+                            <p class="text-xs text-scandi-muted mb-4">Categories needing attention.</p>
+                            <div class="overflow-hidden border border-scandi-line rounded-sm">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-scandi-bg text-xs font-mono uppercase text-scandi-muted">
+                                        <tr>
+                                            <th class="p-3 text-left font-medium">Category</th>
+                                            <th class="p-3 text-right font-medium">Complete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listLeastComplete" class="divide-y divide-scandi-line/50"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Sizes -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                             <h3 class="font-serif text-lg text-scandi-text mb-3">Smallest Categories</h3>
+                             <p class="text-xs text-scandi-muted mb-4">Categories with few providers.</p>
+                             <div class="overflow-hidden border border-scandi-line rounded-sm">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-scandi-bg text-xs font-mono uppercase text-scandi-muted">
+                                        <tr>
+                                            <th class="p-3 text-left font-medium">Category</th>
+                                            <th class="p-3 text-right font-medium">Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listSmallestCategories" class="divide-y divide-scandi-line/50"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- VIEW: DATA CLEANUP -->
             <div id="cleanupView" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-sm shadow-card border border-scandi-line relative">
@@ -502,6 +584,7 @@
                             <p class="text-xs text-scandi-muted mt-1">Reviewing Service <span id="cleanupProgress" class="font-bold text-scandi-text">0/0</span></p>
                         </div>
                         <div class="flex items-center gap-3">
+                            <button id="cleanupBackBtn" class="px-4 py-2 bg-white text-scandi-muted text-xs font-mono uppercase tracking-widest rounded-sm border border-scandi-line hover:bg-scandi-bg hover:text-scandi-text disabled:opacity-50 disabled:cursor-not-allowed">Back</button>
                             <button id="cleanupNextBtn" class="px-4 py-2 bg-scandi-bg text-scandi-text text-xs font-mono uppercase tracking-widest rounded-sm border border-scandi-line hover:bg-scandi-line/50">Skip / Next</button>
                         </div>
                     </div>

@@ -18,6 +18,7 @@ const navItems = {
     beta: document.getElementById('navBeta'),
     categories: document.getElementById('navCategories'),
     groups: document.getElementById('navGroups'),
+    qualityDashboard: document.getElementById('navQualityDashboard'),
     cleanup: document.getElementById('navCleanup')
 };
 
@@ -28,6 +29,7 @@ const views = {
     beta: document.getElementById('betaView'),
     categories: document.getElementById('categoriesView'),
     groups: document.getElementById('groupsView'),
+    qualityDashboard: document.getElementById('qualityDashboardView'),
     cleanup: document.getElementById('cleanupView')
 };
 
@@ -223,6 +225,7 @@ function switchView(viewName) {
     if (viewName === 'users') loadUsers();
     if (viewName === 'beta') loadUsers(); // Reuse user loader but renders differently
     if (viewName === 'suggestions') loadSuggestions();
+    if (viewName === 'qualityDashboard') loadQualityDashboard();
     if (viewName === 'cleanup') initCleanup();
 }
 
@@ -1136,6 +1139,7 @@ function setupEventListeners() {
 
     // Cleanup Events
     const cleanupNextBtn = document.getElementById('cleanupNextBtn');
+    const cleanupBackBtn = document.getElementById('cleanupBackBtn');
     const acceptPhoneBtn = document.getElementById('acceptPhoneBtn');
     const rejectPhoneBtn = document.getElementById('rejectPhoneBtn');
     const acceptEmailBtn = document.getElementById('acceptEmailBtn');
@@ -1148,6 +1152,15 @@ function setupEventListeners() {
         });
     }
 
+    if (cleanupBackBtn) {
+        cleanupBackBtn.addEventListener('click', () => {
+            if (currentCleanupIndex > 0) {
+                currentCleanupIndex--;
+                renderCleanupItem();
+            }
+        });
+    }
+
     if (acceptPhoneBtn) acceptPhoneBtn.addEventListener('click', () => handleAccept('phone'));
     if (rejectPhoneBtn) rejectPhoneBtn.addEventListener('click', () => handleReject('phone'));
     if (acceptEmailBtn) acceptEmailBtn.addEventListener('click', () => handleAccept('email'));
@@ -1155,11 +1168,103 @@ function setupEventListeners() {
 }
 
 
+// -- Data Quality Dashboard --
+
+function loadQualityDashboard() {
+    if (!allServices) return; // Should be loaded by initDashboard
+    renderQualityDashboard();
+}
+
+function renderQualityDashboard() {
+    // KPI Elements
+    const statTotal = document.getElementById('statTotalServices');
+    const statMissing = document.getElementById('statMissingContact');
+    const statMissingCount = document.getElementById('statMissingContactCount');
+    const statSunny = document.getElementById('statSunnyApproved');
+    const statSunnyCount = document.getElementById('statSunnyApprovedCount');
+    
+    // List Elements
+    const listMostComplete = document.getElementById('listMostComplete');
+    const listLeastComplete = document.getElementById('listLeastComplete');
+    const listSmallest = document.getElementById('listSmallestCategories');
+
+    // 1. Global Stats
+    const total = allServices.length;
+    const missingContact = allServices.filter(s => !s.phone && !s.email);
+    const sunnyApproved = allServices.filter(s => s.sunnyApproved);
+
+    statTotal.textContent = total;
+    
+    const missingPct = total > 0 ? Math.round((missingContact.length / total) * 100) : 0;
+    statMissing.textContent = `${missingPct}%`;
+    statMissingCount.textContent = `${missingContact.length} providers`;
+    
+    const sunnyPct = total > 0 ? Math.round((sunnyApproved.length / total) * 100) : 0;
+    statSunny.textContent = `${sunnyPct}%`;
+    statSunnyCount.textContent = `${sunnyApproved.length} providers`;
+
+    // 2. Category Stats
+    const catStats = {}; // { name: { total, withContact } }
+    
+    allServices.forEach(s => {
+        const cat = s.category || 'Uncategorized';
+        if (!catStats[cat]) catStats[cat] = { name: cat, total: 0, withContact: 0 };
+        
+        catStats[cat].total++;
+        if (s.phone || s.email) catStats[cat].withContact++;
+    });
+
+    const catArray = Object.values(catStats).map(c => ({
+        ...c,
+        completeness: c.total > 0 ? (c.withContact / c.total) * 100 : 0
+    }));
+
+    // Most Complete (Sort DESC completeness, then DESC total)
+    const mostComplete = [...catArray]
+        .filter(c => c.total > 2) // Filter out very small cats for this metric? Maybe just show all.
+        .sort((a, b) => b.completeness - a.completeness || b.total - a.total)
+        .slice(0, 10);
+
+    // Least Complete (Sort ASC completeness, then DESC total to show impactful ones first)
+    const leastComplete = [...catArray]
+        .filter(c => c.total > 0) // Ensure not empty
+        .sort((a, b) => a.completeness - b.completeness || b.total - a.total)
+        .slice(0, 10);
+
+    // Smallest Categories (Sort ASC total)
+    const smallest = [...catArray]
+        .sort((a, b) => a.total - b.total)
+        .slice(0, 5);
+
+    // Render Lists
+    renderDashboardList(listMostComplete, mostComplete, (c) => `${Math.round(c.completeness)}%`);
+    renderDashboardList(listLeastComplete, leastComplete, (c) => `${Math.round(c.completeness)}%`);
+    renderDashboardList(listSmallest, smallest, (c) => c.total);
+}
+
+function renderDashboardList(container, items, valueFormatter) {
+    container.innerHTML = '';
+    if (items.length === 0) {
+        container.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-xs text-scandi-muted">No data available</td></tr>';
+        return;
+    }
+    
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="p-3 text-scandi-text border-b border-scandi-line/50">${item.name}</td>
+            <td class="p-3 text-right font-mono text-xs text-scandi-muted border-b border-scandi-line/50">${valueFormatter(item)}</td>
+        `;
+        container.appendChild(tr);
+    });
+}
+
+
 // -- Data Cleanup Logic --
 
 function initCleanup() {
-    // 1. Filter services missing phone OR email
-    cleanupQueue = allServices.filter(s => !s.phone || !s.email);
+    // 1. Filter services missing phone (Requirement: Only providers with no phone number)
+    cleanupQueue = allServices.filter(s => !s.phone);
     currentCleanupIndex = 0;
     renderCleanupItem();
 }
@@ -1207,6 +1312,10 @@ function renderCleanupItem() {
     els.content.classList.remove('hidden');
     els.empty.classList.add('hidden');
     
+    // Back button state
+    const backBtn = document.getElementById('cleanupBackBtn');
+    if (backBtn) backBtn.disabled = currentCleanupIndex === 0;
+    
     els.name.textContent = service.businessName || `${service.firstName || ''} ${service.lastName || ''}`;
     els.category.textContent = service.category || 'Uncategorized';
     els.address.textContent = 'Scarsdale Area'; // Placeholder as address isn't in model yet
@@ -1216,8 +1325,21 @@ function renderCleanupItem() {
     resetCleanupCard(els.phoneVal, els.phoneSrc, els.phoneBadge, els.phoneActions, els.phoneStatus);
     resetCleanupCard(els.emailVal, els.emailSrc, els.emailBadge, els.emailActions, els.emailStatus);
     
-    // Auto-Trigger Search
-    triggerCleanupSearch(service);
+    // Manual Trigger: Show button instead of auto-searching
+    els.loading.classList.remove('hidden'); // Reusing loading container for the button state temporarily
+    els.loading.innerHTML = `
+        <button id="startSearchBtn" class="bg-scandi-clay text-white px-6 py-3 rounded-sm text-sm font-mono uppercase tracking-widest hover:opacity-90 shadow-soft flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            Find Contact Info
+        </button>
+    `;
+    
+    // Hide results initially until searched
+    els.results.classList.add('hidden');
+    
+    document.getElementById('startSearchBtn').onclick = () => {
+         triggerCleanupSearch(service);
+    };
 }
 
 function resetCleanupCard(valEl, srcEl, badgeEl, actionsEl, statusEl) {
@@ -1236,8 +1358,15 @@ async function triggerCleanupSearch(service) {
     const loadingEl = document.getElementById('cleanupLoading');
     const resultsEl = document.getElementById('cleanupResults');
     
+    // Switch to actual loading state
     loadingEl.classList.remove('hidden');
-    resultsEl.classList.add('opacity-50', 'pointer-events-none'); // Dim existing
+    loadingEl.innerHTML = `
+        <div class="w-8 h-8 border-2 border-scandi-clay border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p class="text-sm text-scandi-muted animate-pulse">Sunny is searching Google for contact info...</p>
+    `;
+    
+    resultsEl.classList.add('hidden'); // Ensure hidden while loading
+    // resultsEl.classList.add('opacity-50', 'pointer-events-none'); // (Previously used for dimming)
 
     try {
         const idToken = await currentUser.getIdToken();
@@ -1279,6 +1408,7 @@ async function triggerCleanupSearch(service) {
 
         currentCleanupResult = result;
         displayCleanupResult(result, service);
+        resultsEl.classList.remove('hidden'); // Show results
 
     } catch (e) {
         console.error("Cleanup search failed:", e);
@@ -1289,9 +1419,9 @@ async function triggerCleanupSearch(service) {
         };
         updateCleanupCard('phone', errorData, service.phone);
         updateCleanupCard('email', errorData, service.email);
+        resultsEl.classList.remove('hidden'); // Show results (with error)
     } finally {
-        loadingEl.classList.add('hidden');
-        resultsEl.classList.remove('opacity-50', 'pointer-events-none');
+        loadingEl.classList.add('hidden'); // Hide loading/button container
     }
 }
 
@@ -1345,6 +1475,11 @@ function updateCleanupCard(type, data, existingValue) {
     els.val.classList.remove('text-scandi-muted');
     els.val.classList.add('text-scandi-text');
     els.src.textContent = data.source || 'No source provided';
+    
+    // NEW: Verification Context
+    if (data.verification_text) {
+        els.src.innerHTML += `<br><span class="block mt-2 p-2 bg-scandi-bg/50 rounded-sm text-[10px] font-mono text-scandi-text/80 border-l-2 border-scandi-clay/50">"${data.verification_text}"</span>`;
+    }
     
     // Badge
     els.badge.textContent = data.confidence || 'UNKNOWN';

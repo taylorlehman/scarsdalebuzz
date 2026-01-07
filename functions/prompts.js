@@ -173,12 +173,14 @@ Respond with strictly valid JSON:
   "phone": { 
     "value": "string (formatted phone number)", 
     "confidence": "High" | "Medium" | "Low",
-    "source": "string (URL or description of where found, e.g. 'Official Website footer')"
+    "source": "string (URL or description of where found, e.g. 'Official Website footer')",
+    "verification_text": "string (Verbatim text surrounding the number or context, e.g., 'Call us at (914)...' or 'Contact: ...'). If from an image/footer, describe the visual context."
   } | null,
   "email": { 
     "value": "string (email address)", 
     "confidence": "High" | "Medium" | "Low",
-    "source": "string (URL or description of where found)"
+    "source": "string (URL or description of where found)",
+    "verification_text": "string (Verbatim text or context)"
   } | null
 }
 
@@ -186,6 +188,7 @@ RULES:
 - Only provide "High" confidence if you found it on the business's own website or a verified Google Business profile.
 - If you find multiple numbers, prefer the local (914) number over 800 numbers if it looks like a direct line.
 - If you cannot find a reliable value, return null for that field.
+- **Verification Text:** Provide the exact text snippet from the page that lists the contact info to help the user trust the result.
 `;
 
 module.exports = {
