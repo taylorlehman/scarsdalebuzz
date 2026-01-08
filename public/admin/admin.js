@@ -1206,6 +1206,13 @@ function renderQualityDashboard() {
     // 2. Category Stats
     const catStats = {}; // { name: { total, withContact } }
     
+    // Initialize stats for ALL categories in the config list (even empty ones)
+    if (categoriesList) {
+        categoriesList.forEach(c => {
+            catStats[c] = { name: c, total: 0, withContact: 0 };
+        });
+    }
+
     allServices.forEach(s => {
         const cat = s.category || 'Uncategorized';
         if (!catStats[cat]) catStats[cat] = { name: cat, total: 0, withContact: 0 };
@@ -1237,8 +1244,8 @@ function renderQualityDashboard() {
         .slice(0, 5);
 
     // Render Lists
-    renderDashboardList(listMostComplete, mostComplete, (c) => `${Math.round(c.completeness)}%`);
-    renderDashboardList(listLeastComplete, leastComplete, (c) => `${Math.round(c.completeness)}%`);
+    renderDashboardList(listMostComplete, mostComplete, (c) => `${Math.round(c.completeness)}% (${c.withContact}/${c.total})`);
+    renderDashboardList(listLeastComplete, leastComplete, (c) => `${Math.round(c.completeness)}% (${c.withContact}/${c.total})`);
     renderDashboardList(listSmallest, smallest, (c) => c.total);
 }
 
