@@ -64,8 +64,8 @@ class SharedHeader {
                     </button>
                     <!-- User Dropdown -->
                     <div id="user-dropdown" class="hidden absolute right-0 top-full mt-4 w-56 bg-white border border-scandi-line shadow-soft rounded-sm py-2 z-[60]">
-                        <a href="${rootPath}rolodex.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Rolodex</a>
-                         <a href="${rootPath}account.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Account</a>
+                        <a href="${rootPath}recommendations.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Recommendations</a>
+                        <a href="${rootPath}account.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Account</a>
                         <a href="${rootPath}privacy.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Privacy Policy</a>
                         <button id="sign-out-btn" class="block w-full text-left px-4 py-3 text-xs uppercase tracking-widest text-red-600 hover:bg-red-50 border-t border-scandi-line mt-2 pt-2 font-mono">Sign Out</button>
                     </div>
@@ -144,8 +144,8 @@ class SharedHeader {
                     // Show User Menu Content
                     if (dropdown) {
                         dropdown.innerHTML = `
-                            <a href="${this.options.rootPath}rolodex.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Rolodex</a>
-                             <a href="${this.options.rootPath}account.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Account</a>
+                            <a href="${this.options.rootPath}recommendations.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Recommendations</a>
+                             <a href="${this.options.rootPath}account.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">My Account</a>
                             <a href="${this.options.rootPath}privacy.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Privacy Policy</a>
                             <button id="sign-out-btn" class="block w-full text-left px-4 py-3 text-xs uppercase tracking-widest text-red-600 hover:bg-red-50 border-t border-scandi-line mt-2 pt-2 font-mono">Sign Out</button>
                         `;

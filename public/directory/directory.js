@@ -550,7 +550,7 @@ const showRolodexTooltip = (targetEl) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'fixed z-[100] bg-scandi-text text-white p-4 rounded-sm shadow-xl max-w-xs text-sm font-light text-center fade-in cursor-pointer';
     tooltip.innerHTML = `
-        <div class="font-serif text-lg mb-1">Saved to your Rolodex!</div>
+        <div class="font-serif text-lg mb-1">Saved to your Recommendations!</div>
         <p class="text-xs opacity-90">Find and share all your recommended providers here.</p>
         <div class="absolute -top-1 right-6 w-3 h-3 bg-scandi-text transform rotate-45"></div>
     `;
@@ -579,10 +579,10 @@ const toggleLike = async (serviceId, btnElement) => {
 
     // Onboarding Check
     if (btnElement && !userLikedServices.has(serviceId)) {
-        const hasSeen = localStorage.getItem('rolodex_onboarded');
+        const hasSeen = localStorage.getItem('recommendations_onboarded');
         if (!hasSeen) {
             runRolodexAnimation(btnElement);
-            localStorage.setItem('rolodex_onboarded', 'true');
+            localStorage.setItem('recommendations_onboarded', 'true');
         }
     }
 
@@ -870,7 +870,7 @@ const filterAndRender = (options = { keepOrder: false }) => {
         filteredServices = filteredServices.filter(service => service.category === activeCategory);
     }
 
-    // 2b. Recommended By Filter (Rolodex)
+    // 2b. Recommended By Filter (Recommendations)
     if (recommendedByUid) {
         if (recommendedServiceIds) {
              filteredServices = filteredServices.filter(service => recommendedServiceIds.has(service.id));
@@ -964,7 +964,7 @@ const checkPassword = () => {
     return false;
 };
 
-// --- ROLODEX LOGIC ---
+// --- RECOMMENDATIONS LOGIC ---
 async function loadRolodex(uid) {
     if (!db) return;
     try {
@@ -1016,7 +1016,7 @@ function renderRolodexBanner() {
         <div class="flex items-center gap-4 relative z-10">
             <img src="${photo}" class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm bg-scandi-bg">
             <div>
-                <div class="text-[10px] uppercase tracking-widest text-scandi-clay font-bold mb-1">Viewing Rolodex</div>
+                <div class="text-[10px] uppercase tracking-widest text-scandi-clay font-bold mb-1">Viewing Recommendations</div>
                 <h2 class="font-serif text-2xl text-scandi-text">${name}'s Top Picks</h2>
                 <p class="text-sm text-scandi-muted">Browsing ${recommendedServiceIds ? recommendedServiceIds.size : 0} recommended providers</p>
             </div>
