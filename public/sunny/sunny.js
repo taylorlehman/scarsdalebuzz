@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const token = currentUser ? await currentUser.getIdToken() : null;
-                const functionUrl = 'https://submitrequest-bnvo6soxla-uc.a.run.app';
+                const functionUrl = window.firebaseConfig.functionUrls.submitRequest;
                 const response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: { 
@@ -461,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const token = currentUser ? await currentUser.getIdToken() : null;
-                const functionUrl = 'https://handleuserresponse-bnvo6soxla-uc.a.run.app';
+                const functionUrl = window.firebaseConfig.functionUrls.handleUserResponse;
                 const response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: { 
@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const token = currentUser ? await currentUser.getIdToken() : null;
-            const functionUrl = 'https://cancelrequest-bnvo6soxla-uc.a.run.app';
+            const functionUrl = window.firebaseConfig.functionUrls.cancelRequest;
             await fetch(functionUrl, {
                 method: 'POST',
                 headers: { 

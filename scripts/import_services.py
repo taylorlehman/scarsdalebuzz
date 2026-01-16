@@ -267,15 +267,32 @@ def main():
 
         # Initialize Firebase Admin
         if not firebase_admin._apps:
-            script_dir = os.path.dirname(__file__)
-            sa_path = os.path.join(script_dir, "serviceAccountKey.json")
-            if os.path.exists(sa_path):
-                cred = credentials.Certificate(sa_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                if args.project:
+            if args.project:
+                # Try to load environment-specific service account key if it exists
+                script_dir = os.path.dirname(__file__)
+                # Map project ID to key file suffix? Or just check if there is a file matching the project ID
+                # Simple convention: serviceAccountKey.{project_id}.json or just check known ones.
+                
+                # Check for staging key specifically
+                if "staging" in args.project:
+                    sa_path = os.path.join(script_dir, "serviceAccountKey.staging.json")
+                else:
+                    sa_path = os.path.join(script_dir, "serviceAccountKey.json")
+
+                if os.path.exists(sa_path):
+                    print(f"Using service account key: {sa_path}")
+                    cred = credentials.Certificate(sa_path)
+                    firebase_admin.initialize_app(cred)
+                else:
+                    print(f"Using Application Default Credentials for {args.project}")
                     cred = credentials.ApplicationDefault()
                     firebase_admin.initialize_app(cred, {'projectId': args.project})
+            else:
+                script_dir = os.path.dirname(__file__)
+                sa_path = os.path.join(script_dir, "serviceAccountKey.json")
+                if os.path.exists(sa_path):
+                    cred = credentials.Certificate(sa_path)
+                    firebase_admin.initialize_app(cred)
                 else:
                     firebase_admin.initialize_app()
 

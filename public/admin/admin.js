@@ -145,7 +145,7 @@ async function checkAdminAccess() {
         const idToken = await currentUser.getIdToken();
 
         // Call the Cloud Function via fetch (onRequest)
-        const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/verifyAdminRole', {
+        const response = await fetch(window.firebaseConfig.functionUrls.verifyAdminRole, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${idToken}`,
@@ -443,7 +443,7 @@ window.handleDeleteUser = async (uid) => {
         // Show loading state on row?
         const idToken = await currentUser.getIdToken();
         
-        const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/deleteUser', {
+        const response = await fetch(window.firebaseConfig.functionUrls.deleteUser, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${idToken}`,
@@ -948,7 +948,7 @@ function setupEventListeners() {
         
         try {
             const idToken = await currentUser.getIdToken();
-            const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/deleteService', {
+            const response = await fetch(window.firebaseConfig.functionUrls.deleteService, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${idToken}`,
@@ -1380,7 +1380,7 @@ async function triggerCleanupSearch(service) {
         
         // Use direct fetch to ensure Auth header is passed correctly
         // 'onCall' functions require the body to be wrapped in { "data": ... }
-        const response = await fetch('https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/findBusinessContactInfo', {
+        const response = await fetch(window.firebaseConfig.functionUrls.findBusinessContactInfo, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${idToken}`,

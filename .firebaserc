@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "scarsdale-buzz-prod"
-  }
+    "default": "scarsdale-buzz-prod",
+    "staging": "scarsdale-buzz-staging"
+  },
+  "targets": {},
+  "etags": {}
 }
