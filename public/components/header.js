@@ -27,8 +27,8 @@ class SharedHeader {
         const mobileItemClass = "block px-6 py-4 text-xl font-serif text-scandi-text hover:bg-scandi-surface border-b border-scandi-line/50 transition-colors";
 
         // Determine links
-        const dirLink = activePage === 'directory' ? '#' : `${rootPath}directory/index.html`;
-        const sunnyLink = activePage === 'sunny' ? '#' : `${rootPath}sunny/index.html`;
+        const dirLink = `${rootPath}directory/index.html`;
+        const sunnyLink = `${rootPath}sunny/index.html`;
 
         const dirClass = activePage === 'directory' ? activeClass : inactiveClass;
         const sunnyClass = activePage === 'sunny' ? activeClass : inactiveClass;

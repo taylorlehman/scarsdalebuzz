@@ -5,6 +5,7 @@ let db;
 let currentUser = null;
 let recommendations = []; 
 let serviceCache = new Map();
+let shareModal;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Shared Header
@@ -12,6 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
         activePage: 'directory', // Highlight directory as parent
         rootPath: './'
     });
+
+    // Initialize Share Modal
+    shareModal = new ShareModal();
 
     if (window.firebaseConfig && !firebase.apps.length) {
         firebase.initializeApp(window.firebaseConfig);
@@ -32,12 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Share Button Logic
             document.getElementById('share-rolodex-btn').onclick = () => {
                 const shareUrl = `${window.location.origin}/directory/index.html?recommendedBy=${user.uid}`;
-                if (navigator.share) {
-                    navigator.share({
-                        title: `${user.displayName}'s Recommendations`,
-                        text: `Check out my recommended service providers on Scarsdale Buzz!`,
-                        url: shareUrl
-                    }).catch(console.error);
+                if (shareModal) {
+                    shareModal.show(shareUrl, `${user.displayName}'s Recommendations`);
                 } else {
                     // Fallback to clipboard
                     navigator.clipboard.writeText(shareUrl).then(() => {

@@ -275,6 +275,9 @@ const startServicesSubscription = () => {
                 if (!passwordModal || passwordModal.classList.contains('hidden')) {
                     renderCategoryButtons();
                     filterAndRender({ keepOrder: true });
+                    if (recommendedByUid) {
+                        renderRolodexBanner();
+                    }
                 }
                 resolve();
             }, (err) => {
@@ -823,6 +826,9 @@ const showOverflowDialog = (overflowCategories, categoryTotals) => {
 
                 renderCategoryButtons();
                 filterAndRender();
+                if (recommendedByUid) {
+                    renderRolodexBanner();
+                }
                 document.body.removeChild(modal);
             });
             itemContainer.appendChild(btn);
@@ -940,6 +946,9 @@ categoryFilters.addEventListener('click', (e) => {
 
     renderCategoryButtons();
     filterAndRender();
+    if (recommendedByUid) {
+        renderRolodexBanner();
+    }
 });
 
 // --- PASSWORD PROTECTION ---
@@ -1005,6 +1014,19 @@ function renderRolodexBanner() {
         ? recommendedByUserProfile.photoURL 
         : 'https://www.gravatar.com/avatar?d=mp';
 
+    // Calculate count based on activeCategory
+    let count = 0;
+    if (recommendedServiceIds) {
+        if (activeCategory === 'All') {
+            count = recommendedServiceIds.size;
+        } else {
+             count = serviceData.filter(s => 
+                s.category === activeCategory && 
+                recommendedServiceIds.has(s.id)
+            ).length;
+        }
+    }
+
     const banner = document.createElement('div');
     banner.id = 'rolodex-banner';
     banner.className = 'mb-8 bg-white border border-scandi-clay/30 rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-soft relative overflow-hidden fade-in';
@@ -1018,11 +1040,11 @@ function renderRolodexBanner() {
             <div>
                 <div class="text-[10px] uppercase tracking-widest text-scandi-clay font-bold mb-1">Viewing Recommendations</div>
                 <h2 class="font-serif text-2xl text-scandi-text">${name}'s Top Picks</h2>
-                <p class="text-sm text-scandi-muted">Browsing ${recommendedServiceIds ? recommendedServiceIds.size : 0} recommended providers</p>
+                <p class="text-sm text-scandi-muted">Browsing ${count} recommended providers</p>
             </div>
         </div>
         
-        <a href="directory.html" class="relative z-10 px-6 py-3 border border-scandi-line bg-white text-scandi-text font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-bg transition-colors shadow-sm whitespace-nowrap">
+        <a href="index.html" class="relative z-10 px-6 py-3 border border-scandi-line bg-white text-scandi-text font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-bg transition-colors shadow-sm whitespace-nowrap">
             View All Providers
         </a>
     `;
