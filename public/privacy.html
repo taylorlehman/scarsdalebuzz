@@ -1,82 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScarsdaleBuzz // Privacy Policy</title>
-  <link rel="icon" type="image/png" href="images/logos/logo_bee_white_bg.png">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScarsdaleBuzz // Privacy Policy</title>
+    <link rel="icon" type="image/png" href="images/logos/bee_favicon.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'scandi-bg': '#F2F0E9', 
+                        'scandi-surface': '#FFFCF5', 
+                        'scandi-text': '#282624', 
+                        'scandi-muted': '#8A8580',
+                        'scandi-line': '#DCD6CE', 
+                        'scandi-sage': '#9FA898',
+                        'scandi-clay': '#C29B8B',
+                        'scandi-stone': '#A8A4A0',
+                        'scandi-dark': '#1A1918',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 20px rgba(40, 38, 36, 0.02)',
+                        'card': '0 1px 3px rgba(0,0,0,0.05)',
+                        'hover': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F2F0E9;
+            color: #282624;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.5;
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="antialiased bg-[#f7e9cf] min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-2xl text-stone-800 w-full max-w-2xl">
-    <div class="w-32 h-32 rounded-full bg-[#f7e9cf] p-1 mx-auto mb-6 flex items-center justify-center" style="border: 4px solid #81503f;">
-      <img src="images/scarsdale_services_directory.png" alt="Scarsdale Services Directory Logo" class="w-20 h-20">
-    </div>
-    <h1 class="font-brand text-3xl md:text-4xl font-black text-center mb-4">Privacy Policy</h1>
-    <p class="text-center text-stone-600 italic mb-8">Last updated: August 17, 2025</p>
+<body class="min-h-screen flex flex-col relative antialiased selection:bg-scandi-sage selection:text-white">
+    <div class="paper-texture"></div>
 
-    <div class="space-y-6 text-stone-700 leading-relaxed">
-      <section>
-        <h2 class="font-bold text-lg mb-2">1. Overview</h2>
-        <p>Scarsdale Services Directory ("we", "us", "our") provides a community-powered directory of local services. This policy explains what information we collect, how we use it, and your choices.</p>
-      </section>
+    <!-- Header (Fixed) -->
+    <div id="header-container"></div>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">2. Information We Collect</h2>
-        <ul class="list-disc pl-5">
-          <li><span class="font-semibold">Directory data:</span> Business and contact information used for listings (e.g., names, phone, category, recommendation counts).</li>
-          <li><span class="font-semibold">Usage data:</span> Basic site interaction data (e.g., page views) to improve the experience. We do not sell personal information.</li>
-        </ul>
-      </section>
+    <!-- Main Content -->
+    <main class="flex-grow pt-28 pb-12 px-6 relative z-10 fade-in">
+        <div class="max-w-3xl mx-auto bg-scandi-surface p-8 md:p-12 border border-scandi-line shadow-card rounded-sm">
+            
+            <div class="text-center mb-10">
+                <div class="w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <img src="images/logos/bee_favicon.png" alt="Scarsdale Buzz Logo" class="w-16 h-16 opacity-80">
+                </div>
+                <h1 class="font-serif text-3xl md:text-4xl text-scandi-text mb-2">Privacy Policy</h1>
+                <p class="text-scandi-muted font-mono text-xs tracking-widest uppercase">Last updated: August 17, 2025</p>
+            </div>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">3. How We Use Information</h2>
-        <ul class="list-disc pl-5">
-          <li>To operate and improve the directory.</li>
-          <li>To display listings and categories to users.</li>
-          <li>To maintain quality and accuracy of listings.</li>
-        </ul>
-      </section>
+            <div class="space-y-8 text-scandi-text leading-relaxed font-light">
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">1. Overview</h2>
+                    <p>ScarsdaleBuzz ("we", "us", "our") provides a community-powered directory of local services. This policy explains what information we collect, how we use it, and your choices.</p>
+                </section>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">4. Sharing</h2>
-        <p>We may share aggregated, non-identifiable information for analytics or improvements. We do not sell or rent personal data. We may disclose information if required by law or to protect our rights and users.</p>
-      </section>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">2. Information We Collect</h2>
+                    <ul class="list-disc pl-5 space-y-2 marker:text-scandi-clay">
+                        <li><span class="font-medium">Directory data:</span> Business and contact information used for listings (e.g., names, phone, category, recommendation counts).</li>
+                        <li><span class="font-medium">Usage data:</span> Basic site interaction data (e.g., page views) to improve the experience. We do not sell personal information.</li>
+                    </ul>
+                </section>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">5. Data Retention</h2>
-        <p>We retain directory data as needed to operate the service. If you’d like a listing updated or removed, contact us using the information below.</p>
-      </section>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">3. How We Use Information</h2>
+                    <ul class="list-disc pl-5 space-y-2 marker:text-scandi-clay">
+                        <li>To operate and improve the directory.</li>
+                        <li>To display listings and categories to users.</li>
+                        <li>To maintain quality and accuracy of listings.</li>
+                    </ul>
+                </section>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">6. Your Choices</h2>
-        <ul class="list-disc pl-5">
-          <li>You may request updates or deletion of a listing by contacting us.</li>
-          <li>For data access or deletion, see our Data Deletion page.</li>
-        </ul>
-      </section>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">4. Sharing</h2>
+                    <p>We may share aggregated, non-identifiable information for analytics or improvements. We do not sell or rent personal data. We may disclose information if required by law or to protect our rights and users.</p>
+                </section>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">7. Children’s Privacy</h2>
-        <p>Our directory is intended for general audiences and not directed to children under 13. We do not knowingly collect personal information from children under 13.</p>
-      </section>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">5. Data Retention</h2>
+                    <p>We retain directory data as needed to operate the service. If you’d like a listing updated or removed, contact us using the information below.</p>
+                </section>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">8. Changes to This Policy</h2>
-        <p>We may update this policy periodically. We will post the updated version with a new “Last updated” date.</p>
-      </section>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">6. Your Choices</h2>
+                    <ul class="list-disc pl-5 space-y-2 marker:text-scandi-clay">
+                        <li>You may request updates or deletion of a listing by contacting us.</li>
+                        <li>For data access or deletion, see our <a href="data-deletion.html" class="border-b border-scandi-muted hover:text-scandi-text hover:border-scandi-text transition-colors">Data Deletion</a> page.</li>
+                    </ul>
+                </section>
 
-      <section>
-        <h2 class="font-bold text-lg mb-2">9. Contact</h2>
-        <p>Questions? Contact <a href="mailto:taylor.lehman@gmail.com" class="underline text-stone-800">taylor.lehman@gmail.com</a>.</p>
-      </section>
-    </div>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">7. Children’s Privacy</h2>
+                    <p>Our directory is intended for general audiences and not directed to children under 13. We do not knowingly collect personal information from children under 13.</p>
+                </section>
 
-    <div class="text-center mt-8">
-      <a href="index.html" class="underline text-stone-700 hover:text-stone-900">Back to Directory</a>
-    </div>
-  </div>
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">8. Changes to This Policy</h2>
+                    <p>We may update this policy periodically. We will post the updated version with a new “Last updated” date.</p>
+                </section>
+
+                <section>
+                    <h2 class="font-serif text-xl mb-3 text-scandi-dark">9. Contact</h2>
+                    <p>Questions? Contact <a href="mailto:taylor.lehman@gmail.com" class="border-b border-scandi-muted hover:text-scandi-text hover:border-scandi-text transition-colors">taylor.lehman@gmail.com</a>.</p>
+                </section>
+            </div>
+
+            <div class="text-center mt-12 pt-8 border-t border-scandi-line/50">
+                <a href="directory/index.html" class="inline-flex items-center gap-2 text-sm font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text transition-colors group">
+                    <svg class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Back to Directory
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-12 border-t border-scandi-line text-center relative z-10">
+        <div class="text-[10px] text-scandi-muted font-mono uppercase tracking-widest mb-4">Scarsdale Buzz • Est. 2024</div>
+        <div class="flex justify-center gap-6 text-[10px] uppercase tracking-widest text-scandi-muted font-mono">
+             <a href="privacy.html" class="hover:text-scandi-text transition-colors text-scandi-text">Privacy</a>
+             <a href="data-deletion.html" class="hover:text-scandi-text transition-colors">Data</a>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="components/header.js"></script>
+    
+    <script>
+        // Initialize Shared Header
+        document.addEventListener('DOMContentLoaded', () => {
+            new SharedHeader({
+                activePage: 'none', // No active page highlight for privacy policy
+                rootPath: './'
+            });
+        });
+    </script>
 </body>
 </html>

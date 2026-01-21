@@ -1,12 +1,40 @@
 #!/bin/bash
 
-# Usage: ./scripts/deploy.sh [staging|prod] [--reset-data]
+# Usage: ./scripts/deploy.sh [staging|prod|both] [--reset-data]
 
 ENV=$1
 RESET_DATA=$2
 
+if [[ "$ENV" == "both" ]]; then
+    if [[ "$RESET_DATA" == "--reset-data" ]]; then
+        echo "Error: --reset-data is not supported with 'both' option."
+        exit 1
+    fi
+
+    echo "=== Starting Sequential Deployment (Staging -> Prod) ==="
+
+    echo ">>> Step 1: Deploying to Staging"
+    bash "$0" staging
+    RETVAL=$?
+    if [ $RETVAL -ne 0 ]; then
+        echo ">>> Error: Staging deployment failed (Exit Code: $RETVAL). Aborting production deployment."
+        exit $RETVAL
+    fi
+
+    echo ">>> Step 2: Deploying to Prod"
+    bash "$0" prod
+    RETVAL=$?
+    if [ $RETVAL -ne 0 ]; then
+        echo ">>> Error: Production deployment failed (Exit Code: $RETVAL)."
+        exit $RETVAL
+    fi
+
+    echo "=== Sequential Deployment Complete ==="
+    exit 0
+fi
+
 if [[ "$ENV" != "staging" && "$ENV" != "prod" ]]; then
-    echo "Usage: $0 [staging|prod] [--reset-data]"
+    echo "Usage: $0 [staging|prod|both] [--reset-data]"
     exit 1
 fi
 
@@ -37,6 +65,11 @@ fi
 echo "-> Running firebase deploy -P $ENV..."
 # We assume the user has configured the alias using `firebase use --add`
 firebase deploy -P $ENV
+RETVAL=$?
+if [ $RETVAL -ne 0 ]; then
+    echo "Error: Deployment to $ENV failed."
+    exit $RETVAL
+fi
 
 # 4. Data Reset (Staging Only)
 if [[ "$ENV" == "staging" && "$RESET_DATA" == "--reset-data" ]]; then

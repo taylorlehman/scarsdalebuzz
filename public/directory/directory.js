@@ -707,14 +707,20 @@ const openAuthModal = () => {
 const renderCategoryButtons = () => {
     // Calculate total recommendations per category
     const categoryTotals = {};
+    const providerCounts = {};
+
     serviceData.forEach(service => {
         if (!categoryTotals[service.category]) categoryTotals[service.category] = 0;
         categoryTotals[service.category] += service.recommendations;
+        
+        if (!providerCounts[service.category]) providerCounts[service.category] = 0;
+        providerCounts[service.category] += 1;
     });
 
     if (Array.isArray(categoriesList) && categoriesList.length) {
         categoriesList.forEach(cat => {
             if (cat && !(cat in categoryTotals)) categoryTotals[cat] = 0;
+            if (cat && !(cat in providerCounts)) providerCounts[cat] = 0;
         });
     }
 
@@ -761,13 +767,13 @@ const renderCategoryButtons = () => {
         categoryFilters.appendChild(overflowBtn);
         
         overflowBtn.addEventListener('click', () => {
-            showOverflowDialog(overflowCategories, categoryTotals);
+            showOverflowDialog(overflowCategories, providerCounts);
         });
     }
 };
 
 // --- OVERFLOW DIALOG ---
-const showOverflowDialog = (overflowCategories, categoryTotals) => {
+const showOverflowDialog = (overflowCategories, providerCounts) => {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-scandi-dark/20 backdrop-blur-sm flex items-center justify-center z-[60] p-4';
     modal.id = 'overflow-modal';
@@ -803,6 +809,12 @@ const showOverflowDialog = (overflowCategories, categoryTotals) => {
         if (!foundGroup) ungroupedCategories.push(category);
     });
 
+    // Sort alphabetically within groups
+    Object.keys(groupedCategories).forEach(group => {
+        groupedCategories[group].sort((a, b) => a.localeCompare(b));
+    });
+    ungroupedCategories.sort((a, b) => a.localeCompare(b));
+
     const renderGroup = (name, cats) => {
         const groupDiv = document.createElement('div');
         groupDiv.innerHTML = `<div class="text-xs font-mono text-scandi-muted uppercase tracking-widest mb-3">${name}</div>`;
@@ -814,7 +826,7 @@ const showOverflowDialog = (overflowCategories, categoryTotals) => {
             btn.className = `w-full text-left p-3 rounded-sm hover:bg-scandi-bg transition flex justify-between items-center border ${activeCategory === cat ? 'border-scandi-clay bg-scandi-bg' : 'border-scandi-line'}`;
             btn.innerHTML = `
                 <span class="font-serif text-scandi-text text-sm">${cat}</span>
-                <span class="text-xs font-mono text-scandi-muted">${categoryTotals[cat]}</span>
+                <span class="text-xs font-mono text-scandi-muted">${providerCounts[cat] || 0}</span>
             `;
             btn.addEventListener('click', () => {
                 activeCategory = cat;

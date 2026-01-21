@@ -48,6 +48,12 @@ Run the script from the root directory:
 ./scripts/deploy.sh prod
 ```
 
+**Deploy to Staging, then Production (Sequential):**
+*Deploys to Staging first. If successful, automatically deploys to Production. Aborts if Staging fails.*
+```bash
+./scripts/deploy.sh both
+```
+
 ### What the Script Does:
 1. **Config Swap**: Copies `public/firebase-config.[env].js` to `public/firebase-config.js`.
 2. **Env Swap**: Copies `functions/.env.[env]` to `functions/.env`.
