@@ -1,0 +1,129 @@
+ENVIRONMENT SETUP & DEPLOYMENT GUIDE
+
+1. ARCHITECTURE OVERVIEW
+------------------------
+This project maintains two separate Firebase environments to ensure safe testing and reliable production releases:
+
+- **Staging** (`scarsdale-buzz-staging`)
+  - Used for development, testing features, and data experiments.
+  - Deployment automatically swaps in staging configurations.
+  - Supports a `--reset-data` flag to wipe the database and start fresh with seed data.
+
+- **Production** (`scarsdale-buzz-prod`)
+  - The live application used by real users.
+  - Deployment swaps in production configurations.
+  - Protected from accidental data wipes (the deploy script explicitly prevents data reset on prod).
+
+Each environment has its own:
+- Firebase Project (Hosting, Firestore, Functions, Auth)
+- Environment Variables (API Keys, Secrets)
+- Frontend Configuration File
+
+2. DEPLOYMENT SCRIPT
+--------------------
+The `scripts/deploy.sh` script automates the deployment process. It handles configuration swapping to ensure the correct environment variables and frontend config are used.
+
+### Usage
+Run the script from the root directory:
+
+```bash
+./scripts/deploy.sh [environment] [options]
+```
+
+### Commands
+
+**Deploy to Staging:**
+```bash
+./scripts/deploy.sh staging
+```
+
+**Deploy to Staging AND Reset Data (Wipe DB & Re-seed):**
+*Warning: This deletes all users and data in the staging project.*
+```bash
+./scripts/deploy.sh staging --reset-data
+```
+
+**Deploy to Production:**
+```bash
+./scripts/deploy.sh prod
+```
+
+### What the Script Does:
+1. **Config Swap**: Copies `public/firebase-config.[env].js` to `public/firebase-config.js`.
+2. **Env Swap**: Copies `functions/.env.[env]` to `functions/.env`.
+3. **Deploy**: Runs `firebase deploy -P [env]`.
+4. **Data Reset (Staging only)**: If `--reset-data` is passed:
+   - Deletes all Firestore data.
+   - Deletes all Authentication users via `scripts/delete_users.js`.
+   - Re-imports seed data via `scripts/import_services.py`.
+
+3. NEW DEPLOYMENT SETUP INSTRUCTIONS
+------------------------------------
+If you are setting this up from scratch (e.g., cloning the repo for the first time), you need to populate several configuration files that are git-ignored for security.
+
+### A. Frontend Configuration
+Create these files in `public/` with your Firebase web configuration (found in Firebase Console -> Project Settings).
+
+1. `public/firebase-config.staging.js`
+2. `public/firebase-config.prod.js`
+
+**Template for `firebase-config.[env].js`:**
+```javascript
+window.firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "...",
+  appId: "...",
+  measurementId: "..."
+};
+
+// Cloud Function URLs (Required for API calls)
+window.firebaseConfig.functionUrls = {
+    verifyAdminRole: "https://us-central1-YOUR_PROJECT.cloudfunctions.net/verifyAdminRole",
+    deleteUser: "https://us-central1-YOUR_PROJECT.cloudfunctions.net/deleteUser",
+    deleteService: "https://us-central1-YOUR_PROJECT.cloudfunctions.net/deleteService",
+    findBusinessContactInfo: "https://us-central1-YOUR_PROJECT.cloudfunctions.net/findBusinessContactInfo",
+    submitRequest: "https://submitrequest-HASH-uc.a.run.app",       // Gen 2 Function URL
+    handleUserResponse: "https://handleuserresponse-HASH-uc.a.run.app", // Gen 2 Function URL
+    cancelRequest: "https://cancelrequest-HASH-uc.a.run.app"        // Gen 2 Function URL
+};
+
+window.formatPhoneNumber = (input) => { ... }; // Copy helper from existing source
+```
+
+### B. Backend Environment Variables
+Create these files in `functions/` to store secrets for Cloud Functions.
+
+1. `functions/.env.staging`
+2. `functions/.env.prod`
+
+**Required Variables:**
+```ini
+GEMINI_API_KEY="AIzaSy..."
+TWILIO_ACCOUNT_SID="AC..."
+TWILIO_AUTH_TOKEN="..."
+TWILIO_PHONE_NUMBER="+1555..."
+TWILIO_MESSAGING_SERVICE_SID="MG..."
+```
+
+### C. Admin Scripts Configuration
+To run data reset scripts (`scripts/deploy.sh staging --reset-data`), you need Service Account keys.
+
+1. Go to Firebase Console -> Project Settings -> Service Accounts.
+2. Generate a new private key for **Staging**.
+3. Save it as `scripts/serviceAccountKey.staging.json`.
+4. (Optional) For prod admin scripts, save the prod key as `scripts/serviceAccountKey.json`.
+
+### D. Python Dependencies (for Data Import)
+If using the data reset feature, ensure python dependencies are installed:
+```bash
+pip install -r scripts/requirements.txt
+```
+
+### E. Node Dependencies
+Install dependencies for both the root (if any) and functions:
+```bash
+cd functions && npm install
+```
