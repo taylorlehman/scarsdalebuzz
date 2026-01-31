@@ -324,24 +324,79 @@ function renderUserTable() {
         return searchStr.includes(q);
     });
     
+    // Sort: Pending first, then by name
+    filtered.sort((a, b) => {
+        const statusA = a.directoryStatus || 'pending';
+        const statusB = b.directoryStatus || 'pending';
+        
+        if (statusA === 'pending' && statusB !== 'pending') return -1;
+        if (statusA !== 'pending' && statusB === 'pending') return 1;
+        
+        return (a.displayName || '').localeCompare(b.displayName || '');
+    });
+    
     usersTableBody.innerHTML = '';
     filtered.forEach(u => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
+        
+        const status = u.directoryStatus || 'pending';
+        
+        let statusBadge = '';
+        let actionButtons = '';
+        
+        if (status === 'approved') {
+            statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>';
+            actionButtons = `<button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest border border-red-200 px-3 py-1 rounded hover:bg-red-50" onclick="handleDeleteUser('${u.uid}')">Delete</button>`;
+        } else {
+            statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>';
+            actionButtons = `
+                <button class="text-xs font-bold text-green-600 hover:text-green-800 uppercase tracking-widest border border-green-200 px-3 py-1 rounded hover:bg-green-50 mr-2" onclick="handleApproveAccess('${u.uid}')">Accept</button>
+                <button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest border border-red-200 px-3 py-1 rounded hover:bg-red-50" onclick="handleRejectAccess('${u.uid}')">Reject</button>
+            `;
+        }
+
         tr.innerHTML = `
             <td class="py-4 px-6 font-medium text-scandi-text flex items-center gap-3">
                 ${u.photoURL ? `<img src="${u.photoURL}" class="w-8 h-8 rounded-full bg-gray-200" />` : '<div class="w-8 h-8 rounded-full bg-scandi-line flex items-center justify-center text-xs">?</div>'}
-                ${u.displayName || 'Unknown'}
+                <div>
+                    <div>${u.displayName || 'Unknown'}</div>
+                    <div class="text-[10px] text-scandi-muted font-mono">${u.uid}</div>
+                </div>
             </td>
             <td class="py-4 px-6 text-scandi-muted font-mono text-xs">${u.email || '-'}</td>
-            <td class="py-4 px-6 text-scandi-muted font-mono text-xs opacity-50">${u.uid}</td>
+            <td class="py-4 px-6">${statusBadge}</td>
             <td class="py-4 px-6 text-right">
-                <button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest border border-red-200 px-3 py-1 rounded hover:bg-red-50" onclick="handleDeleteUser('${u.uid}')">Delete</button>
+                ${actionButtons}
             </td>
         `;
         usersTableBody.appendChild(tr);
     });
 }
+
+window.handleApproveAccess = async (uid) => {
+    try {
+        await db.collection('users').doc(uid).update({
+            directoryStatus: 'approved'
+        });
+        
+        // Optimistic update
+        const user = allUsers.find(u => u.uid === uid);
+        if (user) user.directoryStatus = 'approved';
+        renderUserTable();
+        updateCounts();
+        
+    } catch (e) {
+        console.error("Approval failed", e);
+        alert("Failed to approve user: " + e.message);
+    }
+};
+
+window.handleRejectAccess = async (uid) => {
+    if (!confirm('Reject this user? This will delete their account request.')) return;
+    // Reuse delete logic as rejection implies removal in this context
+    handleDeleteUser(uid);
+};
 
 function renderBetaTable() {
     const q = (betaSearchEl.value || '').toLowerCase();

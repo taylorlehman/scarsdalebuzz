@@ -103,26 +103,27 @@
 <body class="min-h-screen flex flex-col relative antialiased selection:bg-scandi-sage selection:text-white">
     <div class="paper-texture"></div>
 
-    <!-- Password Modal -->
-    <div id="password-modal" class="fixed inset-0 bg-scandi-bg z-[100] flex items-center justify-center transition-opacity duration-500">
+    <!-- Pending Approval Modal -->
+    <div id="pending-modal" class="fixed inset-0 bg-scandi-bg z-[100] flex items-center justify-center hidden">
         <div class="bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center m-4 relative overflow-hidden">
             <div class="paper-texture"></div>
             <div class="relative z-10">
                 <div class="w-24 h-24 rounded-full bg-scandi-bg border border-scandi-line flex items-center justify-center mx-auto mb-8 p-4">
                     <img src="../images/logos/logo_bee_gray_bg.png" alt="Logo" class="w-full h-full object-contain opacity-80">
                 </div>
-                <h1 class="font-serif text-3xl text-scandi-text mb-2">The Directory</h1>
+                <h1 class="font-serif text-3xl text-scandi-text mb-2">Access Pending</h1>
                 <p class="text-scandi-muted font-light mb-8 text-sm max-w-xs mx-auto">
-                    Find the passcode on the <a href="https://www.facebook.com/groups/375204099272472" target="_blank" class="border-b border-scandi-muted hover:text-scandi-text hover:border-scandi-text transition-colors">Scarsdale Buzz 🐝 Facebook group</a>
+                    Thanks for signing in! An admin is reviewing your request. Access will be granted within 24 hours.
                 </p>
 
-                <form id="password-form" class="space-y-4">
-                    <input type="text" id="password-input" class="w-full p-4 border border-scandi-line bg-scandi-bg/30 rounded-sm text-center font-serif text-lg tracking-widest placeholder-scandi-muted/50 focus:outline-none focus:border-scandi-clay transition-colors" placeholder="•••••••" autofocus autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-                    <p id="password-error" class="text-red-800 text-xs font-mono uppercase tracking-widest hidden">Incorrect phrase.</p>
-                    <button type="submit" class="w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-[0.2em] py-4 rounded-sm hover:bg-scandi-clay transition-all duration-300">
-                        Enter
+                <div class="space-y-4">
+                    <a href="../index.html" class="block w-full bg-scandi-text text-white font-mono text-xs uppercase tracking-[0.2em] py-4 rounded-sm hover:bg-scandi-clay transition-all duration-300">
+                        Back to Home
+                    </a>
+                    <button id="pending-signout-btn" class="block w-full border border-scandi-line text-scandi-muted font-mono text-xs uppercase tracking-[0.2em] py-4 rounded-sm hover:text-scandi-text hover:border-scandi-text transition-all duration-300">
+                        Sign Out
                     </button>
-                </form>
+                </div>
                 
                 <div class="mt-8 pt-6 border-t border-scandi-line/50 flex justify-center gap-6 text-[10px] uppercase tracking-widest text-scandi-muted font-mono">
                     <a href="../privacy.html" class="hover:text-scandi-text transition-colors">Privacy</a>

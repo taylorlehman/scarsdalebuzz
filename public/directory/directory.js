@@ -1,8 +1,6 @@
 // --- ELEMENT SELECTORS ---
-const passwordModal = document.getElementById('password-modal');
-const passwordForm = document.getElementById('password-form');
-const passwordInput = document.getElementById('password-input');
-const passwordError = document.getElementById('password-error');
+const pendingModal = document.getElementById('pending-modal');
+const pendingSignOutBtn = document.getElementById('pending-signout-btn');
 const mainContent = document.getElementById('main-content');
 const serviceList = document.getElementById('serviceList');
 const searchInput = document.getElementById('searchInput');
@@ -31,6 +29,9 @@ try {
         db = firebase.firestore();
         // Try to load category group mapping from Firestore config early
         loadCategoryGroupsConfig();
+        loadCategoriesConfig();
+        // Start auth check immediately
+        initAuthListener();
     }
 } catch (_) {
     // No-op if Firebase not available; page will still render but without data
@@ -175,66 +176,121 @@ const hydrateNames = async () => {
     });
 };
 
-// --- AUTH LISTENER ---
-const initAuthListener = () => {
+// --- AUTH LISTENER & ACCESS CONTROL ---
+function initAuthListener() {
     firebase.auth().onAuthStateChanged(async (user) => {
+        if (!user) {
+            // Not logged in -> Redirect to Login
+            const returnUrl = encodeURIComponent(window.location.href);
+            window.location.href = `../login.html?redirect=${returnUrl}`;
+            return;
+        }
+
         currentUser = user;
         currentIsAdmin = false;
-        if (unsubscribeUser) {
-            unsubscribeUser();
-            unsubscribeUser = null;
-        }
         
-        if (user) {
-            try {
-                const tokenResult = await user.getIdTokenResult();
-                currentIsAdmin = !!tokenResult.claims.admin;
-                // Re-render if we are admin to show test providers
-                if (currentIsAdmin) filterAndRender({ keepOrder: true });
-            } catch (e) {
-                console.warn("Error fetching admin claim", e);
+        // 1. Check/Create User Document & Directory Status
+        const userRef = db.collection('users').doc(user.uid);
+        
+        try {
+            const userDoc = await userRef.get();
+            let status = 'pending';
+            
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                status = userData.directoryStatus || 'pending';
+                
+                // Sync latest profile info
+                const profileUpdate = {
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    email: user.email,
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // Only update if changes to avoid write costs/loops? 
+                // For now, simple merge is fine.
+                await userRef.set(profileUpdate, { merge: true });
+                
+            } else {
+                // New User: Create doc with pending status
+                await userRef.set({
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    email: user.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                    directoryStatus: 'pending',
+                    roles: ['user'] 
+                });
+                status = 'pending';
             }
 
-            // Ensure user profile exists (fixes missing avatar/name for non-onboarded users)
-            const profileUpdate = {
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                email: user.email,
-                lastActive: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            // 1. Sync to private user doc
-            db.collection('users').doc(user.uid).set(profileUpdate, { merge: true })
-                .catch(e => console.log('Error syncing private profile', e));
-
-            // 2. Sync to public profile (for other users to see)
+            // Sync public profile
             db.collection('public_profiles').doc(user.uid).set({
                 displayName: user.displayName,
                 photoURL: user.photoURL
-            }, { merge: true })
-                .catch(e => console.log('Error syncing public profile', e));
+            }, { merge: true }).catch(console.error);
 
-            // Listen to real-time updates of user's liked services (via collectionGroup)
-            unsubscribeUser = db.collectionGroup('recommendations')
-                .where('uid', '==', user.uid)
-                .onSnapshot((snapshot) => {
-                    userLikedServices.clear();
-                    snapshot.forEach(doc => {
-                        // Parent is recommendations col, Parent.Parent is service doc
-                        if (doc.ref.parent && doc.ref.parent.parent) {
-                            userLikedServices.add(doc.ref.parent.parent.id);
-                        }
+            // 2. Handle Status
+            if (status === 'approved') {
+                // ACCESS GRANTED
+                if (pendingModal) pendingModal.classList.add('hidden');
+                if (mainContent) mainContent.classList.remove('hidden');
+                
+                // Start Data Subscriptions
+                startServicesSubscription();
+                
+                if (unsubscribeUser) {
+                    unsubscribeUser();
+                    unsubscribeUser = null;
+                }
+                
+                // Listen to Recommendations
+                unsubscribeUser = db.collectionGroup('recommendations')
+                    .where('uid', '==', user.uid)
+                    .onSnapshot((snapshot) => {
+                        userLikedServices.clear();
+                        snapshot.forEach(doc => {
+                            if (doc.ref.parent && doc.ref.parent.parent) {
+                                userLikedServices.add(doc.ref.parent.parent.id);
+                            }
+                        });
+                        filterAndRender({ keepOrder: true });
+                    }, error => {
+                        console.error("Error listening to likes:", error);
                     });
-                    filterAndRender({ keepOrder: true });
-                }, error => {
-                    console.error("Error listening to likes:", error);
-                });
-        } else {
-            userLikedServices.clear();
-            filterAndRender({ keepOrder: true });
+
+                // Check Admin Claim (for UI features)
+                try {
+                    const tokenResult = await user.getIdTokenResult();
+                    currentIsAdmin = !!tokenResult.claims.admin;
+                    if (currentIsAdmin) filterAndRender({ keepOrder: true });
+                } catch (e) {
+                    console.warn("Error fetching admin claim", e);
+                }
+
+            } else {
+                // ACCESS DENIED / PENDING
+                if (mainContent) mainContent.classList.add('hidden');
+                if (pendingModal) pendingModal.classList.remove('hidden');
+                // Don't load services to prevent data leak
+            }
+
+        } catch (e) {
+            console.error("Error checking user status:", e);
+            alert("An error occurred while checking your access status. Please try refreshing.");
         }
     });
 };
+
+if (pendingSignOutBtn) {
+    pendingSignOutBtn.addEventListener('click', () => {
+        firebase.auth().signOut().then(() => {
+            window.location.href = '../login.html';
+        });
+    });
+}
 
 // Subscribe to Firestore and keep a warm in-memory cache for instant filtering
 let unsubscribeServices = null;
@@ -965,24 +1021,8 @@ categoryFilters.addEventListener('click', (e) => {
 
 // --- PASSWORD PROTECTION ---
 const checkPassword = () => {
-    if (localStorage.getItem('scarsdale_access') === 'true') {
-        passwordModal.classList.add('hidden');
-        mainContent.classList.remove('hidden');
-        Promise.all([
-            loadCategoryGroupsConfig(),
-            loadCategoriesConfig(),
-            startServicesSubscription(),
-        ]).then(async () => {
-            if (recommendedByUid) {
-                await loadRolodex(recommendedByUid);
-            }
-            initAuthListener();
-            renderCategoryButtons();
-            filterAndRender();
-        });
-        return true;
-    }
-    return false;
+    // Password protection removed in favor of Google Auth + Admin Approval
+    return true; 
 };
 
 // --- RECOMMENDATIONS LOGIC ---
@@ -1065,25 +1105,7 @@ function renderRolodexBanner() {
 }
 
 // Check immediately on load
-checkPassword();
+checkPassword(); // Legacy placeholder
 
-passwordForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const enteredPassword = passwordInput.value;
-    const correctPassword = 'raiders';
+// Removed password event listener
 
-    if (enteredPassword === correctPassword) {
-        localStorage.setItem('scarsdale_access', 'true');
-        passwordError.classList.add('hidden');
-        passwordModal.style.opacity = '0';
-        setTimeout(() => {
-            checkPassword();
-        }, 500);
-    } else {
-        passwordError.classList.remove('hidden');
-        passwordInput.value = '';
-        passwordInput.focus();
-        passwordForm.parentElement.classList.add('animate-shake');
-        setTimeout(() => passwordForm.parentElement.classList.remove('animate-shake'), 600);
-    }
-});
