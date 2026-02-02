@@ -887,6 +887,9 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
             btn.addEventListener('click', () => {
                 activeCategory = cat;
                 
+                // Clear any active search when selecting a category
+                searchInput.value = '';
+                
                 // Update URL
                 const url = new URL(window.location);
                 url.searchParams.set('category', cat);
@@ -1002,6 +1005,9 @@ categoryFilters.addEventListener('click', (e) => {
     if (newCategory === activeCategory) return;
 
     activeCategory = newCategory;
+    
+    // Clear any active search when selecting a category
+    searchInput.value = '';
 
     // Update URL
     const url = new URL(window.location);
