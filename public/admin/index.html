@@ -277,6 +277,7 @@
                 <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Service Management</div>
                 <button id="navServices" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors active rounded-r-md">Services</button>
                 <button id="navSuggestions" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Suggestions</button>
+                <button id="navMergeCategories" class="nav-item w-full text-left pl-10 pr-6 py-2 text-sm text-scandi-text/80 hover:bg-scandi-bg/50 hover:text-scandi-text transition-colors rounded-r-md">Merge Categories</button>
 
                 <!-- Category Management -->
                 <div class="px-6 mt-8 mb-3 text-xs font-mono font-bold text-scandi-muted uppercase tracking-widest border-t border-scandi-line/30 pt-6">Category Management</div>
@@ -664,6 +665,90 @@
                             </div>
 
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: MERGE CATEGORIES -->
+            <div id="mergeCategoriesView" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-sm shadow-card border border-scandi-line">
+                    <div class="mb-6">
+                        <h2 class="font-serif text-xl text-scandi-text">Merge Categories</h2>
+                        <p class="text-scandi-muted text-sm mt-2">Move all services from one category to another, then delete the source category.</p>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 rounded-sm p-4 mb-8">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div class="text-sm text-amber-800">
+                                <p class="font-medium mb-1">Warning: This action cannot be undone</p>
+                                <p class="text-amber-700">All services in the source category will be moved to the destination category. The source category will be permanently deleted.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <!-- Source Category -->
+                        <div>
+                            <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Source Category (to be deleted)</label>
+                            <select id="mergeSourceCategory" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
+                                <option value="">Select source category...</option>
+                            </select>
+                            <p id="mergeSourceCount" class="text-xs text-scandi-muted mt-2"></p>
+                        </div>
+
+                        <!-- Destination Category -->
+                        <div>
+                            <label class="block text-xs font-mono uppercase tracking-widest text-scandi-muted mb-2">Destination Category</label>
+                            <select id="mergeDestCategory" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
+                                <option value="">Select destination category...</option>
+                            </select>
+                            <p id="mergeDestCount" class="text-xs text-scandi-muted mt-2"></p>
+                        </div>
+                    </div>
+
+                    <!-- Arrow Indicator -->
+                    <div class="flex items-center justify-center mb-8">
+                        <div class="flex items-center gap-4 px-6 py-4 bg-scandi-bg/30 rounded-sm border border-scandi-line/50">
+                            <span id="mergePreviewSource" class="font-medium text-scandi-text">—</span>
+                            <svg class="w-6 h-6 text-scandi-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                            <span id="mergePreviewDest" class="font-medium text-scandi-text">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-4 pt-6 border-t border-scandi-line">
+                        <button id="mergeCategoriesBtn" class="bg-red-600 text-white px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" disabled>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                            Merge & Delete Source
+                        </button>
+                        <span id="mergeStatus" class="text-sm text-scandi-muted"></span>
+                    </div>
+                </div>
+
+                <!-- Services Preview -->
+                <div id="mergeServicesPreview" class="hidden bg-white rounded-sm shadow-card border border-scandi-line overflow-hidden">
+                    <div class="p-6 border-b border-scandi-line bg-scandi-bg/20">
+                        <h3 class="font-serif text-lg text-scandi-text">Services to be Moved</h3>
+                        <p class="text-xs text-scandi-muted mt-1">These services will be reassigned to the destination category</p>
+                    </div>
+                    <div class="max-h-64 overflow-y-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-scandi-bg border-b border-scandi-line sticky top-0">
+                                <tr class="text-left text-scandi-muted font-mono text-xs uppercase tracking-widest">
+                                    <th class="py-3 px-6 font-medium">Name / Business</th>
+                                    <th class="py-3 px-6 font-medium">Recommendations</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mergeServicesTableBody" class="divide-y divide-scandi-line/50">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

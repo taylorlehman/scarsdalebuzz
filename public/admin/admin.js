@@ -15,6 +15,7 @@ const navItems = {
     users: document.getElementById('navUsers'),
     services: document.getElementById('navServices'),
     suggestions: document.getElementById('navSuggestions'),
+    mergeCategories: document.getElementById('navMergeCategories'),
     beta: document.getElementById('navBeta'),
     categories: document.getElementById('navCategories'),
     groups: document.getElementById('navGroups'),
@@ -26,6 +27,7 @@ const views = {
     users: document.getElementById('usersView'),
     services: document.getElementById('servicesView'),
     suggestions: document.getElementById('suggestionsView'),
+    mergeCategories: document.getElementById('mergeCategoriesView'),
     beta: document.getElementById('betaView'),
     categories: document.getElementById('categoriesView'),
     groups: document.getElementById('groupsView'),
@@ -227,6 +229,7 @@ function switchView(viewName) {
     if (viewName === 'suggestions') loadSuggestions();
     if (viewName === 'qualityDashboard') loadQualityDashboard();
     if (viewName === 'cleanup') initCleanup();
+    if (viewName === 'mergeCategories') initMergeCategories();
 }
 
 function updateCounts() {
@@ -1598,4 +1601,250 @@ function handleReject(type) {
     statusEl.textContent = 'Rejected';
     statusEl.classList.remove('hidden');
     statusEl.classList.add('text-gray-500');
+}
+
+
+// -- Merge Categories Logic --
+
+function initMergeCategories() {
+    const sourceSelect = document.getElementById('mergeSourceCategory');
+    const destSelect = document.getElementById('mergeDestCategory');
+    const mergeBtn = document.getElementById('mergeCategoriesBtn');
+    const sourceCountEl = document.getElementById('mergeSourceCount');
+    const destCountEl = document.getElementById('mergeDestCount');
+    const previewSourceEl = document.getElementById('mergePreviewSource');
+    const previewDestEl = document.getElementById('mergePreviewDest');
+    const statusEl = document.getElementById('mergeStatus');
+    const servicesPreview = document.getElementById('mergeServicesPreview');
+    const servicesTableBody = document.getElementById('mergeServicesTableBody');
+    
+    // Populate category dropdowns
+    const categories = getAllCategories();
+    const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    sourceSelect.innerHTML = '<option value="">Select source category...</option>' + options;
+    destSelect.innerHTML = '<option value="">Select destination category...</option>' + options;
+    
+    // Reset UI state
+    sourceCountEl.textContent = '';
+    destCountEl.textContent = '';
+    previewSourceEl.textContent = '—';
+    previewDestEl.textContent = '—';
+    statusEl.textContent = '';
+    mergeBtn.disabled = true;
+    servicesPreview.classList.add('hidden');
+    
+    // Remove old event listeners by cloning
+    const newSourceSelect = sourceSelect.cloneNode(true);
+    const newDestSelect = destSelect.cloneNode(true);
+    const newMergeBtn = mergeBtn.cloneNode(true);
+    
+    sourceSelect.parentNode.replaceChild(newSourceSelect, sourceSelect);
+    destSelect.parentNode.replaceChild(newDestSelect, destSelect);
+    mergeBtn.parentNode.replaceChild(newMergeBtn, mergeBtn);
+    
+    // Add event listeners
+    newSourceSelect.addEventListener('change', updateMergePreview);
+    newDestSelect.addEventListener('change', updateMergePreview);
+    newMergeBtn.addEventListener('click', executeMerge);
+}
+
+function updateMergePreview() {
+    const sourceSelect = document.getElementById('mergeSourceCategory');
+    const destSelect = document.getElementById('mergeDestCategory');
+    const mergeBtn = document.getElementById('mergeCategoriesBtn');
+    const sourceCountEl = document.getElementById('mergeSourceCount');
+    const destCountEl = document.getElementById('mergeDestCount');
+    const previewSourceEl = document.getElementById('mergePreviewSource');
+    const previewDestEl = document.getElementById('mergePreviewDest');
+    const servicesPreview = document.getElementById('mergeServicesPreview');
+    const servicesTableBody = document.getElementById('mergeServicesTableBody');
+    
+    const sourceCategory = sourceSelect.value;
+    const destCategory = destSelect.value;
+    
+    // Update preview labels
+    previewSourceEl.textContent = sourceCategory || '—';
+    previewDestEl.textContent = destCategory || '—';
+    
+    // Count services in each category
+    const sourceServices = allServices.filter(s => s.category === sourceCategory);
+    const destServices = allServices.filter(s => s.category === destCategory);
+    
+    if (sourceCategory) {
+        sourceCountEl.textContent = `${sourceServices.length} service${sourceServices.length !== 1 ? 's' : ''} in this category`;
+    } else {
+        sourceCountEl.textContent = '';
+    }
+    
+    if (destCategory) {
+        destCountEl.textContent = `${destServices.length} service${destServices.length !== 1 ? 's' : ''} in this category`;
+    } else {
+        destCountEl.textContent = '';
+    }
+    
+    // Validate selection
+    const isValid = sourceCategory && destCategory && sourceCategory !== destCategory;
+    mergeBtn.disabled = !isValid;
+    
+    // Show services preview if source is selected
+    if (sourceCategory && sourceServices.length > 0) {
+        servicesPreview.classList.remove('hidden');
+        servicesTableBody.innerHTML = '';
+        
+        sourceServices.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-scandi-bg/50';
+            const name = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
+            tr.innerHTML = `
+                <td class="py-3 px-6 text-scandi-text">
+                    ${name || '-'}
+                    ${s.sunnyApproved ? '<span title="Sunny Approved" class="ml-2">☀️</span>' : ''}
+                </td>
+                <td class="py-3 px-6 text-scandi-muted">${s.recommendations ?? 0}</td>
+            `;
+            servicesTableBody.appendChild(tr);
+        });
+    } else if (sourceCategory && sourceServices.length === 0) {
+        servicesPreview.classList.remove('hidden');
+        servicesTableBody.innerHTML = `
+            <tr>
+                <td colspan="2" class="py-8 px-6 text-center text-scandi-muted italic">
+                    No services in this category. You can delete it directly from the Categories page.
+                </td>
+            </tr>
+        `;
+    } else {
+        servicesPreview.classList.add('hidden');
+    }
+    
+    // Warning if same category selected
+    if (sourceCategory && destCategory && sourceCategory === destCategory) {
+        document.getElementById('mergeStatus').textContent = 'Source and destination cannot be the same category.';
+    } else {
+        document.getElementById('mergeStatus').textContent = '';
+    }
+}
+
+async function executeMerge() {
+    const sourceSelect = document.getElementById('mergeSourceCategory');
+    const destSelect = document.getElementById('mergeDestCategory');
+    const mergeBtn = document.getElementById('mergeCategoriesBtn');
+    const statusEl = document.getElementById('mergeStatus');
+    
+    const sourceCategory = sourceSelect.value;
+    const destCategory = destSelect.value;
+    
+    if (!sourceCategory || !destCategory || sourceCategory === destCategory) {
+        alert('Please select valid source and destination categories.');
+        return;
+    }
+    
+    const sourceServices = allServices.filter(s => s.category === sourceCategory);
+    
+    // Confirmation dialog
+    const confirmMsg = sourceServices.length > 0
+        ? `This will move ${sourceServices.length} service${sourceServices.length !== 1 ? 's' : ''} from "${sourceCategory}" to "${destCategory}" and then delete the "${sourceCategory}" category.\n\nThis action cannot be undone. Continue?`
+        : `This will delete the empty category "${sourceCategory}".\n\nContinue?`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    // Disable UI during operation
+    mergeBtn.disabled = true;
+    sourceSelect.disabled = true;
+    destSelect.disabled = true;
+    statusEl.textContent = 'Processing...';
+    statusEl.classList.remove('text-green-600', 'text-red-600');
+    statusEl.classList.add('text-scandi-muted');
+    
+    try {
+        // Step 1: Update all services in the source category
+        if (sourceServices.length > 0) {
+            statusEl.textContent = `Moving ${sourceServices.length} services...`;
+            
+            const batchSize = 400;
+            let batch = db.batch();
+            let i = 0;
+            
+            for (const service of sourceServices) {
+                const ref = db.collection('services').doc(service.id);
+                batch.update(ref, { category: destCategory });
+                i++;
+                
+                if (i % batchSize === 0) {
+                    await batch.commit();
+                    batch = db.batch();
+                }
+            }
+            
+            // Commit remaining
+            if (i % batchSize !== 0) {
+                await batch.commit();
+            }
+        }
+        
+        // Step 2: Verify source category is empty
+        statusEl.textContent = 'Verifying source category is empty...';
+        const verifySnap = await db.collection('services').where('category', '==', sourceCategory).limit(1).get();
+        
+        if (!verifySnap.empty) {
+            throw new Error('Failed to move all services. Some services still remain in the source category.');
+        }
+        
+        // Step 3: Delete source category from categories list
+        statusEl.textContent = 'Deleting source category...';
+        categoriesList = categoriesList.filter(c => c !== sourceCategory);
+        await db.collection('config').doc('categories').set({ list: categoriesList });
+        
+        // Step 4: Remove source category from any group associations
+        if (categoryGroups) {
+            for (const [groupName, cats] of Object.entries(categoryGroups)) {
+                const idx = cats.indexOf(sourceCategory);
+                if (idx !== -1) {
+                    cats.splice(idx, 1);
+                }
+            }
+            await db.collection('config').doc('categoryGroups').set({ groups: categoryGroups });
+        }
+        
+        // Step 5: Update local services cache
+        allServices.forEach(s => {
+            if (s.category === sourceCategory) {
+                s.category = destCategory;
+            }
+        });
+        
+        // Success!
+        statusEl.textContent = `Successfully merged "${sourceCategory}" into "${destCategory}"!`;
+        statusEl.classList.remove('text-scandi-muted');
+        statusEl.classList.add('text-green-600');
+        
+        // Refresh UI
+        populateCategorySelects();
+        renderTable();
+        renderCategoryTable();
+        renderGroupTable();
+        updateCounts();
+        
+        // Re-initialize the merge view with updated data
+        setTimeout(() => {
+            initMergeCategories();
+        }, 1500);
+        
+    } catch (e) {
+        console.error('Merge failed:', e);
+        statusEl.textContent = `Error: ${e.message}`;
+        statusEl.classList.remove('text-scandi-muted');
+        statusEl.classList.add('text-red-600');
+        
+        // Re-enable UI
+        sourceSelect.disabled = false;
+        destSelect.disabled = false;
+        mergeBtn.disabled = false;
+        
+        // Reload data to ensure consistency
+        await loadServicesOnce();
+        await loadCategoriesList();
+        await loadCategoryGroups();
+    }
 }
