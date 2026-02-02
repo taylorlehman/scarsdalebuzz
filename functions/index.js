@@ -1239,8 +1239,15 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
 
         logger.info(`Searching contact info for: ${businessName} (${category}) in ${address}`);
 
+        const apiKey = GEMINI_API_KEY.value();
+        if (!apiKey) {
+            logger.error("GEMINI_API_KEY is missing or empty.");
+            res.status(500).json({ error: "Server configuration error: API key missing." });
+            return;
+        }
+
         try {
-            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+            const genAI = new GoogleGenerativeAI(apiKey);
             
             const model = genAI.getGenerativeModel({
                 model: "gemini-2.5-flash", 
