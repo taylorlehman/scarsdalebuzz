@@ -40,6 +40,30 @@ fi
 
 echo "=== Deploying to $ENV environment ==="
 
+# 0. Backup Data (Production Only)
+if [[ "$ENV" == "prod" ]]; then
+    echo "-> Backing up production data before deployment..."
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    if [ -f "$SCRIPT_DIR/backup_services.py" ]; then
+        python3 "$SCRIPT_DIR/backup_services.py" --production
+        BACKUP_RETVAL=$?
+        if [ $BACKUP_RETVAL -ne 0 ]; then
+            echo "Error: Backup failed (Exit Code: $BACKUP_RETVAL). Aborting deployment."
+            exit $BACKUP_RETVAL
+        fi
+        echo "-> Backup completed successfully."
+    else
+        echo "Warning: backup_services.py not found. Skipping backup."
+        read -p "Continue without backup? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Deployment cancelled."
+            exit 1
+        fi
+    fi
+fi
+
 # 1. Swap Config
 echo "-> Swapping public/firebase-config.js..."
 if [ -f "public/firebase-config.$ENV.js" ]; then

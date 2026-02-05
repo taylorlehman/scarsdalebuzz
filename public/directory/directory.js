@@ -17,7 +17,7 @@ let recommendedByUserProfile = null;
 // --- FIREBASE INIT ---
 // Expect window.firebaseConfig to be defined in firebase-config.js
 let db;
-let analytics;
+let analytics = null; // Analytics loaded lazily for performance
 try {
     if (window.firebaseConfig && firebase?.apps?.length === 0) {
         firebase.initializeApp(window.firebaseConfig);
@@ -34,14 +34,14 @@ try {
         // Start auth check immediately
         initAuthListener();
     }
-    // Initialize Analytics (wrapped separately to handle env detection errors)
-    try {
-        if (firebase?.analytics) {
-            analytics = firebase.analytics();
-        }
-    } catch (analyticsError) {
-        console.warn('Analytics initialization failed:', analyticsError);
-        // Continue without analytics
+    // Analytics is loaded lazily via index.html for better page performance
+    // Listen for the analyticsReady event to update the reference
+    window.addEventListener('analyticsReady', () => {
+        analytics = window.analytics;
+    });
+    // Check if already loaded (in case event fired before this listener)
+    if (window.analytics) {
+        analytics = window.analytics;
     }
 } catch (_) {
     // No-op if Firebase not available; page will still render but without data

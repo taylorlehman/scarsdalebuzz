@@ -9,9 +9,13 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts -->
+    <!-- Preconnect to critical domains for faster loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 
     <script>
@@ -245,17 +249,50 @@
 
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+    <!-- Scripts - Core Firebase SDKs loaded first -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
-    <!-- Polyfill for process (required by Firebase Analytics in browser) -->
-    <script>if (typeof process === 'undefined') { window.process = { env: {} }; }</script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics-compat.js"></script>
     <script src="../firebase-config.js"></script>
     <script src="directory.js"></script>
     <script src="../components/header.js"></script>
+    
+    <!-- Firebase Analytics loaded lazily after page becomes interactive -->
+    <script>
+        // Defer analytics loading to improve initial page performance
+        function loadAnalytics() {
+            if (window.analyticsLoaded) return;
+            window.analyticsLoaded = true;
+            
+            // Polyfill for process (required by Firebase Analytics in browser)
+            if (typeof process === 'undefined') { window.process = { env: {} }; }
+            
+            const script = document.createElement('script');
+            script.src = 'https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics-compat.js';
+            script.onload = function() {
+                // Initialize analytics after SDK loads
+                if (window.firebase && window.firebase.analytics) {
+                    try {
+                        window.analytics = firebase.analytics();
+                        // Dispatch event so directory.js knows analytics is ready
+                        window.dispatchEvent(new CustomEvent('analyticsReady'));
+                    } catch (e) {
+                        console.warn('Analytics initialization failed:', e);
+                    }
+                }
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Load analytics after page is interactive (requestIdleCallback or fallback)
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(loadAnalytics, { timeout: 3000 });
+        } else {
+            // Fallback: load after a short delay
+            setTimeout(loadAnalytics, 2000);
+        }
+    </script>
     
     <script>
         // Initialize Shared Header
