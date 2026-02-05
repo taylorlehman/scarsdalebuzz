@@ -250,6 +250,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+    <!-- Polyfill for process (required by Firebase Analytics in browser) -->
+    <script>if (typeof process === 'undefined') { window.process = { env: {} }; }</script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics-compat.js"></script>
     <script src="../firebase-config.js"></script>
     <script src="directory.js"></script>
     <script src="../components/header.js"></script>

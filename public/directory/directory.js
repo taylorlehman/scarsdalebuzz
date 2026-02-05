@@ -17,6 +17,7 @@ let recommendedByUserProfile = null;
 // --- FIREBASE INIT ---
 // Expect window.firebaseConfig to be defined in firebase-config.js
 let db;
+let analytics;
 try {
     if (window.firebaseConfig && firebase?.apps?.length === 0) {
         firebase.initializeApp(window.firebaseConfig);
@@ -32,6 +33,15 @@ try {
         loadCategoriesConfig();
         // Start auth check immediately
         initAuthListener();
+    }
+    // Initialize Analytics (wrapped separately to handle env detection errors)
+    try {
+        if (firebase?.analytics) {
+            analytics = firebase.analytics();
+        }
+    } catch (analyticsError) {
+        console.warn('Analytics initialization failed:', analyticsError);
+        // Continue without analytics
     }
 } catch (_) {
     // No-op if Firebase not available; page will still render but without data
@@ -328,12 +338,10 @@ const startServicesSubscription = () => {
                     fuse = new Fuse(serviceData, fuseOptions);
                 }
 
-                if (!passwordModal || passwordModal.classList.contains('hidden')) {
-                    renderCategoryButtons();
-                    filterAndRender({ keepOrder: true });
-                    if (recommendedByUid) {
-                        renderRolodexBanner();
-                    }
+                renderCategoryButtons();
+                filterAndRender({ keepOrder: true });
+                if (recommendedByUid) {
+                    renderRolodexBanner();
                 }
                 resolve();
             }, (err) => {
@@ -365,6 +373,15 @@ const renderServices = (services) => {
     // Hide/Show No Results
     if (services.length === 0) {
         noResults.classList.remove('hidden');
+        
+        // Log no-results analytics event if there's an active search
+        const searchTerm = searchInput.value.trim();
+        if (searchTerm && analytics) {
+            analytics.logEvent('directory_search_no_results', {
+                search_term: searchTerm
+            });
+        }
+        
         // Add "Suggest a Provider" button to No Results
         const existingBtn = noResults.querySelector('.suggest-btn-placeholder');
         if (!existingBtn) {
@@ -985,6 +1002,7 @@ const filterAndRender = (options = { keepOrder: false }) => {
     }
 
     renderServices(filteredServices);
+    return filteredServices;
 };
 
 let searchTimeout;
@@ -992,7 +1010,30 @@ searchInput.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     serviceList.style.opacity = '0.5';
     searchTimeout = setTimeout(() => {
-        filterAndRender();
+        const searchTerm = searchInput.value.trim();
+        
+        // Log search event if there's a query
+        if (searchTerm && analytics) {
+            analytics.logEvent('directory_search', {
+                search_term: searchTerm
+            });
+        }
+        
+        const filteredResults = filterAndRender();
+        
+        // Log search results quality metrics
+        if (searchTerm && analytics && filteredResults.length > 0) {
+            const resultsWithoutContact = filteredResults.filter(
+                s => !s.phone && !s.email
+            ).length;
+            
+            analytics.logEvent('directory_search_results', {
+                search_term: searchTerm,
+                total_results: filteredResults.length,
+                results_without_contact: resultsWithoutContact
+            });
+        }
+        
         serviceList.style.opacity = '1';
     }, 250);
 });
