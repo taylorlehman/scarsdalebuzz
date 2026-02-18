@@ -1748,6 +1748,10 @@ function initMergeCategories() {
     destSelect.parentNode.replaceChild(newDestSelect, destSelect);
     mergeBtn.parentNode.replaceChild(newMergeBtn, mergeBtn);
     
+    // Enable controls in case they were disabled
+    newSourceSelect.disabled = false;
+    newDestSelect.disabled = false;
+    
     // Add event listeners
     newSourceSelect.addEventListener('change', updateMergePreview);
     newDestSelect.addEventListener('change', updateMergePreview);

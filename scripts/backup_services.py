@@ -11,7 +11,7 @@ Usage:
   python3 scripts/backup_services.py --staging --dry-run
 
 Output:
-  scripts/backups/data_backup_<YYYY-MM-DD>_<environment>.csv
+  scripts/backups/data_backup_<YYYY-MM-DD_HH-MM>_<environment>.csv
 """
 from __future__ import annotations
 
@@ -196,7 +196,7 @@ Examples:
         sys.exit(1)
     
     # Generate output filename
-    date_str = datetime.now().strftime('%Y-%m-%d')
+    date_str = datetime.now().strftime('%Y-%m-%d_%H-%M')
     
     if args.output:
         output_path = args.output
