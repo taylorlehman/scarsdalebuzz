@@ -350,7 +350,26 @@ function renderUserTable() {
         
         if (status === 'approved') {
             statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>';
-            actionButtons = `<button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest border border-red-200 px-3 py-1 rounded hover:bg-red-50" onclick="handleDeleteUser('${u.uid}')">Delete</button>`;
+            
+            // Check if admin
+            const isAdmin = !!u.isAdmin;
+            const adminBadge = isAdmin ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 uppercase tracking-wide">ADMIN</span>' : '';
+            statusBadge += adminBadge;
+
+            // Overflow Menu
+            actionButtons = `
+                <div class="relative inline-block text-left">
+                    <button onclick="toggleUserMenu('${u.uid}', event)" class="p-2 text-scandi-muted hover:text-scandi-text rounded-full hover:bg-scandi-bg transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                    </button>
+                    <div id="menu-${u.uid}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-scandi-line origin-top-right">
+                        ${!isAdmin ? `<button onclick="handleMakeAdmin('${u.uid}')" class="block w-full text-left px-4 py-2 text-sm text-scandi-text hover:bg-scandi-bg">Make Admin</button>` : ''}
+                        <button onclick="handleDeleteUser('${u.uid}')" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete User</button>
+                    </div>
+                </div>
+            `;
         } else {
             statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>';
             actionButtons = `
@@ -399,6 +418,92 @@ window.handleRejectAccess = async (uid) => {
     if (!confirm('Reject this user? This will delete their account request.')) return;
     // Reuse delete logic as rejection implies removal in this context
     handleDeleteUser(uid);
+};
+
+window.toggleUserMenu = (uid, event) => {
+    event.stopPropagation();
+    const btn = event.currentTarget;
+    const menuId = `menu-${uid}`;
+
+    // Close all others
+    document.querySelectorAll('[id^="menu-"]').forEach(el => {
+        if (el.id !== menuId) el.classList.add('hidden');
+    });
+    
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+
+    if (!menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+        return;
+    }
+
+    // Show and position
+    menu.classList.remove('hidden');
+    
+    // Use fixed positioning to escape overflow container
+    const rect = btn.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 8}px`; // slight offset
+    menu.style.right = `${document.documentElement.clientWidth - rect.right}px`;
+    menu.style.left = 'auto'; // reset in case
+    menu.style.zIndex = '9999';
+};
+
+// Close menus when clicking outside
+document.addEventListener('click', () => {
+    document.querySelectorAll('[id^="menu-"]').forEach(el => el.classList.add('hidden'));
+});
+
+// Close menus on scroll (capture phase to catch table scroll)
+window.addEventListener('scroll', () => {
+    document.querySelectorAll('[id^="menu-"]').forEach(el => el.classList.add('hidden'));
+}, true);
+
+window.handleMakeAdmin = async (uid) => {
+    if (!confirm('Are you sure you want to make this user an Admin? They will have full access to this dashboard.')) return;
+    
+    // Safety Check: Ensure the URL is defined
+    const url = window.firebaseConfig?.functionUrls?.grantAdminRole;
+    if (!url) {
+        console.error("Configuration error: grantAdminRole URL is missing.", window.firebaseConfig);
+        alert("Configuration error: The 'Grant Admin' feature is not properly configured in this environment (URL missing). Please clear your cache or contact support.");
+        return;
+    }
+
+    try {
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ uid })
+        });
+        
+        if (!response.ok) {
+            // Check content type to see if it's HTML (likely 404 page)
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("text/html")) {
+                throw new Error("Server returned a 404 Page (Function not found or misconfigured URL).");
+            }
+            
+            const err = await response.text();
+            throw new Error(err || 'Request failed');
+        }
+        
+        alert('Admin role granted successfully.');
+        
+        // Optimistic update
+        const user = allUsers.find(u => u.uid === uid);
+        if (user) user.isAdmin = true;
+        renderUserTable();
+        
+    } catch (e) {
+        console.error("Grant admin failed:", e);
+        alert("Failed to grant admin role: " + e.message);
+    }
 };
 
 function renderBetaTable() {

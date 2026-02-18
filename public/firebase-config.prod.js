@@ -23,6 +23,7 @@ window.firebaseConfig = window.firebaseConfig || {
 // Function URLs for Production
 window.firebaseConfig.functionUrls = {
     verifyAdminRole: "https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/verifyAdminRole",
+    grantAdminRole: "https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/grantAdminRole",
     deleteUser: "https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/deleteUser",
     deleteService: "https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/deleteService",
     findBusinessContactInfo: "https://us-central1-scarsdale-buzz-prod.cloudfunctions.net/findBusinessContactInfo",

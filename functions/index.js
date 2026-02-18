@@ -47,11 +47,7 @@ const verifyAuthAndGetClaims = async (req) => {
 };
 
 // --- ADMIN CONFIGURATION ---
-// Add emails here to grant admin access. 
-// These users will receive the 'admin' custom claim upon calling verifyAdminRole.
-const ADMIN_EMAILS = [
-    'taylor@tl-labs.com'
-];
+
 
 exports.verifyAdminRole = functions.https.onRequest(async (req, res) => {
     cors(req, res, async () => {
@@ -77,27 +73,94 @@ exports.verifyAdminRole = functions.https.onRequest(async (req, res) => {
         }
 
         const email = decodedToken.email;
-        logger.info(`Verifying admin role for email: ${email} (uid: ${decodedToken.uid})`);
+        const uid = decodedToken.uid;
+        logger.info(`Verifying admin role for email: ${email} (uid: ${uid})`);
 
-        if (ADMIN_EMAILS.includes(email)) {
-            // Grant admin claim if not already present
-            if (decodedToken.admin !== true) {
+        // Check 1: Email domain
+        const isTlLabs = email && email.endsWith('@tl-labs.com');
+
+        // Check 2: Existing admin claim (via User Record)
+        let hasAdminClaim = false;
+        try {
+            const userRecord = await admin.auth().getUser(uid);
+            hasAdminClaim = !!(userRecord.customClaims && userRecord.customClaims.admin);
+        } catch (e) {
+            logger.error(`Error fetching user record for ${uid}:`, e);
+        }
+
+        if (isTlLabs || hasAdminClaim) {
+            // Grant/Refresh admin claim if not already present or just to be safe
+            if (!hasAdminClaim) {
                 try {
                     logger.info(`Attempting to grant admin privileges (setCustomUserClaims) to ${email}...`);
-                    await admin.auth().setCustomUserClaims(decodedToken.uid, { admin: true });
+                    await admin.auth().setCustomUserClaims(uid, { admin: true });
                     logger.info(`Successfully granted admin privileges to ${email}`);
                     res.json({ isAdmin: true, message: 'Admin privileges granted.' });
                 } catch (error) {
-                    logger.error(`Failed to set custom user claims for ${email}. Ensure the Service Account has 'Firebase Authentication Admin' role. Error details:`, error);
-                    res.status(500).json({ error: 'Failed to grant admin privileges due to internal permissions error.' });
+                    logger.error(`Failed to set custom user claims for ${email}.`, error);
+                    res.status(500).json({ error: 'Failed to grant admin privileges.' });
                 }
             } else {
                 logger.info(`User ${email} is already an admin.`);
                 res.json({ isAdmin: true, message: 'Already an admin.' });
             }
         } else {
-            logger.warn(`Access denied for email: ${email} - Not in ADMIN_EMAILS list.`);
+            logger.warn(`Access denied for email: ${email}`);
             res.json({ isAdmin: false, message: 'Not authorized.' });
+        }
+    });
+});
+
+exports.grantAdminRole = functions.https.onRequest(async (req, res) => {
+    cors(req, res, async () => {
+        if (req.method !== 'POST') {
+            res.status(405).send('Method Not Allowed');
+            return;
+        }
+
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            res.status(401).send('Unauthorized');
+            return;
+        }
+
+        const idToken = authHeader.split('Bearer ')[1];
+        let decodedToken;
+        try {
+            decodedToken = await admin.auth().verifyIdToken(idToken);
+        } catch (error) {
+            logger.error("Error verifying ID token:", error);
+            res.status(401).send('Invalid token');
+            return;
+        }
+
+        // Enforce Admin Check
+        if (decodedToken.admin !== true) {
+             res.status(403).send('Forbidden: Admin access required');
+             return;
+        }
+        
+        const { uid } = req.body;
+        if (!uid) {
+            res.status(400).send('Target UID is required');
+            return;
+        }
+
+        try {
+            logger.info(`Granting admin role to user ${uid} by request of ${decodedToken.email}`);
+
+            // 1. Set custom claim
+            await admin.auth().setCustomUserClaims(uid, { admin: true });
+            
+            // 2. Update Firestore user doc
+            await admin.firestore().collection('users').doc(uid).set({ isAdmin: true }, { merge: true });
+            
+            logger.info(`Successfully granted admin role to ${uid}`);
+            res.json({ success: true, message: 'Admin role granted successfully' });
+            
+        } catch (error) {
+            logger.error("Error granting admin role:", error);
+            res.status(500).send("Internal Server Error: " + error.message);
         }
     });
 });

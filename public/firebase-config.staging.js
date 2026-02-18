@@ -14,6 +14,7 @@ window.firebaseConfig = window.firebaseConfig || {
 // Note: Gen 2 functions (run.app) have a random hash that needs to be updated after deployment.
 window.firebaseConfig.functionUrls = {
     verifyAdminRole: "https://us-central1-scarsdale-buzz-staging.cloudfunctions.net/verifyAdminRole",
+    grantAdminRole: "https://us-central1-scarsdale-buzz-staging.cloudfunctions.net/grantAdminRole",
     deleteUser: "https://us-central1-scarsdale-buzz-staging.cloudfunctions.net/deleteUser",
     deleteService: "https://us-central1-scarsdale-buzz-staging.cloudfunctions.net/deleteService",
     findBusinessContactInfo: "https://us-central1-scarsdale-buzz-staging.cloudfunctions.net/findBusinessContactInfo",
