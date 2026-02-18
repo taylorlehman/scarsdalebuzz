@@ -807,9 +807,14 @@ const renderCategoryButtons = () => {
         }
     }
 
-    const topCategories = ['All', ...sortedCategories.slice(0, 5)];
-    const overflowCategories = sortedCategories.slice(5);
-    const isActiveInOverflow = overflowCategories.includes(activeCategory);
+    const pinnedCategories = ['Plumbing', 'HVAC', 'Electrician', 'Body Shop', 'Landscaper'];
+    const topCategories = ['All', ...pinnedCategories];
+    
+    // Overflow now contains ALL categories as requested
+    const overflowCategories = sortedCategories;
+    
+    // Active in overflow if it's NOT in the top pinned list
+    const isActiveInOverflow = !topCategories.includes(activeCategory) && activeCategory !== 'All';
     
     categoryFilters.innerHTML = '';
     
