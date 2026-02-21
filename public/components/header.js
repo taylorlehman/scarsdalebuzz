@@ -39,7 +39,7 @@ class SharedHeader {
                 <!-- Desktop Navigation (Hidden on Mobile) -->
                 <nav class="hidden md:flex gap-8">
                     <a href="${dirLink}" class="${dirClass}">Directory</a>
-                    <a href="${sunnyLink}" class="${sunnyClass}">Sunny</a>
+                    <a href="${sunnyLink}" class="${sunnyClass} sunny-nav-link hidden">Sunny</a>
                 </nav>
 
                 <!-- Mobile Hamburger Button (Visible on Mobile) -->
@@ -66,6 +66,7 @@ class SharedHeader {
                     <div id="user-dropdown" class="hidden absolute right-0 top-full mt-4 w-56 bg-white border border-scandi-line shadow-soft rounded-sm py-2 z-[60]">
                         <a href="${rootPath}recommendations.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Recommendations</a>
                         <a href="${rootPath}account.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-b border-scandi-line/50">My Account</a>
+                        <a href="${rootPath}terms.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Terms of Service</a>
                         <a href="${rootPath}privacy.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Privacy Policy</a>
                         <button id="sign-out-btn" class="block w-full text-left px-4 py-3 text-xs uppercase tracking-widest text-red-600 hover:bg-red-50 border-t border-scandi-line mt-2 pt-2 font-mono">Sign Out</button>
                     </div>
@@ -74,7 +75,7 @@ class SharedHeader {
                 <!-- Mobile Menu Dropdown -->
                 <div id="mobile-menu" class="hidden absolute left-0 top-20 w-full bg-scandi-bg border-b border-scandi-line shadow-soft z-[59] md:hidden flex flex-col">
                     <a href="${dirLink}" class="${mobileItemClass} ${activePage === 'directory' ? 'bg-scandi-surface text-scandi-clay' : ''}">Directory</a>
-                    <a href="${sunnyLink}" class="${mobileItemClass} ${activePage === 'sunny' ? 'bg-scandi-surface text-scandi-clay' : ''}">Sunny</a>
+                    <a href="${sunnyLink}" class="${mobileItemClass} ${activePage === 'sunny' ? 'bg-scandi-surface text-scandi-clay' : ''} sunny-nav-link hidden">Sunny</a>
                 </div>
             </header>
         `;
@@ -140,6 +141,18 @@ class SharedHeader {
                 if (user) {
                     if(nameEl) nameEl.textContent = user.displayName || 'User';
                     if(photoEl && user.photoURL) photoEl.src = user.photoURL;
+
+                    // Check Sunny Beta Status
+                    if (firebase.firestore) {
+                        const db = firebase.firestore();
+                        db.collection('users').doc(user.uid).get().then(doc => {
+                            if (doc.exists && doc.data().sunnyBetaStatus === 'approved') {
+                                document.querySelectorAll('.sunny-nav-link').forEach(el => el.classList.remove('hidden'));
+                            }
+                        }).catch(err => {
+                            console.error("Error fetching user profile:", err);
+                        });
+                    }
                     
                     // Show User Menu Content
                     if (dropdown) {
@@ -170,7 +183,8 @@ class SharedHeader {
                         
                         dropdown.innerHTML = `
                             <a href="${loginUrl}" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono font-bold">Sign In</a>
-                            <a href="${this.options.rootPath}privacy.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-t border-scandi-line mt-2 pt-2">Privacy Policy</a>
+                            <a href="${this.options.rootPath}terms.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono border-t border-scandi-line mt-2 pt-2">Terms of Service</a>
+                            <a href="${this.options.rootPath}privacy.html" class="block px-4 py-3 text-xs uppercase tracking-widest text-scandi-text hover:bg-scandi-bg font-mono">Privacy Policy</a>
                         `;
                     }
                 }
