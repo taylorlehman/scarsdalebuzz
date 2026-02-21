@@ -5,6 +5,18 @@
 ENV=$1
 RESET_DATA=$2
 
+if [[ "$ENV" == "--help" || "$ENV" == "-h" ]]; then
+    echo "Usage: $0 [staging|prod|both] [--reset-data]"
+    echo ""
+    echo "Options:"
+    echo "  staging       Deploy to the staging environment"
+    echo "  prod          Deploy to the production environment"
+    echo "  both          Deploy to staging first, then to production if successful"
+    echo "  --reset-data  (Staging ONLY) Delete all Firestore/Auth data and re-import from CSV"
+    echo "  --help, -h    Show this help message"
+    exit 0
+fi
+
 if [[ "$ENV" == "both" ]]; then
     if [[ "$RESET_DATA" == "--reset-data" ]]; then
         echo "Error: --reset-data is not supported with 'both' option."

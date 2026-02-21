@@ -2,6 +2,16 @@ const admin = require('../functions/node_modules/firebase-admin');
 
 // Parse args
 const args = process.argv.slice(2);
+
+if (args.includes('--help') || args.includes('-h')) {
+    console.log('Usage: node scripts/delete_users.js --project=PROJECT_ID');
+    console.log('');
+    console.log('Options:');
+    console.log('  --project=PROJECT_ID   The GCP Project ID to target for user deletion');
+    console.log('  --help, -h             Show this help message');
+    process.exit(0);
+}
+
 const projectArg = args.find(arg => arg.startsWith('--project='));
 const projectId = projectArg ? projectArg.split('=')[1] : null;
 
@@ -47,33 +57,33 @@ try {
 }
 
 async function deleteAllUsers(nextPageToken) {
-  // List batch of users, 1000 at a time.
-  const listUsersResult = await admin.auth().listUsers(1000, nextPageToken);
-  
-  const uids = listUsersResult.users.map((userRecord) => userRecord.uid);
-  if (uids.length > 0) {
-      const deleteUsersResult = await admin.auth().deleteUsers(uids);
-      console.log(`Successfully deleted ${deleteUsersResult.successCount} users`);
-      if (deleteUsersResult.failureCount > 0) {
-          console.log(`Failed to delete ${deleteUsersResult.failureCount} users`);
-          deleteUsersResult.errors.forEach((err) => {
-              console.error(err.error.toJSON());
-          });
-      }
-  }
-  
-  if (listUsersResult.pageToken) {
-    // List next batch of users.
-    await deleteAllUsers(listUsersResult.pageToken);
-  }
+    // List batch of users, 1000 at a time.
+    const listUsersResult = await admin.auth().listUsers(1000, nextPageToken);
+
+    const uids = listUsersResult.users.map((userRecord) => userRecord.uid);
+    if (uids.length > 0) {
+        const deleteUsersResult = await admin.auth().deleteUsers(uids);
+        console.log(`Successfully deleted ${deleteUsersResult.successCount} users`);
+        if (deleteUsersResult.failureCount > 0) {
+            console.log(`Failed to delete ${deleteUsersResult.failureCount} users`);
+            deleteUsersResult.errors.forEach((err) => {
+                console.error(err.error.toJSON());
+            });
+        }
+    }
+
+    if (listUsersResult.pageToken) {
+        // List next batch of users.
+        await deleteAllUsers(listUsersResult.pageToken);
+    }
 }
 
 deleteAllUsers()
-  .then(() => {
-    console.log('Successfully deleted all users');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.log('Error deleting users:', error);
-    process.exit(1);
-  });
+    .then(() => {
+        console.log('Successfully deleted all users');
+        process.exit(0);
+    })
+    .catch((error) => {
+        console.log('Error deleting users:', error);
+        process.exit(1);
+    });

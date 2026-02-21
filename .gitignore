@@ -22,3 +22,10 @@ serviceAccountKey.*.json
 *.swp
 *.swo
 public/firebase-config.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

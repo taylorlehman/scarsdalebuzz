@@ -13,23 +13,26 @@ const TOOLS = require('./tools');
 // Define environment variables
 const GEMINI_API_KEY = defineString('GEMINI_API_KEY');
 
-const cors = require('cors')({origin: true});
+const cors = require('cors')({ origin: true });
 
 // Helper function to verify ID token
-const verifyAuthToken = async (req) => {
+async function verifyAuthToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
+        return null; // Token not found or invalid format
     }
     const idToken = authHeader.split('Bearer ')[1];
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
-        return decodedToken.uid;
+        return decodedToken;
     } catch (error) {
-        logger.error("Error verifying ID token:", error);
-        return null;
+        logger.warn('Error verifying ID token:', error);
+        return null; // Token verification failed
     }
-};
+}
+
+// Export the internal helper function for unit testing ONLY
+exports.verifyAuthToken = verifyAuthToken;
 
 const verifyAuthAndGetClaims = async (req) => {
     const authHeader = req.headers.authorization;
@@ -61,7 +64,7 @@ exports.verifyAdminRole = functions.https.onRequest(async (req, res) => {
             res.status(401).json({ error: 'Unauthenticated' });
             return;
         }
-        
+
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
         try {
@@ -136,10 +139,10 @@ exports.grantAdminRole = functions.https.onRequest(async (req, res) => {
 
         // Enforce Admin Check
         if (decodedToken.admin !== true) {
-             res.status(403).send('Forbidden: Admin access required');
-             return;
+            res.status(403).send('Forbidden: Admin access required');
+            return;
         }
-        
+
         const { uid } = req.body;
         if (!uid) {
             res.status(400).send('Target UID is required');
@@ -151,13 +154,13 @@ exports.grantAdminRole = functions.https.onRequest(async (req, res) => {
 
             // 1. Set custom claim
             await admin.auth().setCustomUserClaims(uid, { admin: true });
-            
+
             // 2. Update Firestore user doc
             await admin.firestore().collection('users').doc(uid).set({ isAdmin: true }, { merge: true });
-            
+
             logger.info(`Successfully granted admin role to ${uid}`);
             res.json({ success: true, message: 'Admin role granted successfully' });
-            
+
         } catch (error) {
             logger.error("Error granting admin role:", error);
             res.status(500).send("Internal Server Error: " + error.message);
@@ -190,10 +193,10 @@ exports.deleteUser = functions.https.onRequest(async (req, res) => {
 
         // Enforce Admin Check
         if (decodedToken.admin !== true) {
-             res.status(403).send('Forbidden: Admin access required');
-             return;
+            res.status(403).send('Forbidden: Admin access required');
+            return;
         }
-        
+
         const { uid } = req.body;
         if (!uid) {
             res.status(400).send('Target UID is required');
@@ -207,14 +210,14 @@ exports.deleteUser = functions.https.onRequest(async (req, res) => {
             // 1. Find and delete all recommendations by this user
             const recsSnapshot = await db.collectionGroup('recommendations').where('uid', '==', uid).get();
             logger.info(`Found ${recsSnapshot.size} recommendations to delete`);
-            
+
             // Process recommendations
             for (const doc of recsSnapshot.docs) {
-                 await doc.ref.delete();
-                 const serviceRef = doc.ref.parent.parent;
-                 if (serviceRef) {
-                     // Use transaction to update service stats safely
-                     try {
+                await doc.ref.delete();
+                const serviceRef = doc.ref.parent.parent;
+                if (serviceRef) {
+                    // Use transaction to update service stats safely
+                    try {
                         await db.runTransaction(async (t) => {
                             const sDoc = await t.get(serviceRef);
                             if (!sDoc.exists) return;
@@ -226,21 +229,21 @@ exports.deleteUser = functions.https.onRequest(async (req, res) => {
                                 recentRecommenders: newRecent
                             });
                         });
-                     } catch (err) {
-                         logger.warn(`Failed to update service stats for ${serviceRef.id}:`, err);
-                     }
-                 }
+                    } catch (err) {
+                        logger.warn(`Failed to update service stats for ${serviceRef.id}:`, err);
+                    }
+                }
             }
-            
+
             // 2. Delete user doc
             await db.collection('users').doc(uid).delete();
-            
+
             // 3. Delete from Auth
             await admin.auth().deleteUser(uid);
-            
+
             logger.info(`Successfully deleted user ${uid}`);
             res.json({ success: true, message: 'User deleted successfully' });
-            
+
         } catch (error) {
             logger.error("Error deleting user:", error);
             res.status(500).send("Internal Server Error: " + error.message);
@@ -273,10 +276,10 @@ exports.deleteService = functions.https.onRequest(async (req, res) => {
 
         // Enforce Admin Check
         if (decodedToken.admin !== true) {
-             res.status(403).send('Forbidden: Admin access required');
-             return;
+            res.status(403).send('Forbidden: Admin access required');
+            return;
         }
-        
+
         const { serviceId } = req.body;
         if (!serviceId) {
             res.status(400).send('Service ID is required');
@@ -288,7 +291,7 @@ exports.deleteService = functions.https.onRequest(async (req, res) => {
             logger.info(`Starting deletion process for service ${serviceId}`);
 
             const serviceRef = db.collection('services').doc(serviceId);
-            
+
             // 1. Delete recommendations subcollection
             const recsSnapshot = await serviceRef.collection('recommendations').get();
             const batch = db.batch();
@@ -331,10 +334,10 @@ exports.deleteService = functions.https.onRequest(async (req, res) => {
 
             // 3. Delete the service document itself
             await serviceRef.delete();
-            
+
             logger.info(`Successfully deleted service ${serviceId}`);
             res.json({ success: true, message: 'Service deleted successfully' });
-            
+
         } catch (error) {
             logger.error("Error deleting service:", error);
             res.status(500).send("Internal Server Error: " + error.message);
@@ -392,7 +395,7 @@ const addMessageToChatHistory = async (requestId, sender, receiver, message, pho
             }
 
             const chatHistory = doc.data().chat_history || [];
-            
+
             const newMessage = {
                 sender,
                 receiver,
@@ -418,11 +421,11 @@ const addMessageToChatHistory = async (requestId, sender, receiver, message, pho
  */
 const processIntake = async (requestRef, userContext, chatHistory, intakeCount, isAdmin) => {
     logger.info(`Processing intake for request ${requestRef.id}, count: ${intakeCount}, isAdmin: ${isAdmin}`);
-    
+
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
     const tools = [TOOLS.ASK_CLARIFYING_QUESTION_TOOL, TOOLS.PROCEED_TO_PROVIDER_TOOL];
-    
-    const model = genAI.getGenerativeModel({ 
+
+    const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
         tools: tools
     });
@@ -444,19 +447,19 @@ const processIntake = async (requestRef, userContext, chatHistory, intakeCount, 
             if (call.name === "ask_clarifying_question") {
                 // Scenario A: Ask Question
                 responseMessage = args.question;
-                
+
                 // Add Sunny's question to history
                 await addMessageToChatHistory(requestRef.id, 'Sunny', 'User', responseMessage, null);
-                
+
                 // Increment intake count
-                await requestRef.update({ 
-                    intakeCount: admin.firestore.FieldValue.increment(1) 
+                await requestRef.update({
+                    intakeCount: admin.firestore.FieldValue.increment(1)
                 });
 
             } else if (call.name === "proceed_to_provider") {
                 // Scenario B: Proceed
                 logger.info("Intake complete. Proceeding to provider.");
-                
+
                 // Notify user we are moving forward
                 const transitionMsg = "Thanks! I have everything I need. I'm contacting a provider now.";
                 await addMessageToChatHistory(requestRef.id, 'Sunny', 'User', transitionMsg, null);
@@ -504,9 +507,9 @@ const findAndContactProvider = async (requestRef, userContext, chatHistory, scop
             // Filter logic:
             // If !isAdmin, filter out test providers.
             // If isAdmin, allow all (prioritize test providers? No, treating like any other as per user instruction).
-            
+
             const candidates = snapshot.docs.map(d => d.data());
-            
+
             let filteredCandidates = candidates;
             if (!isAdmin) {
                 filteredCandidates = candidates.filter(c => !c.isTestProvider);
@@ -555,7 +558,7 @@ const findAndContactProvider = async (requestRef, userContext, chatHistory, scop
     // inside the prompt instructions that we might not want to re-execute fully 
     // (we already found the provider). 
     // BUT for simplicity, let's just generate the TEXT for the SMS directly using a simple model call.
-    
+
     const smsPrompt = `
     You are Sunny, an AI assistant. You need to write a text message to a plumber named ${providerName}.
     
@@ -590,7 +593,7 @@ const findAndContactProvider = async (requestRef, userContext, chatHistory, scop
             to: providerPhone
         });
         logger.info("Text message sent successfully.");
-        
+
         // Log Sunny -> Provider
         await addMessageToChatHistory(requestRef.id, 'Sunny', 'Service Provider', messageToSend, process.env.TWILIO_PHONE_NUMBER);
 
@@ -601,7 +604,7 @@ const findAndContactProvider = async (requestRef, userContext, chatHistory, scop
     // 4. Return user confirmation
     const userMsg = `I've contacted ${providerName} with the details. I'll let you know when they reply!`;
     await addMessageToChatHistory(requestRef.id, 'Sunny', 'User', userMsg, null);
-    
+
     return userMsg;
 };
 
@@ -620,12 +623,12 @@ exports.onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
         // 1. Find and delete all recommendations by this user
         const recsSnapshot = await db.collectionGroup('recommendations').where('uid', '==', uid).get();
         logger.info(`Found ${recsSnapshot.size} recommendations to delete`);
-        
+
         for (const doc of recsSnapshot.docs) {
-             await doc.ref.delete();
-             const serviceRef = doc.ref.parent.parent;
-             if (serviceRef) {
-                 try {
+            await doc.ref.delete();
+            const serviceRef = doc.ref.parent.parent;
+            if (serviceRef) {
+                try {
                     await db.runTransaction(async (t) => {
                         const sDoc = await t.get(serviceRef);
                         if (!sDoc.exists) return;
@@ -637,12 +640,12 @@ exports.onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
                             recentRecommenders: newRecent
                         });
                     });
-                 } catch (err) {
-                     logger.warn(`Failed to update service stats for ${serviceRef.id}:`, err);
-                 }
-             }
+                } catch (err) {
+                    logger.warn(`Failed to update service stats for ${serviceRef.id}:`, err);
+                }
+            }
         }
-        
+
         // 2. Delete user doc in Firestore
         // Check if it still exists (it might if deleted via Console)
         const userDocRef = db.collection('users').doc(uid);
@@ -662,7 +665,7 @@ exports.onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
             await batch.commit();
             logger.info(`Deleted ${requestsSnapshot.size} requests for user ${uid}`);
         }
-        
+
         logger.info(`Cleanup complete for user ${uid}`);
 
     } catch (error) {
@@ -712,8 +715,8 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
 
         const auth = await verifyAuthAndGetClaims(req);
         if (!auth) {
-             res.status(401).send('Unauthorized');
-             return;
+            res.status(401).send('Unauthorized');
+            return;
         }
         const { uid: userId, isAdmin } = auth;
 
@@ -729,11 +732,11 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
         let description;
 
         if (req.get('content-type') === 'application/json') {
-             description = req.body.description;
+            description = req.body.description;
         } else {
-             description = req.body;
+            description = req.body;
         }
-        
+
         logger.info("Description:", description);
         logger.info("UserId:", userId);
 
@@ -760,7 +763,7 @@ exports.submitRequest = functions.https.onRequest((req, res) => {
             // Initialize with status: 'intake' and intakeCount: 0
             const newRequestRef = await admin.firestore().collection('requests').add({
                 timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                status: 'intake', 
+                status: 'intake',
                 intakeCount: 0,
                 title: title,
                 userId: userId,
@@ -834,12 +837,12 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         // Fetch User Context for Incoming SMS
         const userId = updatedRequestData.userId;
         const userDoc = await admin.firestore().collection('users').doc(userId).get();
-        
+
         let isAdmin = false;
         try {
             const userRecord = await admin.auth().getUser(userId);
             isAdmin = !!(userRecord.customClaims && userRecord.customClaims.admin);
-        } catch(e) {
+        } catch (e) {
             logger.warn(`Failed to fetch user record for ${userId} to check admin status`, e);
         }
 
@@ -854,7 +857,7 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
         const confirmTools = [TOOLS.CONFIRM_APPOINTMENT_TOOL];
 
-        const model = genAI.getGenerativeModel({ 
+        const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             tools: confirmTools
         });
@@ -865,23 +868,23 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         const result = await model.generateContent(prompt);
         const response = result.response;
         const functionCalls = response.functionCalls();
-        
+
         // Check for Tool Call (Confirmation)
         if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
             if (call.name === "confirm_appointment") {
                 const args = call.args;
                 logger.info("Tool called: confirm_appointment", args);
-                
+
                 // Update Firestore
-                await requestDoc.ref.update({ 
+                await requestDoc.ref.update({
                     status: 'scheduled',
                     serviceDate: args.appointmentDate,
                     providerName: args.providerName,
                     providerPhoneNumber: args.providerPhoneNumber // Ensure this is captured
                 });
                 logger.info("Request status updated to 'scheduled'.");
-                
+
                 // Generate and save summary
                 await generateAndSaveSummary(requestDoc.id);
 
@@ -889,11 +892,11 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
                 const confirmationMsg = `Great, the appointment is confirmed for ${new Date(args.appointmentDate).toLocaleString()}. I've updated the request.`;
                 const twiml = new MessagingResponse();
                 twiml.message(confirmationMsg);
-                
+
                 // Log Sunny -> Provider
                 await addMessageToChatHistory(requestDoc.id, 'Sunny', 'Service Provider', confirmationMsg, process.env.TWILIO_PHONE_NUMBER);
-                
-                res.writeHead(200, {'Content-Type': 'text/xml'});
+
+                res.writeHead(200, { 'Content-Type': 'text/xml' });
                 res.end(twiml.toString());
                 return;
             }
@@ -909,14 +912,14 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         // 4. Update status and save Gemini's messages
         const messageToUser = geminiJson.messageToUser;
         const messageToProvider = geminiJson.messageToProvider;
-        
+
         // Heuristics fallback
         const impliesUserInput = (messageToUser || "").toLowerCase().includes("ask the homeowner");
 
         // Note: isScheduled check removed in favor of tool call, but keeping fallback just in case
         if (geminiJson.isScheduled) {
-             // ... existing logic fallback ...
-             await requestDoc.ref.update({ status: 'scheduled' });
+            // ... existing logic fallback ...
+            await requestDoc.ref.update({ status: 'scheduled' });
         } else if (geminiJson.isProviderUnavailable) {
             await requestDoc.ref.update({ status: 'provider unavailable' });
             logger.info("Request status updated to 'provider unavailable'.");
@@ -943,7 +946,7 @@ exports.incomingSms = functions.https.onRequest(async (req, res) => {
         if (messageToProvider) {
             twiml.message(messageToProvider);
         }
-        res.writeHead(200, {'Content-Type': 'text/xml'});
+        res.writeHead(200, { 'Content-Type': 'text/xml' });
         res.end(twiml.toString());
 
     } catch (error) {
@@ -962,7 +965,7 @@ exports.cancelRequest = functions.https.onRequest(async (req, res) => {
 
         const userId = await verifyAuthToken(req);
         if (!userId) {
-             return res.status(401).send('Unauthorized');
+            return res.status(401).send('Unauthorized');
         }
 
         const { requestId } = req.body;
@@ -979,7 +982,7 @@ exports.cancelRequest = functions.https.onRequest(async (req, res) => {
             }
 
             const requestData = doc.data();
-            
+
             if (requestData.userId !== userId) {
                 return res.status(403).send('Forbidden');
             }
@@ -1025,7 +1028,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
 
         const auth = await verifyAuthAndGetClaims(req);
         if (!auth) {
-             return res.status(401).send('Unauthorized');
+            return res.status(401).send('Unauthorized');
         }
         const { uid: userId, isAdmin } = auth;
 
@@ -1044,7 +1047,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 return res.status(404).json({ error: 'Request not found.' });
             }
             const requestData = requestDoc.data();
-            
+
             if (requestData.userId !== userId) {
                 return res.status(403).send('Forbidden');
             }
@@ -1067,7 +1070,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 role: 'User',
                 message: response,
                 timestamp: new Date(),
-                phoneNumber: null 
+                phoneNumber: null
             };
 
             // NEW: Handle Intake Phase
@@ -1076,12 +1079,12 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 await requestRef.update({
                     chat_history: admin.firestore.FieldValue.arrayUnion(userMessage)
                 });
-                
+
                 // Add the user message to our local history for the prompt
                 const updatedHistory = [...currentHistory, userMessage];
-                
+
                 const responseMessage = await processIntake(requestRef, userContext, updatedHistory, requestData.intakeCount || 0, isAdmin);
-                
+
                 await generateAndSaveSummary(requestId);
                 return res.status(200).json({ success: true, message: responseMessage });
             }
@@ -1098,7 +1101,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 // Available tools for this step
                 const tools = [TOOLS.MANAGE_REQUEST_TOOL, TOOLS.CONFIRM_APPOINTMENT_TOOL];
 
-                const model = genAI.getGenerativeModel({ 
+                const model = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     tools: tools
                 });
@@ -1109,10 +1112,10 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                 const result = await model.generateContent(prompt);
                 const response = result.response;
                 const functionCalls = response.functionCalls();
-                
+
                 // Initialize history updates with the user's message
                 const newHistoryEntries = [userMessage];
-                
+
                 // Get provider phone number if available
                 const providerPhoneNumber = requestData.providerPhoneNumber || (currentHistory.find(m => m.sender === 'Service Provider' || m.role === 'Service Provider')?.phoneNumber);
 
@@ -1124,7 +1127,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
 
                     if (call.name === "manage_request") {
                         // Handle General Management (Message User, Message Provider, Update Status)
-                        
+
                         // 1. Message to Provider (if any)
                         if (args.messageToProvider && providerPhoneNumber) {
                             try {
@@ -1135,7 +1138,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                                     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
                                     to: providerPhoneNumber
                                 });
-                                
+
                                 // Log Sunny -> Provider
                                 newHistoryEntries.push({
                                     sender: 'Sunny',
@@ -1223,7 +1226,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                             timestamp: new Date(),
                             phoneNumber: null
                         });
-                        
+
                         await requestRef.update({
                             chat_history: admin.firestore.FieldValue.arrayUnion(...newHistoryEntries)
                         });
@@ -1233,7 +1236,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
             } catch (aiError) {
                 logger.error("Error in AI processing:", aiError);
                 // Fallback safe response if AI fails completely
-                 const fallbackEntry = [userMessage, {
+                const fallbackEntry = [userMessage, {
                     sender: 'Sunny',
                     receiver: 'User',
                     role: 'Sunny',
@@ -1241,7 +1244,7 @@ exports.handleUserResponse = functions.https.onRequest(async (req, res) => {
                     timestamp: new Date(),
                     phoneNumber: null
                 }];
-                 await requestRef.update({
+                await requestRef.update({
                     chat_history: admin.firestore.FieldValue.arrayUnion(...fallbackEntry)
                 });
                 finalMessageToUser = "I received your message. I'm having trouble processing it right now, but I've logged it.";
@@ -1273,7 +1276,7 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
             res.status(401).json({ error: 'Unauthenticated' });
             return;
         }
-        
+
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
         try {
@@ -1311,9 +1314,9 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            
+
             const model = genAI.getGenerativeModel({
-                model: "gemini-2.5-flash", 
+                model: "gemini-2.5-flash",
                 tools: [{
                     googleSearch: {}
                 }]
@@ -1324,7 +1327,7 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
             const result = await model.generateContent(prompt);
             const response = result.response;
             const text = response.text();
-            
+
             const cleanJson = extractJson(text);
             let parsedData;
             try {

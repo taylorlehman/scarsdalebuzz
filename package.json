@@ -1,0 +1,23 @@
+{
+  "name": "scarsdalebuzz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/taylorlehman/scarsdalebuzz.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/taylorlehman/scarsdalebuzz/issues"
+  },
+  "homepage": "https://github.com/taylorlehman/scarsdalebuzz#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.3.0",
+    "firebase-admin": "^13.6.1"
+  }
+}
