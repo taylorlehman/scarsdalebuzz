@@ -21,3 +21,4 @@ serviceAccountKey.*.json
 .vscode/
 *.swp
 *.swo
+public/firebase-config.js
