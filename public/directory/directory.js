@@ -26,7 +26,7 @@ try {
     }
     // Enable offline persistence (best effort)
     if (firebase?.firestore) {
-        firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => {});
+        firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => { });
         db = firebase.firestore();
         // Try to load category group mapping from Firestore config early
         loadCategoryGroupsConfig();
@@ -104,11 +104,11 @@ async function loadCategoriesConfig() {
 // --- USER DATA FETCHING ---
 const fetchUser = async (uid) => {
     if (userCache.has(uid)) return userCache.get(uid);
-    
+
     try {
         // Try fetching from public_profiles first (faster, safer)
         let doc = await db.collection('public_profiles').doc(uid).get();
-        
+
         if (!doc.exists) {
             // Fallback to 'users' collection IF the user is authenticated and rules allow it (or for legacy)
             // But for public view, public_profiles should be the source.
@@ -134,7 +134,7 @@ const fetchUser = async (uid) => {
 const hydrateAvatars = async () => {
     const avatars = document.querySelectorAll('.avatar-placeholder[data-uid]');
     const uidsToFetch = new Set();
-    
+
     avatars.forEach(el => {
         if (!el.dataset.hydrated) uidsToFetch.add(el.dataset.uid);
     });
@@ -163,7 +163,7 @@ const hydrateAvatars = async () => {
 const hydrateNames = async () => {
     const names = document.querySelectorAll('.avatar-name-placeholder[data-uid]');
     const uidsToFetch = new Set();
-    
+
     names.forEach(el => {
         if (!el.dataset.hydrated) uidsToFetch.add(el.dataset.uid);
     });
@@ -198,18 +198,18 @@ function initAuthListener() {
 
         currentUser = user;
         currentIsAdmin = false;
-        
+
         // 1. Check/Create User Document & Directory Status
         const userRef = db.collection('users').doc(user.uid);
-        
+
         try {
             const userDoc = await userRef.get();
             let status = 'pending';
-            
+
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 status = userData.directoryStatus || 'pending';
-                
+
                 // Sync latest profile info
                 const profileUpdate = {
                     displayName: user.displayName,
@@ -217,11 +217,11 @@ function initAuthListener() {
                     email: user.email,
                     lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 };
-                
+
                 // Only update if changes to avoid write costs/loops? 
                 // For now, simple merge is fine.
                 await userRef.set(profileUpdate, { merge: true });
-                
+
             } else {
                 // New User: Create doc with pending status
                 await userRef.set({
@@ -231,7 +231,7 @@ function initAuthListener() {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                     directoryStatus: 'pending',
-                    roles: ['user'] 
+                    roles: ['user']
                 });
                 status = 'pending';
             }
@@ -247,15 +247,15 @@ function initAuthListener() {
                 // ACCESS GRANTED
                 if (pendingModal) pendingModal.classList.add('hidden');
                 if (mainContent) mainContent.classList.remove('hidden');
-                
+
                 // Start Data Subscriptions
                 startServicesSubscription();
-                
+
                 if (unsubscribeUser) {
                     unsubscribeUser();
                     unsubscribeUser = null;
                 }
-                
+
                 // Listen to Recommendations
                 unsubscribeUser = db.collectionGroup('recommendations')
                     .where('uid', '==', user.uid)
@@ -373,7 +373,7 @@ const renderServices = (services) => {
     // Hide/Show No Results
     if (services.length === 0) {
         noResults.classList.remove('hidden');
-        
+
         // Log no-results analytics event if there's an active search
         const searchTerm = searchInput.value.trim();
         if (searchTerm && analytics) {
@@ -381,7 +381,7 @@ const renderServices = (services) => {
                 search_term: searchTerm
             });
         }
-        
+
         // Add "Suggest a Provider" button to No Results
         const existingBtn = noResults.querySelector('.suggest-btn-placeholder');
         if (!existingBtn) {
@@ -411,19 +411,18 @@ const renderServices = (services) => {
     services.forEach((service, index) => {
         processedIds.add(service.id);
         const safeId = service.id.replace(/'/g, "\\'");
-        
+
         let card = existingCards.get(service.id);
         const isNew = !card;
 
         if (isNew) {
             card = document.createElement('div');
             card.dataset.id = service.id;
-            card.className = 'group bg-white p-8 rounded-sm shadow-card hover:shadow-hover transition-all duration-500 ease-out flex flex-col h-full relative fade-in border border-scandi-line/50';
+            card.className = 'service-card group bg-white rounded-sm shadow-card hover:shadow-hover transition-all duration-500 ease-out flex flex-col h-full relative fade-in border border-scandi-line/40 overflow-hidden';
             card.style.animationDelay = `${index * 0.05}s`;
         } else {
-             // Reset animation for existing cards to prevent re-triggering
-             card.style.animationDelay = '0s';
-             card.classList.remove('fade-in');
+            card.style.animationDelay = '0s';
+            card.classList.remove('fade-in');
         }
 
         const fullName = [service.firstName, service.lastName].filter(Boolean).join(' ');
@@ -433,125 +432,112 @@ const renderServices = (services) => {
             subtitle = fullName;
         }
 
-        // Icons
-        const ThumbsUpIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
-        const ThumbsUpFilled = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
-        const ArrowRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+        // Icons - New larger versions
+        const ThumbsUpIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
+        const ThumbsUpFilled = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`;
 
-        let recStatusHTML = '';
-        if (service.lastRecommended) {
-            recStatusHTML = `<span class="text-[10px] text-scandi-muted uppercase tracking-wider">Last Recommended: ${new Date(service.lastRecommended).toLocaleDateString([], {month:'short', day:'numeric', year: 'numeric'})}</span>`;
-        }
-
-        const sunnyBadgeHTML = ''; // Removed badge
+        const isLiked = userLikedServices.has(service.id);
+        const likeBtnClass = isLiked ? 'text-scandi-clay' : 'text-scandi-muted';
+        const likeIcon = isLiked ? ThumbsUpFilled : ThumbsUpIcon;
 
         const bookingButtonHTML = service.sunnyApproved ? `
-            <div class="mt-auto pt-2">
+            <div class="mt-8">
                 <a href="../sunny/index.html" 
-                   class="flex items-center justify-center gap-2 w-full bg-scandi-clay text-white text-xs font-bold uppercase tracking-wider py-2 px-3 rounded-sm hover:bg-scandi-text transition-all duration-300 shadow-sm hover:shadow-md group/btn">
+                   class="flex items-center justify-center gap-2 w-full bg-scandi-clay text-white text-[10px] font-bold uppercase tracking-widest py-3 px-4 rounded-sm hover:bg-scandi-text transition-all duration-300 shadow-sm hover:shadow-md group/btn">
                    <span>Ask Sunny to Book</span>
                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transform group-hover/btn:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
             </div>` : '';
 
-        // Contact Actions
-        let actionHTML = '';
-        if (service.phone) {
-             actionHTML = `<a href="tel:${service.phone.replace(/[^\d+]/g, '')}" class="text-sm font-medium text-scandi-text border-b border-scandi-clay/50 hover:border-scandi-clay transition-colors">${service.phone}</a>`;
-        } else if (service.email) {
-             actionHTML = `<a href="mailto:${service.email}" class="text-sm font-medium text-scandi-text border-b border-scandi-clay/50 hover:border-scandi-clay transition-colors truncate max-w-full block">${service.email}</a>`;
-        } else {
-             actionHTML = `<a href="${generateGoogleSearchUrl(service)}" target="_blank" rel="noopener noreferrer" class="text-xs uppercase tracking-widest text-scandi-muted hover:text-scandi-text flex items-center gap-2 group-hover:gap-3 transition-all">
-                Look Up Info on Google ${ArrowRightIcon}
-             </a>`;
-        }
+        const formatRecommenders = (recommenders) => {
+            if (!recommenders || recommenders.length === 0) return '';
+            const displayCount = 3;
+            const displayed = recommenders.slice(0, displayCount);
+            const remaining = recommenders.length - displayCount;
 
-        // Like Button State
-        const isLiked = userLikedServices.has(service.id);
-        const likeBtnClass = isLiked ? 'text-scandi-clay hover:text-scandi-text' : 'text-scandi-muted hover:text-scandi-clay';
-        const likeIcon = isLiked ? ThumbsUpFilled : ThumbsUpIcon;
-
-        // Recently Recommended Logic
-        let recentlyRecommendedHTML = '';
-        if (service.recentRecommenders && service.recentRecommenders.length > 0) {
-            const avatars = service.recentRecommenders.map(rec => 
-                `<img src="https://www.gravatar.com/avatar?d=mp" data-uid="${rec.uid}" class="avatar-placeholder opacity-0 w-6 h-6 rounded-full border border-white -ml-2 first:ml-0 object-cover bg-gray-100 transition-opacity duration-300">`
-            ).join('');
-            
-            recentlyRecommendedHTML = `
-                <div class="flex flex-col gap-1 cursor-pointer" onclick="openRecommendersModal('${safeId}')">
-                    <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommended By:</span>
-                    <div class="flex items-center pl-2">
-                        ${avatars}
-                        ${service.recommendations > service.recentRecommenders.length ? `<span class="text-[10px] text-scandi-muted ml-2">+${service.recommendations - service.recentRecommenders.length} more</span>` : ''}
-                    </div>
+            return `
+                <div class="flex -space-x-2 overflow-hidden">
+                    ${displayed.map(r => `
+                        <img class="avatar-placeholder inline-block h-6 w-6 rounded-full ring-2 ring-white transition-opacity duration-300 opacity-0" 
+                             data-uid="${r.uid}"
+                             src="https://www.gravatar.com/avatar?d=mp" 
+                             alt="User avatar">
+                    `).join('')}
+                    ${remaining > 0 ? `
+                        <div class="flex items-center justify-center h-6 w-6 rounded-full bg-scandi-bg border-2 border-white text-[8px] font-bold text-scandi-muted">
+                            +${remaining}
+                        </div>
+                    ` : ''}
                 </div>
             `;
-        } else if (service.recommendations > 0) {
-            recentlyRecommendedHTML = `
-                <div class="flex flex-col gap-1 cursor-pointer" onclick="openLegacyModal()">
-                    <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommended By:</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-scandi-text font-medium underline decoration-scandi-muted/30">🐝 Scarsdale Buzz community</span>
-                    </div>
-                </div>
-            `;
-        }
+        };
 
         const newHTML = `
-            <!-- 1. Header: Index & Category -->
-            <div class="flex justify-between items-start mb-4 pb-2 border-b border-scandi-line/30 h-10">
-                ${IndexNumber(index)}
-                <span class="text-[10px] uppercase tracking-widest font-semibold text-scandi-sage truncate max-w-[150px] text-right" title="${service.category}">${service.category}</span>
-            </div>
-            
-            <!-- 2. Contact Info -->
-            <div class="mb-4 h-32 flex flex-col">
-                <h3 class="font-serif text-2xl text-scandi-text leading-tight mb-1 group-hover:text-scandi-clay transition-colors duration-300 line-clamp-2" title="${title}">${title}</h3>
-                ${subtitle ? `<p class="text-sm text-scandi-muted italic mb-3 line-clamp-1" title="${subtitle}">${subtitle}</p>` : ''}
-                <div class="mt-auto">
-                    ${actionHTML}
-                </div>
-            </div>
-
-            <!-- 3. Recommendation Info -->
-            <div class="bg-scandi-bg/40 p-4 rounded-sm border border-scandi-line/30 flex flex-col gap-3 mb-4 h-48 justify-between">
-                <!-- Count & Like -->
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                         <div class="w-8 h-8 rounded-full bg-white flex flex-col items-center justify-center text-center border border-scandi-line shadow-sm">
-                            <span class="text-sm font-serif font-bold text-scandi-text leading-none">${service.recommendations}</span>
-                        </div>
-                        <span class="text-[10px] uppercase tracking-widest text-scandi-muted">Recommendations</span>
+            <div class="flex flex-col md:flex-row h-full min-h-[380px]">
+                <!-- Left Panel: Info -->
+                <div class="flex-1 p-8 md:p-10 flex flex-col justify-between bg-white relative">
+                    <div class="flex justify-between items-start mb-6">
+                        <span class="text-[10px] font-mono text-scandi-muted tracking-[0.2em] opacity-60">${(index + 1).toString().padStart(2, '0')}</span>
+                        <span class="service-category text-[9px] uppercase tracking-[0.2em] font-bold text-scandi-sage truncate ml-4" title="${service.category}">${service.category}</span>
                     </div>
-                    <button onclick="toggleLike('${safeId}', this)" class="${likeBtnClass} transition-colors p-2 -mr-2 rounded-full hover:bg-white border border-transparent hover:border-scandi-line" title="${isLiked ? 'Undo Recommendation' : 'Recommend this provider'}">
-                        ${likeIcon}
-                    </button>
+                    
+                    <div class="flex-grow flex flex-col justify-start py-2">
+                        <h3 class="service-title font-serif text-3xl md:text-4xl text-scandi-text leading-[1.3] pb-2 mb-1 line-clamp-3 hover:text-scandi-clay transition-colors cursor-pointer" title="${title}">${title}</h3>
+                    </div>
+
+                    <div class="mt-auto">
+                        <div class="text-[9px] uppercase tracking-[0.2em] text-scandi-muted mb-4 font-bold opacity-60">Contact Detail</div>
+                        <div class="font-serif text-2xl text-scandi-text italic mb-4 line-clamp-1 opacity-90">${subtitle || title}</div>
+                        <div class="inline-block border-b-2 border-scandi-sage pb-1 hover:border-scandi-clay transition-colors">
+                            ${service.phone ? `
+                                <a href="tel:${service.phone.replace(/[^\d+]/g, '')}" class="font-serif text-2xl font-bold text-scandi-sage tracking-tight hover:text-scandi-clay transition-colors tabular-nums">${service.phone}</a>
+                            ` : `
+                                <a href="${generateGoogleSearchUrl(service)}" target="_blank" class="font-serif text-2xl font-bold text-scandi-sage tracking-tight hover:text-scandi-clay transition-colors tabular-nums">Look up info</a>
+                            `}
+                        </div>
+                        ${bookingButtonHTML}
+                    </div>
                 </div>
 
-                <!-- Recent Avatars -->
-                <div class="flex-grow flex flex-col justify-center">
-                    ${recentlyRecommendedHTML ? `
-                    <div class="pt-2 border-t border-dashed border-scandi-line/30">
-                        ${recentlyRecommendedHTML}
-                    </div>` : ''}
-                </div>
-                
-                <!-- Last Recommended Date -->
-                <div class="pt-2 border-t border-dashed border-scandi-line/30 min-h-[25px] flex items-center">
-                    ${recStatusHTML}
+                <!-- Right Panel: Stats/Recommendations -->
+                <div class="w-full md:w-[38%] bg-[#FDFCFB] p-8 md:p-10 flex flex-col justify-between border-t md:border-t-0 md:border-l border-scandi-line/25">
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <span class="text-6xl font-serif text-scandi-clay leading-none tracking-tighter tabular-nums">${service.recommendations}</span>
+                            <span class="text-[9px] uppercase tracking-[0.15em] text-scandi-muted mt-2 font-bold opacity-70">Recommendations</span>
+                        </div>
+                        <button onclick="toggleLike('${safeId}', this)" class="like-btn w-14 h-14 rounded-full border border-scandi-line/50 flex items-center justify-center bg-white shadow-soft ${likeBtnClass} hover:scale-105 hover:border-scandi-clay transition-all duration-300 group/like flex-shrink-0" title="${isLiked ? 'Undo Recommendation' : 'Recommend this provider'}">
+                            <span class="group-hover/like:scale-110 transition-transform">${likeIcon}</span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-8 mt-12">
+                        <div class="pl-4 border-l-[1.5px] border-scandi-clay/30">
+                            <div class="text-[9px] uppercase tracking-[0.2em] text-scandi-clay mb-3 font-bold opacity-70">Recommended By</div>
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 cursor-pointer group/rec" onclick="${service.recentRecommenders?.length > 0 ? `openRecommendersModal('${safeId}')` : 'openLegacyModal()'}">
+                                    ${formatRecommenders(service.recentRecommenders)}
+                                    <span class="text-[12px] font-bold text-scandi-text tracking-tight group-hover/rec:text-scandi-clay transition-colors">${service.recentRecommenders?.length > 0 ? '' : 'Scarsdale Buzz'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pl-4 border-l-[1.5px] border-scandi-sage/30">
+                            <div class="text-[9px] uppercase tracking-[0.2em] text-scandi-sage mb-3 font-bold opacity-70">Latest Update</div>
+                            <div class="text-[12px] text-scandi-muted font-medium tabular-nums">
+                                ${service.lastRecommended ? new Date(service.lastRecommended).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'May 17, 2025'}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- 4. Booking Button -->
-            ${bookingButtonHTML}
         `;
-        
+
         // Only update innerHTML if it has changed to avoid unnecessary repaints/flickering
         if (card.innerHTML !== newHTML) {
             card.innerHTML = newHTML;
         }
-        
+
         serviceList.appendChild(card);
     });
 
@@ -561,7 +547,7 @@ const renderServices = (services) => {
             card.remove();
         }
     });
-    
+
     // Remove existing suggestion cards to prevent duplicates
     const existingSuggestCards = serviceList.querySelectorAll('.suggest-card-placeholder');
     existingSuggestCards.forEach(card => card.remove());
@@ -571,19 +557,19 @@ const renderServices = (services) => {
 
     // Append "Suggest a Provider" card
     const suggestCard = document.createElement('div');
-    suggestCard.className = 'suggest-card-placeholder group bg-scandi-bg/50 p-8 rounded-sm border-2 border-dashed border-scandi-line hover:border-scandi-clay transition-all duration-300 flex flex-col items-center justify-center text-center h-full min-h-[400px] cursor-pointer';
+    suggestCard.className = 'suggest-card-placeholder group bg-scandi-bg/30 rounded-sm border-2 border-dashed border-scandi-line/40 hover:border-scandi-clay hover:bg-white transition-all duration-500 flex flex-col items-center justify-center text-center h-full min-h-[380px] cursor-pointer p-8';
     suggestCard.innerHTML = `
-        <div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-            <svg class="w-8 h-8 text-scandi-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <div class="w-20 h-20 rounded-full bg-white border border-scandi-line/50 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:border-scandi-clay transition-all duration-500 shadow-sm">
+            <svg class="w-10 h-10 text-scandi-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"></path></svg>
         </div>
-        <h3 class="font-serif text-xl text-scandi-text mb-2">Know someone great?</h3>
-        <p class="text-sm text-scandi-muted mb-6">Suggest a new provider to help your neighbors.</p>
-        <a href="suggest.html" class="px-6 py-2 border border-scandi-text text-scandi-text font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-scandi-text hover:text-white transition-colors relative z-10">
+        <h3 class="font-serif text-3xl text-scandi-text mb-4">Know someone great?</h3>
+        <p class="text-sm text-scandi-muted mb-8 max-w-xs leading-relaxed">Help your neighbors by suggesting a trusted local provider to the directory.</p>
+        <a href="suggest.html" class="px-8 py-3 bg-scandi-text text-white font-mono text-[10px] uppercase tracking-[0.2em] rounded-sm hover:bg-scandi-clay transition-all duration-300 relative z-10 shadow-soft">
             Suggest Provider
         </a>
     `;
     suggestCard.addEventListener('click', (e) => {
-         window.location.href = 'suggest.html';
+        window.location.href = 'suggest.html';
     });
     serviceList.appendChild(suggestCard);
 };
@@ -630,7 +616,7 @@ const showRolodexTooltip = (targetEl) => {
         <p class="text-xs opacity-90">Find and share all your recommended providers here.</p>
         <div class="absolute -top-1 right-6 w-3 h-3 bg-scandi-text transform rotate-45"></div>
     `;
-    
+
     const rect = targetEl.getBoundingClientRect();
     tooltip.style.top = `${rect.bottom + 12}px`;
     tooltip.style.right = '20px'; // Align roughly with right edge
@@ -672,7 +658,7 @@ const toggleLike = async (serviceId, btnElement) => {
             const likeDoc = await transaction.get(likeRef);
 
             if (!serviceDoc.exists) throw "Service does not exist!";
-            
+
             const currentRecs = serviceDoc.data().recommendations || 0;
             const currentRecent = serviceDoc.data().recentRecommenders || [];
 
@@ -693,7 +679,7 @@ const toggleLike = async (serviceId, btnElement) => {
                 });
 
                 transaction.set(likeRef, newRec);
-                
+
                 transaction.set(userRef, {
                     displayName: currentUser.displayName,
                     photoURL: currentUser.photoURL,
@@ -732,7 +718,7 @@ const openRecommendersModal = async (serviceId) => {
 
     try {
         const snapshot = await db.collection('services').doc(serviceId).collection('recommendations').orderBy('timestamp', 'desc').limit(50).get();
-        
+
         if (snapshot.empty) {
             list.innerHTML = '<div class="text-center py-8 text-scandi-muted italic">No specific user recommendations yet.</div>';
             return;
@@ -785,7 +771,7 @@ const renderCategoryButtons = () => {
     serviceData.forEach(service => {
         if (!categoryTotals[service.category]) categoryTotals[service.category] = 0;
         categoryTotals[service.category] += service.recommendations;
-        
+
         if (!providerCounts[service.category]) providerCounts[service.category] = 0;
         providerCounts[service.category] += 1;
     });
@@ -798,7 +784,7 @@ const renderCategoryButtons = () => {
     }
 
     const sortedCategories = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a]);
-    
+
     // Normalize activeCategory casing if needed (e.g. url param 'plumber' -> 'Plumber')
     if (activeCategory !== 'All') {
         const canonical = sortedCategories.find(c => c.toLowerCase() === activeCategory.toLowerCase());
@@ -809,27 +795,26 @@ const renderCategoryButtons = () => {
 
     const pinnedCategories = ['Plumbing', 'HVAC', 'Electrician', 'Body Shop', 'Landscaper'];
     const topCategories = ['All', ...pinnedCategories];
-    
+
     // Overflow now contains ALL categories as requested
     const overflowCategories = sortedCategories;
-    
+
     // Active in overflow if it's NOT in the top pinned list
     const isActiveInOverflow = !topCategories.includes(activeCategory) && activeCategory !== 'All';
-    
+
     categoryFilters.innerHTML = '';
-    
+
     topCategories.forEach(category => {
         const button = document.createElement('button');
         button.textContent = category;
-        button.className = `relative transition-colors duration-300 pb-1 text-sm font-medium ${
-            activeCategory === category 
-            ? 'text-scandi-text border-b border-scandi-text' 
+        button.className = `relative transition-colors duration-300 pb-1 text-sm font-medium ${activeCategory === category
+            ? 'text-scandi-text border-b border-scandi-text'
             : 'text-scandi-muted hover:text-scandi-text'
-        }`;
+            }`;
         button.dataset.category = category;
         categoryFilters.appendChild(button);
     });
-    
+
     // Overflow
     if (overflowCategories.length > 0) {
         const overflowBtn = document.createElement('button');
@@ -843,7 +828,7 @@ const renderCategoryButtons = () => {
             overflowBtn.id = 'overflow-btn';
         }
         categoryFilters.appendChild(overflowBtn);
-        
+
         overflowBtn.addEventListener('click', () => {
             showOverflowDialog(overflowCategories, providerCounts);
         });
@@ -855,17 +840,17 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-scandi-dark/20 backdrop-blur-sm flex items-center justify-center z-[60] p-4';
     modal.id = 'overflow-modal';
-    
+
     const modalContent = document.createElement('div');
     modalContent.className = 'bg-white rounded-sm shadow-hover border border-scandi-line max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col fade-in';
-    
+
     const header = document.createElement('div');
     header.className = 'p-6 border-b border-scandi-line flex justify-between items-center bg-scandi-bg';
     header.innerHTML = `
         <h3 class="font-serif text-xl text-scandi-text">Categories</h3>
         <button id="close-overflow" class="text-scandi-muted hover:text-scandi-text">&times;</button>
     `;
-    
+
     const body = document.createElement('div');
     body.className = 'p-6 overflow-y-auto bg-white';
     const list = document.createElement('div');
@@ -873,7 +858,7 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
 
     const groupedCategories = {};
     const ungroupedCategories = [];
-    
+
     overflowCategories.forEach(category => {
         let foundGroup = false;
         for (const [groupName, categories] of Object.entries(categoryGroups)) {
@@ -898,7 +883,7 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
         groupDiv.innerHTML = `<div class="text-xs font-mono text-scandi-muted uppercase tracking-widest mb-3">${name}</div>`;
         const itemContainer = document.createElement('div');
         itemContainer.className = 'grid grid-cols-1 gap-2';
-        
+
         cats.forEach(cat => {
             const btn = document.createElement('button');
             btn.className = `w-full text-left p-3 rounded-sm hover:bg-scandi-bg transition flex justify-between items-center border ${activeCategory === cat ? 'border-scandi-clay bg-scandi-bg' : 'border-scandi-line'}`;
@@ -908,10 +893,10 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
             `;
             btn.addEventListener('click', () => {
                 activeCategory = cat;
-                
+
                 // Clear any active search when selecting a category
                 searchInput.value = '';
-                
+
                 // Update URL
                 const url = new URL(window.location);
                 url.searchParams.set('category', cat);
@@ -939,7 +924,7 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
     modal.appendChild(modalContent);
 
     document.body.appendChild(modal);
-    
+
     modal.querySelector('#close-overflow').addEventListener('click', () => document.body.removeChild(modal));
     modal.addEventListener('click', (e) => {
         if (e.target === modal) document.body.removeChild(modal);
@@ -972,10 +957,10 @@ const filterAndRender = (options = { keepOrder: false }) => {
     // 2b. Recommended By Filter (Recommendations)
     if (recommendedByUid) {
         if (recommendedServiceIds) {
-             filteredServices = filteredServices.filter(service => recommendedServiceIds.has(service.id));
+            filteredServices = filteredServices.filter(service => recommendedServiceIds.has(service.id));
         } else {
-             // Still loading or empty, show nothing to prevent leak of other services
-             filteredServices = [];
+            // Still loading or empty, show nothing to prevent leak of other services
+            filteredServices = [];
         }
     }
 
@@ -1016,29 +1001,29 @@ searchInput.addEventListener('input', () => {
     serviceList.style.opacity = '0.5';
     searchTimeout = setTimeout(() => {
         const searchTerm = searchInput.value.trim();
-        
+
         // Log search event if there's a query
         if (searchTerm && analytics) {
             analytics.logEvent('directory_search', {
                 search_term: searchTerm
             });
         }
-        
+
         const filteredResults = filterAndRender();
-        
+
         // Log search results quality metrics
         if (searchTerm && analytics && filteredResults.length > 0) {
             const resultsWithoutContact = filteredResults.filter(
                 s => !s.phone && !s.email
             ).length;
-            
+
             analytics.logEvent('directory_search_results', {
                 search_term: searchTerm,
                 total_results: filteredResults.length,
                 results_without_contact: resultsWithoutContact
             });
         }
-        
+
         serviceList.style.opacity = '1';
     }, 250);
 });
@@ -1046,12 +1031,12 @@ searchInput.addEventListener('input', () => {
 categoryFilters.addEventListener('click', (e) => {
     if (e.target.tagName !== 'BUTTON') return;
     if (e.target.id === 'overflow-btn' || e.target.id === 'active-overflow-btn') return;
-    
+
     const newCategory = e.target.dataset.category;
     if (newCategory === activeCategory) return;
 
     activeCategory = newCategory;
-    
+
     // Clear any active search when selecting a category
     searchInput.value = '';
 
@@ -1074,7 +1059,7 @@ categoryFilters.addEventListener('click', (e) => {
 // --- PASSWORD PROTECTION ---
 const checkPassword = () => {
     // Password protection removed in favor of Google Auth + Admin Approval
-    return true; 
+    return true;
 };
 
 // --- RECOMMENDATIONS LOGIC ---
@@ -1083,12 +1068,12 @@ async function loadRolodex(uid) {
     try {
         // 1. Fetch user profile
         recommendedByUserProfile = await fetchUser(uid);
-        
+
         // 2. Fetch recommendations
         const snapshot = await db.collectionGroup('recommendations')
             .where('uid', '==', uid)
             .get();
-            
+
         recommendedServiceIds = new Set();
         snapshot.docs.forEach(doc => {
             // doc.ref.parent is CollectionReference
@@ -1097,9 +1082,9 @@ async function loadRolodex(uid) {
                 recommendedServiceIds.add(doc.ref.parent.parent.id);
             }
         });
-        
+
         renderRolodexBanner();
-        
+
     } catch (e) {
         console.error("Error loading rolodex", e);
     }
@@ -1114,8 +1099,8 @@ function renderRolodexBanner() {
     if (existing) existing.remove();
 
     const name = recommendedByUserProfile ? recommendedByUserProfile.displayName : 'A Neighbor';
-    const photo = recommendedByUserProfile && recommendedByUserProfile.photoURL 
-        ? recommendedByUserProfile.photoURL 
+    const photo = recommendedByUserProfile && recommendedByUserProfile.photoURL
+        ? recommendedByUserProfile.photoURL
         : 'https://www.gravatar.com/avatar?d=mp';
 
     // Calculate count based on activeCategory
@@ -1124,8 +1109,8 @@ function renderRolodexBanner() {
         if (activeCategory === 'All') {
             count = recommendedServiceIds.size;
         } else {
-             count = serviceData.filter(s => 
-                s.category === activeCategory && 
+            count = serviceData.filter(s =>
+                s.category === activeCategory &&
                 recommendedServiceIds.has(s.id)
             ).length;
         }
@@ -1134,7 +1119,7 @@ function renderRolodexBanner() {
     const banner = document.createElement('div');
     banner.id = 'rolodex-banner';
     banner.className = 'mb-8 bg-white border border-scandi-clay/30 rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-soft relative overflow-hidden fade-in';
-    
+
     // Background flair
     banner.innerHTML = `
         <div class="absolute top-0 right-0 w-32 h-32 bg-scandi-clay/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
@@ -1152,7 +1137,7 @@ function renderRolodexBanner() {
             View All Providers
         </a>
     `;
-    
+
     filterBar.parentNode.insertBefore(banner, filterBar);
 }
 

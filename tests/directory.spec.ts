@@ -30,19 +30,19 @@ test.describe('Core Directory & Recommendations Flow', () => {
     });
 
     test('Directory Access Control: Unauthenticated user is redirected to login', async ({ page }) => {
-        await page.goto('/sunny/index.html');
+        await page.goto('/directory/index.html');
         await expect(page).toHaveURL(/.*login.html/);
     });
 
     test.fixme('Directory Access Control: Authenticated user can see directory', async ({ page }) => {
         // Requires authenticated context
-        await page.goto('/sunny/index.html');
+        await page.goto('/directory/index.html');
         // Ensure the service list container is rendered
-        await expect(page.locator('#services-list')).toBeVisible();
+        await expect(page.locator('#serviceList')).toBeVisible();
     });
 
     test.fixme('Service Suggestion: User can suggest a new service', async ({ page }) => {
-        await page.goto('/sunny/suggest.html');
+        await page.goto('/directory/suggest.html');
 
         await page.locator('#business-name').fill('Test Plumber');
         await page.locator('#category').selectOption({ label: 'Plumbing' });
@@ -70,7 +70,7 @@ test.describe('Core Directory & Recommendations Flow', () => {
     });
 
     test.fixme('Liking Services: User can like a service from the directory', async ({ page }) => {
-        await page.goto('/sunny/index.html');
+        await page.goto('/directory/index.html');
 
         const likeBtn = page.locator('.like-btn').first();
         const initialLikes = await likeBtn.textContent();
@@ -82,10 +82,10 @@ test.describe('Core Directory & Recommendations Flow', () => {
     });
 
     test.fixme('Directory Search: Returns expected services based on keywords', async ({ page }) => {
-        await page.goto('/sunny/index.html');
+        await page.goto('/directory/index.html');
 
         // Perform search
-        await page.locator('#search-input').fill('plumber');
+        await page.locator('#searchInput').fill('plumber');
         // Wait for the debounced search to execute
         await page.waitForTimeout(500);
 
@@ -97,7 +97,7 @@ test.describe('Core Directory & Recommendations Flow', () => {
     });
 
     test.fixme('Directory Filtering: Filters by specific service categories', async ({ page }) => {
-        await page.goto('/sunny/index.html');
+        await page.goto('/directory/index.html');
 
         // Trigger category filter
         await page.locator('.category-pill:has-text("Electrician")').click();
@@ -111,11 +111,11 @@ test.describe('Core Directory & Recommendations Flow', () => {
     });
 
     test.fixme('Shared User Lists: Renders correctly for shared lists', async ({ page }) => {
-        await page.goto('/sunny/index.html?view=user&userId=MOCK_USER_ID');
+        await page.goto('/directory/index.html?view=user&userId=MOCK_USER_ID');
         // Ensure the title header reflects the shared view
         const header = page.locator('h1');
         await expect(header).toContainText(/Recommendations/i);
         // Should display a populated list or specific placeholder
-        await expect(page.locator('#services-list')).toBeVisible();
+        await expect(page.locator('#serviceList')).toBeVisible();
     });
 });

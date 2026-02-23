@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const requestsList = document.getElementById('requests-list');
     const newRequestBtn = document.getElementById('new-request-btn');
-    
+
     // Header Elements - Handled by SharedHeader
-    
+
     // Desktop Chat Elements
     const chatHeader = document.getElementById('chat-header');
     const chatTitle = document.getElementById('chat-title');
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalProviderName = document.getElementById('modal-provider-name');
     const modalProviderPhone = document.getElementById('modal-provider-phone');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
-    
+
     const confirmModal = document.getElementById('confirm-modal');
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
     const confirmActionBtn = document.getElementById('confirm-action-btn');
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onboardStepHow = document.getElementById('onboard-step-how');
     const onboardStep1 = document.getElementById('onboard-step-1');
     const onboardStep2 = document.getElementById('onboard-step-2');
-    
+
     const onboardStartBtn = document.getElementById('onboard-start-btn');
     const onboardHowNextBtn = document.getElementById('onboard-how-next-btn');
     const onboardAddressInput = document.getElementById('onboard-address');
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onboardPhoneInput = document.getElementById('onboard-phone');
     const onboardStep2Back = document.getElementById('onboard-step-2-back');
     const onboardFinishBtn = document.getElementById('onboard-finish-btn');
-    
+
     // Beta Waitlist
     const betaWaitlistModal = document.getElementById('beta-waitlist-modal');
 
@@ -128,10 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = doc.data();
             requestsCache[doc.id] = data;
             sortedRequestIds.push(doc.id);
-            
+
             const isActive = doc.id === activeRequestId;
             const div = document.createElement('div');
-            
+
             // New Scandi Sidebar Item Style
             div.className = `group p-4 rounded-sm cursor-pointer transition-all duration-300 border-l-2 relative ${isActive ? 'bg-white border-scandi-clay shadow-soft' : 'bg-transparent border-transparent hover:bg-white/50 hover:border-scandi-line'}`;
             div.dataset.id = doc.id;
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </div>
             `;
-            
+
             requestsList.appendChild(div);
         });
     };
@@ -185,10 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex gap-4 py-6 fade-in group ${!isUser ? 'bg-scandi-bg/30 -mx-8 px-8' : 'flex-row-reverse'}">
                 <!-- Avatar -->
                 <div class="w-8 flex-shrink-0 pt-1">
-                    ${isUser ? 
-                        `<div class="w-8 h-8 rounded-full bg-scandi-text text-white flex items-center justify-center font-serif italic text-sm">${userInitial}</div>` : 
-                        `<div class="w-8 h-8 rounded-full bg-scandi-clay text-white flex items-center justify-center"><span class="font-bold text-xs">S</span></div>`
-                    }
+                    ${isUser ?
+                `<div class="w-8 h-8 rounded-full bg-scandi-text text-white flex items-center justify-center font-serif italic text-sm">${userInitial}</div>` :
+                `<div class="w-8 h-8 rounded-full bg-scandi-clay text-white flex items-center justify-center"><span class="font-bold text-xs">S</span></div>`
+            }
                 </div>
 
                 <!-- Content -->
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderChatHistory = (chatHistory, targetContainer = null) => {
         const container = targetContainer || (window.innerWidth < 768 ? mobileChatMessages : chatMessages);
         container.innerHTML = '';
-        
+
         if (!chatHistory || chatHistory.length === 0) {
             container.innerHTML = '<div class="text-center text-scandi-muted italic mt-10 font-serif">No transcript available.</div>';
             return;
@@ -221,19 +221,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         sortedHistory.forEach(msg => {
-            const isVisible = 
-                (msg.sender === 'User') || 
+            const isVisible =
+                (msg.sender === 'User') ||
                 (msg.receiver === 'User') ||
                 (!msg.sender && (msg.role === 'User' || msg.role === 'Sunny'));
 
             if (isVisible) {
                 let roleDisplay = msg.sender || msg.role;
                 if (roleDisplay === 'User') roleDisplay = 'You';
-                
+
                 html += renderMessage(roleDisplay, msg.message, msg.timestamp);
             }
         });
-        
+
         container.innerHTML = html;
         scrollToBottom(container);
     };
@@ -260,12 +260,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Desktop UI
         emptyState.classList.add('hidden');
         chatHeader.classList.remove('hidden');
-        
+
         if (data.status === 'scheduled') {
             chatMessages.classList.add('hidden');
             chatInputArea.classList.add('hidden');
             confirmationView.classList.remove('hidden');
-            
+
             confirmProvider.textContent = data.providerName || 'Service Provider';
             confirmProviderContact.textContent = data.providerName || 'the provider';
             if (data.providerPhoneNumber) {
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmPhone.textContent = 'support';
                 confirmPhone.href = '#';
             }
-            
+
             let dateStr = 'TBD';
             if (data.serviceDate) {
                 const d = new Date(data.serviceDate);
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInputArea.classList.remove('hidden');
             renderChatHistory(data.chat_history);
         }
-        
+
         chatTitle.textContent = data.title || 'Request';
         chatDescription.textContent = data.summary || 'Details...';
         chatHeaderStatusBadge.textContent = data.status || 'Active';
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileChatStatus.textContent = data.status;
             renderChatHistory(data.chat_history, mobileChatMessages);
         }
-        
+
         // Update sidebar selection
         const currentCache = { ...requestsCache };
         const currentSortedIds = [...sortedRequestIds];
@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startNewRequest = () => {
         isCreatingNew = true;
         activeRequestId = 'new';
-        
+
         const promptText = "Describe your issue! Include urgency and availability.";
         chatInput.placeholder = promptText;
         mobileChatInput.placeholder = promptText;
@@ -329,11 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.classList.remove('hidden');
         chatHeader.classList.remove('hidden');
         chatInputArea.classList.remove('hidden');
-        
+
         chatTitle.textContent = 'New Matter';
         chatDescription.textContent = 'Initiating protocol...';
         chatHeaderStatusBadge.textContent = 'DRAFTING';
-        
+
         const introHtml = `
             <div class="flex gap-4 py-6 fade-in bg-scandi-bg/30 -mx-8 px-8">
                 <div class="w-8 flex-shrink-0 pt-1">
@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileChatStatus.textContent = 'DRAFTING';
             mobileChatMessages.innerHTML = introHtml;
         }
-        
+
         setTimeout(() => {
             if (window.innerWidth < 768) {
                 mobileChatInput.focus();
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInput.focus();
             }
         }, 100);
-        
+
         // Update sidebar selection
         const currentCache = { ...requestsCache };
         const currentSortedIds = [...sortedRequestIds];
@@ -383,10 +383,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleSendMessage = async (text) => {
         if (!text.trim()) return;
-        
+
         const inputField = window.innerWidth < 768 ? mobileChatInput : chatInput;
         const container = window.innerWidth < 768 ? mobileChatMessages : chatMessages;
-        
+
         inputField.value = '';
         inputField.style.height = 'auto';
 
@@ -415,26 +415,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const functionUrl = window.firebaseConfig.functionUrls.submitRequest;
                 const response = await fetch(functionUrl, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         description: text
                     }),
                 });
-                
+
                 if (!response.ok) throw new Error('Failed to submit');
-                
+
                 const data = await response.json();
                 const replyText = data.message;
                 const newId = data.id;
-                
+
                 document.getElementById(loadingId)?.remove();
-                
+
                 container.insertAdjacentHTML('beforeend', renderMessage('Sunny', replyText, new Date()));
                 scrollToBottom(container);
-                
+
                 activeRequestId = newId;
                 chatInput.placeholder = "Type a message...";
                 mobileChatInput.placeholder = "Type a message...";
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } else {
-             const loadingId = 'loading-' + Date.now();
+            const loadingId = 'loading-' + Date.now();
             container.insertAdjacentHTML('beforeend', `
                 <div id="${loadingId}" class="flex gap-4 py-6 fade-in bg-scandi-bg/30 -mx-8 px-8 opacity-70">
                      <div class="w-8 flex-shrink-0 pt-1">
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const functionUrl = window.firebaseConfig.functionUrls.handleUserResponse;
                 const response = await fetch(functionUrl, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!response.ok) throw new Error('Failed to send reply');
                 document.getElementById(loadingId)?.remove();
-                
+
             } catch (error) {
                 document.getElementById(loadingId)?.remove();
                 alert('Error sending message: ' + error.message);
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalSummary.textContent = data.summary || 'No summary available.';
         modalProviderName.textContent = data.providerName || 'Finding a pro...';
         modalProviderPhone.textContent = data.providerPhoneNumber || '---';
-        
+
         detailsModal.classList.remove('hidden');
     };
 
@@ -524,10 +524,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     newRequestBtn.addEventListener('click', startNewRequest);
     emptyStateNewBtn.addEventListener('click', startNewRequest);
-    
+
     chatDetailsBtn.addEventListener('click', showDetails);
     mobileDetailsBtn.addEventListener('click', showDetails);
-    
+
     mobileBackBtn.addEventListener('click', () => {
         mobileChatOverlay.classList.add('hidden');
         activeRequestId = null;
@@ -535,13 +535,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     detailsCloseBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
-    
+
     modalCancelBtn.addEventListener('click', () => {
         requestToCancelId = activeRequestId;
         detailsModal.classList.add('hidden');
         confirmModal.classList.remove('hidden');
     });
-    
+
     confirmCancelBtnView.addEventListener('click', () => {
         requestToCancelId = activeRequestId;
         confirmModal.classList.remove('hidden');
@@ -551,10 +551,10 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmModal.classList.add('hidden');
         requestToCancelId = null;
     });
-    
+
     confirmActionBtn.addEventListener('click', async () => {
         if (!requestToCancelId) return;
-        
+
         const originalText = confirmActionBtn.innerText;
         confirmActionBtn.innerText = 'Cancelling...';
         confirmActionBtn.disabled = true;
@@ -564,15 +564,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const functionUrl = window.firebaseConfig.functionUrls.cancelRequest;
             await fetch(functionUrl, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ requestId: requestToCancelId }),
             });
-            
+
             confirmModal.classList.add('hidden');
-            
+
             if (activeRequestId === requestToCancelId) {
                 activeRequestId = null;
                 emptyState.classList.remove('hidden');
@@ -642,14 +642,14 @@ document.addEventListener('DOMContentLoaded', () => {
         onboardStep1.classList.add('hidden');
         onboardStep2.classList.remove('hidden');
     });
-    
+
     onboardAddressInput.addEventListener('input', () => onboardAddressInput.classList.remove('border-red-500'));
 
     onboardStep2Back.addEventListener('click', () => {
         onboardStep2.classList.add('hidden');
         onboardStep1.classList.remove('hidden');
     });
-    
+
     onboardPhoneInput.addEventListener('input', () => onboardPhoneInput.classList.remove('border-red-500'));
 
     onboardFinishBtn.addEventListener('click', async () => {
@@ -657,10 +657,10 @@ document.addEventListener('DOMContentLoaded', () => {
             onboardPhoneInput.classList.add('border-red-500');
             return;
         }
-        
+
         onboardFinishBtn.disabled = true;
         onboardFinishBtn.textContent = 'Saving...';
-        
+
         try {
             await db.collection('users').doc(currentUser.uid).set({
                 email: currentUser.email,
@@ -672,10 +672,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 sunnyBetaStatus: 'pending',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            
+
             onboardingModal.classList.add('hidden');
             betaWaitlistModal.classList.remove('hidden');
-            
+
         } catch (error) {
             console.error("Error saving profile:", error);
             alert("Error saving profile. Please try again.");
@@ -686,13 +686,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.menu-btn') && !e.target.closest('.menu-dropdown')) {
-             document.querySelectorAll('.menu-dropdown').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.menu-dropdown').forEach(el => el.classList.add('hidden'));
         }
     });
 
     const startApp = (userId) => {
         if (unsubscribeFirestore) unsubscribeFirestore();
-            
+
         unsubscribeFirestore = db.collection('requests')
             .where('userId', '==', userId)
             .orderBy('timestamp', 'desc')
@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mobileChatOverlay.classList.add('hidden');
                     return;
                 }
-                
+
                 if (isCreatingNew && activeRequestId && activeRequestId !== 'new' && requestsCache[activeRequestId]) {
                     isCreatingNew = false;
                 }
@@ -721,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             chatMessages.classList.add('hidden');
                             chatInputArea.classList.add('hidden');
                             confirmationView.classList.remove('hidden');
-                            
+
                             confirmProvider.textContent = data.providerName || 'Service Provider';
                             confirmProviderContact.textContent = data.providerName || 'the provider';
                             if (data.providerPhoneNumber) {
@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 confirmPhone.textContent = 'support';
                                 confirmPhone.href = '#';
                             }
-                            
+
                             let dateStr = 'TBD';
                             if (data.serviceDate) {
                                 const d = new Date(data.serviceDate);
@@ -744,11 +744,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             chatInputArea.classList.remove('hidden');
                             renderChatHistory(data.chat_history);
                         }
-                        
+
                         chatTitle.textContent = data.title || 'Request';
                         chatDescription.textContent = data.summary || 'Details...';
                         chatHeaderStatusBadge.textContent = data.status || 'Active';
-                        
+
                         // Update Mobile Status too if visible
                         if (window.innerWidth < 768) {
                             mobileChatStatus.textContent = data.status;
@@ -762,15 +762,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     auth.onAuthStateChanged((user) => {
+        console.log("Sunny: onAuthStateChanged fired. User:", user ? user.email : "null");
         if (user) {
             currentUser = user;
-            
+
             db.collection('users').doc(user.uid).get().then(doc => {
                 const data = doc.data();
-                
+
                 const isApproved = data && data.sunnyBetaStatus === 'approved';
                 const isPending = data && (data.sunnyBetaStatus === 'pending' || data.sunnyBetaStatus === 'rejected');
                 const hasOnboarded = data && data.address && data.phoneNumber;
+
+                console.log("Sunny: User status - Approved:", isApproved, "Pending:", isPending, "Onboarded:", hasOnboarded);
 
                 if (isApproved) {
                     // Show Main UI
@@ -778,9 +781,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     betaWaitlistModal.classList.add('hidden');
                     startApp(user.uid);
                 } else if (isPending) {
-                     // Show Waitlist
-                     onboardingModal.classList.add('hidden');
-                     betaWaitlistModal.classList.remove('hidden');
+                    // Show Waitlist
+                    onboardingModal.classList.add('hidden');
+                    betaWaitlistModal.classList.remove('hidden');
                 } else {
                     // Not applied or no status
                     if (!hasOnboarded) {
@@ -794,11 +797,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }).catch(err => {
-                console.error("Error fetching user profile:", err);
+                console.error("Sunny: Error fetching user profile:", err);
             });
 
         } else {
-            window.location.href = '../login.html';
+            console.log("Sunny: No user found, redirecting to login...");
+            // Add a slight delay to ensure it's not a transient state during initialization
+            setTimeout(() => {
+                if (!auth.currentUser) {
+                    window.location.href = '../login.html';
+                } else {
+                    console.log("Sunny: User appeared during delay, skipping redirect.");
+                }
+            }, 500);
         }
     });
 

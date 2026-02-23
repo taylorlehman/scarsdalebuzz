@@ -1,29 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ScarsdaleBuzz // Sign In</title>
     <link rel="icon" type="image/png" href="images/logos/bee_favicon.png">
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'scandi-bg': '#F2F0E9', 
-                        'scandi-surface': '#FFFCF5', 
-                        'scandi-text': '#282624', 
+                        'scandi-bg': '#F2F0E9',
+                        'scandi-surface': '#FFFCF5',
+                        'scandi-text': '#282624',
                         'scandi-muted': '#8A8580',
-                        'scandi-line': '#DCD6CE', 
+                        'scandi-line': '#DCD6CE',
                         'scandi-sage': '#9FA898',
                         'scandi-clay': '#C29B8B',
                         'scandi-stone': '#A8A4A0',
@@ -59,32 +62,43 @@
             inset: 0;
             z-index: 0;
         }
-        
+
         .fade-in {
             animation: fadeIn 0.8s ease-out forwards;
             opacity: 0;
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
+
 <body class="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
     <div class="paper-texture"></div>
 
     <!-- Navigation (Minimal) -->
     <nav class="hidden absolute top-0 w-full p-8 flex justify-between items-center z-20">
-        <a href="index.html" class="font-serif text-scandi-muted hover:text-scandi-text transition-colors text-sm tracking-wide">Directory</a>
+        <a href="index.html"
+            class="font-serif text-scandi-muted hover:text-scandi-text transition-colors text-sm tracking-wide">Directory</a>
     </nav>
 
     <!-- Card -->
-    <div class="bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center relative z-10 fade-in">
-        
+    <div
+        class="bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center relative z-10 fade-in">
+
         <!-- Logo Area -->
         <div class="mb-8">
-            <img src="images/logos/logo_name_white_bg.png" alt="Sunny" class="h-12 w-auto mx-auto mb-4 opacity-80 hover:opacity-100 transition-opacity">
+            <img src="images/logos/logo_name_white_bg.png" alt="Sunny"
+                class="h-12 w-auto mx-auto mb-4 opacity-80 hover:opacity-100 transition-opacity">
             <p class="text-scandi-muted font-light text-lg italic">Your home, handled.</p>
         </div>
 
@@ -105,16 +119,20 @@
         </div>
 
         <!-- Facebook Sign In Button -->
-        <button id="facebook-signin-btn" class="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold py-3 px-4 rounded-full transition shadow-sm hover:shadow-md flex items-center justify-center gap-3">
-             <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        <button id="facebook-signin-btn"
+            class="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold py-3 px-4 rounded-full transition shadow-sm hover:shadow-md flex items-center justify-center gap-3">
+            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
             </svg>
             <span>Continue with Facebook</span>
         </button>
 
         <!-- Google Sign In Button (Hidden by default, shown for Admin) -->
-        <button id="google-signin-btn" class="w-full bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold py-3 px-4 rounded-full transition shadow-sm hover:shadow-md flex items-center justify-center gap-3 mt-3 hidden">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6" alt="Google Logo">
+        <button id="google-signin-btn"
+            class="w-full bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold py-3 px-4 rounded-full transition shadow-sm hover:shadow-md flex items-center justify-center gap-3 mt-3 hidden">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6"
+                alt="Google Logo">
             <span>Sign in with Google</span>
         </button>
 
@@ -143,16 +161,35 @@
             };
         };
 
+        let isRedirecting = false;
         const handleRedirect = () => {
+            if (isRedirecting) {
+                console.log("Auth: Already redirecting, skipping...");
+                return;
+            }
+
             const { redirect } = getQueryParams();
             // Default to sunny/index.html if no redirect
             let target = redirect || 'sunny/index.html';
-            
+
+            // Convert to absolute-style path if relative to avoid ambiguity
+            if (!target.startsWith('http') && !target.startsWith('/')) {
+                const parts = window.location.pathname.split('/');
+                parts.pop(); // remove login.html
+                const basePath = parts.join('/');
+                target = basePath + (basePath.endsWith('/') ? '' : '/') + target;
+            }
+
+            console.log("Auth: Target redirect identified:", target);
+
             // Clean up target if needed
             if (target.startsWith('http') && !target.includes(window.location.hostname)) {
-                target = 'sunny/index.html';
+                console.warn("Auth: External redirect detected and blocked:", target);
+                target = '/sunny/index.html';
             }
-            
+
+            console.log("Auth: Navigating to:", target);
+            isRedirecting = true;
             window.location.href = target;
         };
 
@@ -174,18 +211,50 @@
                 return;
             }
 
-            auth.signInWithPopup(provider)
-                .then((result) => {
-                    handleRedirect();
-                })
-                .catch((error) => {
-                    console.error("Auth Error:", error);
-                    if (error.code === 'auth/account-exists-with-different-credential') {
-                        alert("An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
-                    } else {
+            // Disable buttons and show loading state
+            btn.disabled = true;
+            googleBtn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            googleBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Basic mobile detection
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            if (isMobile) {
+                console.log("Auth: Mobile device detected. Using signInWithRedirect.");
+                auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                    .then(() => {
+                        return auth.signInWithRedirect(provider);
+                    })
+                    .catch((error) => {
+                        console.error("Auth: Redirect Sign-In Error:", error);
+                        // Re-enable buttons on error
+                        btn.disabled = false;
+                        googleBtn.disabled = false;
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        googleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                         alert("Authentication failed: " + error.message);
-                    }
-                });
+                    });
+            } else {
+                auth.signInWithPopup(provider)
+                    .then((result) => {
+                        handleRedirect();
+                    })
+                    .catch((error) => {
+                        console.error("Auth Error:", error);
+                        // Re-enable buttons on error
+                        btn.disabled = false;
+                        googleBtn.disabled = false;
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        googleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                        if (error.code === 'auth/account-exists-with-different-credential') {
+                            alert("An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
+                        } else if (error.code !== 'auth/popup-closed-by-user') {
+                            alert("Authentication failed: " + error.message);
+                        }
+                    });
+            }
         };
 
         const btn = document.getElementById('facebook-signin-btn');
@@ -204,12 +273,36 @@
             googleBtn.classList.remove('hidden');
         }
 
+        // Handle Redirect Result
+        console.log("Auth: Checking getRedirectResult...");
+        auth.getRedirectResult()
+            .then((result) => {
+                if (result.user) {
+                    console.log("Auth: Redirect result found user:", result.user.email);
+                    handleRedirect();
+                } else {
+                    console.log("Auth: No redirect result user found.");
+                }
+            })
+            .catch((error) => {
+                console.error("Auth: Redirect Auth Error:", error);
+                if (error.code === 'auth/account-exists-with-different-credential') {
+                    alert("An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
+                } else if (error.code !== 'auth/redirect-cancelled-by-user') {
+                    alert("Authentication failed: " + error.message);
+                }
+            });
+
         // Check if already signed in
         auth.onAuthStateChanged(user => {
             if (user) {
+                console.log("Auth: onAuthStateChanged found user:", user.email);
                 handleRedirect();
+            } else {
+                console.log("Auth: onAuthStateChanged - No user.");
             }
         });
     </script>
 </body>
+
 </html>

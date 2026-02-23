@@ -2,7 +2,7 @@
 // Fill this with your Firebase project config for STAGING
 window.firebaseConfig = window.firebaseConfig || {
     apiKey: "AIzaSyAGj1dj2LyNYtfyf3_lsfSF6cpc3TNpM-U",
-    authDomain: "scarsdale-buzz-staging.firebaseapp.com",
+    authDomain: "scarsdale-buzz-staging.web.app",
     projectId: "scarsdale-buzz-staging",
     storageBucket: "scarsdale-buzz-staging.firebasestorage.app",
     messagingSenderId: "758221753289",
