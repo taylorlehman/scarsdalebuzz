@@ -4,6 +4,7 @@
 let db;
 let functions;
 let currentUser = null;
+let isTlLabsAdmin = false;
 let currentView = 'services'; // services, users, beta, suggestions, categories, groups
 let allUsers = []; // Cache for users
 
@@ -162,6 +163,8 @@ async function checkAdminAccess() {
         const data = await response.json();
         
         if (data.isAdmin) {
+            isTlLabsAdmin = !!data.isTlLabs;
+            
             // Force token refresh to pick up new claims if just granted
             await currentUser.getIdToken(true);
             
@@ -182,6 +185,22 @@ async function checkAdminAccess() {
 async function initDashboard() {
     setupNavigation();
     
+    // If not a TL Labs admin, restrict view to Users only
+    if (!isTlLabsAdmin) {
+        // Hide all nav items except Users
+        Object.keys(navItems).forEach(key => {
+            if (key !== 'users' && navItems[key]) {
+                navItems[key].classList.add('hidden');
+            }
+        });
+        
+        // Force switch to users view
+        switchView('users');
+    } else {
+        // Default View for full admins
+        switchView('services');
+    }
+    
     // Initial data load
     await Promise.all([
         loadCategoryGroups(),
@@ -195,9 +214,6 @@ async function initDashboard() {
     renderCategoryTable();
     
     setupEventListeners();
-    
-    // Default View
-    switchView('services');
 }
 
 // -- Navigation --
@@ -351,8 +367,10 @@ function renderUserTable() {
         if (status === 'approved') {
             statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>';
             
-            // Check if admin
-            const isAdmin = !!u.isAdmin;
+            // Check if admin (either via DB flag or email domain)
+            const isTlLabsEmail = u.email && u.email.endsWith('@tl-labs.com');
+            const isAdmin = !!u.isAdmin || isTlLabsEmail;
+            
             const adminBadge = isAdmin ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 uppercase tracking-wide">ADMIN</span>' : '';
             statusBadge += adminBadge;
 

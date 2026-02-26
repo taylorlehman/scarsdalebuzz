@@ -91,9 +91,15 @@
             class="font-serif text-scandi-muted hover:text-scandi-text transition-colors text-sm tracking-wide">Directory</a>
     </nav>
 
+    <!-- Loading State -->
+    <div id="loading-state" class="bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center relative z-10">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-scandi-clay mx-auto mb-4"></div>
+        <p class="text-scandi-text font-serif text-lg">Logging you in...</p>
+    </div>
+
     <!-- Card -->
-    <div
-        class="bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center relative z-10 fade-in">
+    <div id="login-card"
+        class="hidden bg-white p-12 rounded-sm shadow-hover border border-scandi-line w-full max-w-md text-center relative z-10">
 
         <!-- Logo Area -->
         <div class="mb-8">
@@ -273,19 +279,51 @@
             googleBtn.classList.remove('hidden');
         }
 
+        // UI Helpers
+        const loginCard = document.getElementById('login-card');
+        const loadingState = document.getElementById('loading-state');
+
+        const showLogin = () => {
+            loadingState.classList.add('hidden');
+            loginCard.classList.remove('hidden');
+            loginCard.classList.add('fade-in');
+        };
+
+        const showLoading = () => {
+             loginCard.classList.add('hidden');
+             loadingState.classList.remove('hidden');
+        };
+
+        // State tracking
+        let redirectCheckComplete = false;
+        let authStateCheckComplete = false;
+        let currentUser = null;
+
+        function checkShowLogin() {
+            if (redirectCheckComplete && authStateCheckComplete && !currentUser) {
+                showLogin();
+            }
+        }
+
         // Handle Redirect Result
         console.log("Auth: Checking getRedirectResult...");
         auth.getRedirectResult()
             .then((result) => {
+                redirectCheckComplete = true;
                 if (result.user) {
                     console.log("Auth: Redirect result found user:", result.user.email);
+                    showLoading();
                     handleRedirect();
                 } else {
                     console.log("Auth: No redirect result user found.");
+                    checkShowLogin();
                 }
             })
             .catch((error) => {
                 console.error("Auth: Redirect Auth Error:", error);
+                redirectCheckComplete = true;
+                showLogin(); // Show login on error
+                
                 if (error.code === 'auth/account-exists-with-different-credential') {
                     alert("An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
                 } else if (error.code !== 'auth/redirect-cancelled-by-user') {
@@ -295,11 +333,15 @@
 
         // Check if already signed in
         auth.onAuthStateChanged(user => {
+            authStateCheckComplete = true;
+            currentUser = user;
             if (user) {
                 console.log("Auth: onAuthStateChanged found user:", user.email);
+                showLoading();
                 handleRedirect();
             } else {
                 console.log("Auth: onAuthStateChanged - No user.");
+                checkShowLogin();
             }
         });
     </script>

@@ -14,7 +14,9 @@ describe('Admin Role Management', () => {
         res = {
             status: jest.fn().mockReturnThis(),
             send: jest.fn(),
-            json: jest.fn()
+            json: jest.fn(),
+            on: jest.fn(),
+            emit: jest.fn()
         };
     });
 
@@ -41,7 +43,7 @@ describe('Admin Role Management', () => {
             await myFunctions.verifyAdminRole(req, res);
 
             expect(admin.auth().setCustomUserClaims).toHaveBeenCalledWith('123', { admin: true });
-            expect(res.json).toHaveBeenCalledWith({ isAdmin: true, message: 'Admin privileges granted.' });
+            expect(res.json).toHaveBeenCalledWith({ isAdmin: true, isTlLabs: true, message: 'Admin privileges granted.' });
         });
 
         it('should return already admin if user has claim', async () => {
@@ -51,7 +53,7 @@ describe('Admin Role Management', () => {
 
             await myFunctions.verifyAdminRole(req, res);
 
-            expect(res.json).toHaveBeenCalledWith({ isAdmin: true, message: 'Already an admin.' });
+            expect(res.json).toHaveBeenCalledWith({ isAdmin: true, isTlLabs: false, message: 'Already an admin.' });
         });
 
         it('should deny access for non-admin email', async () => {

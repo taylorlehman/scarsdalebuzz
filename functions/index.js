@@ -1,5 +1,6 @@
 const functions = require("firebase-functions");
 const functionsV1 = require("firebase-functions/v1");
+const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 admin.initializeApp();
 const logger = require("firebase-functions/logger");
@@ -98,14 +99,14 @@ exports.verifyAdminRole = functions.https.onRequest(async (req, res) => {
                     logger.info(`Attempting to grant admin privileges (setCustomUserClaims) to ${email}...`);
                     await admin.auth().setCustomUserClaims(uid, { admin: true });
                     logger.info(`Successfully granted admin privileges to ${email}`);
-                    res.json({ isAdmin: true, message: 'Admin privileges granted.' });
+                    res.json({ isAdmin: true, isTlLabs: isTlLabs, message: 'Admin privileges granted.' });
                 } catch (error) {
                     logger.error(`Failed to set custom user claims for ${email}.`, error);
                     res.status(500).json({ error: 'Failed to grant admin privileges.' });
                 }
             } else {
                 logger.info(`User ${email} is already an admin.`);
-                res.json({ isAdmin: true, message: 'Already an admin.' });
+                res.json({ isAdmin: true, isTlLabs: isTlLabs, message: 'Already an admin.' });
             }
         } else {
             logger.warn(`Access denied for email: ${email}`);
@@ -114,14 +115,13 @@ exports.verifyAdminRole = functions.https.onRequest(async (req, res) => {
     });
 });
 
-exports.grantAdminRole = functions.https.onRequest(async (req, res) => {
-    cors(req, res, async () => {
-        if (req.method !== 'POST') {
-            res.status(405).send('Method Not Allowed');
-            return;
-        }
+exports.grantAdminRole = onRequest({ cors: true }, async (req, res) => {
+    if (req.method !== 'POST') {
+        res.status(405).send('Method Not Allowed');
+        return;
+    }
 
-        const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             res.status(401).send('Unauthorized');
             return;
@@ -165,7 +165,6 @@ exports.grantAdminRole = functions.https.onRequest(async (req, res) => {
             logger.error("Error granting admin role:", error);
             res.status(500).send("Internal Server Error: " + error.message);
         }
-    });
 });
 
 exports.deleteUser = functions.https.onRequest(async (req, res) => {
