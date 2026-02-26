@@ -193,6 +193,17 @@ async function initDashboard() {
                 navItems[key].classList.add('hidden');
             }
         });
+
+        // Hide Section Headers
+        const headersToHide = [
+            'headerServiceManagement',
+            'headerCategoryManagement',
+            'headerDataQuality'
+        ];
+        headersToHide.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
         
         // Force switch to users view
         switchView('users');
