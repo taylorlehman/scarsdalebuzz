@@ -11,13 +11,13 @@
 // };
 
 window.firebaseConfig = window.firebaseConfig || {
-  apiKey: "AIzaSyDemya3LBmhAZoDbKLodJ1f03JMjydMdEU",
+  apiKey: "AIzaSyCnxy1sAQAMAvFXgzT1IaQN-sLY-oAhdmo",
   authDomain: "scarsdalebuzz.com",
   projectId: "scarsdale-buzz-prod",
   storageBucket: "scarsdale-buzz-prod.appspot.com",
-  messagingSenderId: "942213582160",
-  appId: "1:942213582160:web:54f165829c3dbb6514b055",
-  measurementId: "G-81E3DP7LET"
+  messagingSenderId: "473670057425",
+  appId: "1:473670057425:web:5eb2f0e0d64ae4f394f4f0",
+  measurementId: "G-V9NH0F2G7E"
 };
 
 // Function URLs for Production
