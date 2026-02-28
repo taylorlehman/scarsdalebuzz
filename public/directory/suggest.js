@@ -18,6 +18,8 @@ try {
 // --- ELEMENTS ---
 const form = document.getElementById('suggestForm');
 const categorySelect = document.getElementById('category');
+const newCategoryContainer = document.getElementById('newCategoryContainer');
+const newCategoryInput = document.getElementById('newCategory');
 const authModal = document.getElementById('auth-prompt-modal');
 const successMessage = document.getElementById('successMessage');
 const submitBtn = document.getElementById('submitBtn');
@@ -79,7 +81,25 @@ async function loadCategories() {
         option.textContent = cat;
         categorySelect.appendChild(option);
     });
+
+    // Add "Other" option
+    const otherOption = document.createElement('option');
+    otherOption.value = 'Other';
+    otherOption.textContent = 'Other (Suggest New)';
+    categorySelect.appendChild(otherOption);
 }
+
+// --- EVENT LISTENERS ---
+categorySelect.addEventListener('change', () => {
+    if (categorySelect.value === 'Other') {
+        newCategoryContainer.classList.remove('hidden');
+        newCategoryInput.required = true;
+    } else {
+        newCategoryContainer.classList.add('hidden');
+        newCategoryInput.required = false;
+        newCategoryInput.value = '';
+    }
+});
 
 // --- FORM SUBMISSION ---
 form.addEventListener('submit', async (e) => {
@@ -90,7 +110,11 @@ form.addEventListener('submit', async (e) => {
         return;
     }
 
-    const category = categorySelect.value;
+    let category = categorySelect.value;
+    if (category === 'Other') {
+        category = newCategoryInput.value.trim();
+    }
+
     const businessName = document.getElementById('businessName').value.trim();
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();

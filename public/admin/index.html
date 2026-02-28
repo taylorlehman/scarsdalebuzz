@@ -167,6 +167,16 @@
                     <label class="block text-xs font-medium text-scandi-text mb-2">Category</label>
                     <select id="category" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay"></select>
                 </div>
+                <!-- New Category Input (Hidden by default) -->
+                <div id="newCategoryContainer" class="hidden">
+                    <label class="block text-xs font-medium text-scandi-text mb-2">New Category Name</label>
+                    <input type="text" id="newCategory" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay" placeholder="e.g. Dog Walker">
+                    
+                    <label class="block text-xs font-medium text-scandi-text mb-2 mt-4">Assign to Group</label>
+                    <select id="newCategoryGroup" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay">
+                        <option value="">(Select a Group)</option>
+                    </select>
+                </div>
                 <div class="flex items-center gap-3 py-2 bg-yellow-50 p-3 rounded-sm border border-yellow-100">
                     <input id="sunnyApproved" type="checkbox" class="w-4 h-4 text-orange-500 rounded focus:ring-orange-500 border-gray-300" />
                     <label for="sunnyApproved" class="text-sm font-medium text-scandi-text">☀️ Sunny Approved</label>
@@ -186,7 +196,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3 pt-4 border-t border-scandi-line mt-4">
-                    <button type="submit" class="bg-scandi-text text-white px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark shadow-soft">Save</button>
+                    <button type="submit" id="saveServiceBtn" class="bg-scandi-text text-white px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-scandi-dark shadow-soft">Save</button>
+                    <button id="rejectSuggestionBtn" type="button" class="hidden bg-red-600 text-white px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-red-700 shadow-soft">Reject</button>
                     <button id="cancelBtn" type="button" class="px-6 py-3 rounded-sm text-xs font-mono uppercase tracking-widest border border-scandi-line text-scandi-muted hover:text-scandi-text">Cancel</button>
                 </div>
             </form>

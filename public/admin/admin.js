@@ -7,6 +7,8 @@ let currentUser = null;
 let isTlLabsAdmin = false;
 let currentView = 'services'; // services, users, beta, suggestions, categories, groups
 let allUsers = []; // Cache for users
+let approvingSuggestionId = null;
+let approvingSuggestionData = null;
 
 // -- DOM Elements --
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -77,10 +79,15 @@ const lastNameEl = document.getElementById('lastName');
 const phoneEl = document.getElementById('phone');
 const emailEl = document.getElementById('email');
     const categoryEl = document.getElementById('category');
+    const newCategoryContainer = document.getElementById('newCategoryContainer');
+    const newCategoryInput = document.getElementById('newCategory');
+    const newCategoryGroupEl = document.getElementById('newCategoryGroup');
     const sunnyApprovedEl = document.getElementById('sunnyApproved');
     const isTestProviderEl = document.getElementById('isTestProvider');
     const lastRecommendedEl = document.getElementById('lastRecommended');
     const recommendationsEl = document.getElementById('recommendations');
+const saveServiceBtn = document.getElementById('saveServiceBtn');
+const rejectSuggestionBtn = document.getElementById('rejectSuggestionBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 
 // Categories UI elements
@@ -354,7 +361,7 @@ function renderUserTable() {
         return searchStr.includes(q);
     });
     
-    // Sort: Pending first, then by name
+    // Sort: Pending first, then by createdAt descending (newest first)
     filtered.sort((a, b) => {
         const statusA = a.directoryStatus || 'pending';
         const statusB = b.directoryStatus || 'pending';
@@ -362,7 +369,18 @@ function renderUserTable() {
         if (statusA === 'pending' && statusB !== 'pending') return -1;
         if (statusA !== 'pending' && statusB === 'pending') return 1;
         
-        return (a.displayName || '').localeCompare(b.displayName || '');
+        // Both are approved (or rejected/other)
+        // Sort by createdAt desc
+        const getTime = (d) => {
+            if (!d) return 0;
+            // Handle Firestore Timestamp or Date string/object
+            return d.toDate ? d.toDate().getTime() : new Date(d).getTime();
+        };
+
+        const timeA = getTime(a.createdAt);
+        const timeB = getTime(b.createdAt);
+
+        return timeB - timeA; // Descending
     });
     
     usersTableBody.innerHTML = '';
@@ -415,7 +433,10 @@ function renderUserTable() {
                     <div class="text-[10px] text-scandi-muted font-mono">${u.uid}</div>
                 </div>
             </td>
-            <td class="py-4 px-6 text-scandi-muted font-mono text-xs">${u.email || '-'}</td>
+            <td class="py-4 px-6 text-scandi-muted font-mono text-xs">
+                <div>${u.email || '-'}</div>
+                ${u.createdAt ? `<div class="text-[10px] opacity-70 mt-1">Created: ${new Date(u.createdAt.toDate ? u.createdAt.toDate() : u.createdAt).toLocaleDateString()}</div>` : ''}
+            </td>
             <td class="py-4 px-6">${statusBadge}</td>
             <td class="py-4 px-6 text-right">
                 ${actionButtons}
@@ -427,13 +448,19 @@ function renderUserTable() {
 
 window.handleApproveAccess = async (uid) => {
     try {
-        await db.collection('users').doc(uid).update({
-            directoryStatus: 'approved'
-        });
+        const updateData = {
+            directoryStatus: 'approved',
+            joinedDate: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection('users').doc(uid).update(updateData);
         
         // Optimistic update
         const user = allUsers.find(u => u.uid === uid);
-        if (user) user.directoryStatus = 'approved';
+        if (user) {
+            user.directoryStatus = 'approved';
+            user.joinedDate = new Date(); // Approximate for immediate display
+        }
         renderUserTable();
         updateCounts();
         
@@ -668,7 +695,17 @@ function getAllCategories() {
 function populateCategorySelects() {
   const categories = getAllCategories();
   filterEl.innerHTML = '<option value="">All Categories</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
-  categoryEl.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  
+  let catOptions = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  catOptions += '<option value="Other">Other (New Category)</option>';
+  categoryEl.innerHTML = catOptions;
+  
+  // Populate new category group dropdown
+  if (categoryGroups) {
+      const groups = Object.keys(categoryGroups).sort();
+      newCategoryGroupEl.innerHTML = '<option value="">(Select a Group)</option>' + 
+          groups.map(g => `<option value="${g}">${g}</option>`).join('');
+  }
 }
 
 
@@ -733,8 +770,7 @@ async function loadSuggestions() {
                     </div>
                 </td>
                 <td class="py-4 px-6 text-right space-x-2">
-                    <button class="text-xs font-bold text-green-600 hover:text-green-800 uppercase tracking-widest" onclick="approveSuggestion('${doc.id}')">Approve</button>
-                    <button class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest" onclick="rejectSuggestion('${doc.id}')">Reject</button>
+                    <button class="text-xs font-bold text-scandi-text hover:text-scandi-muted uppercase tracking-widest border border-scandi-line px-3 py-1 rounded hover:bg-scandi-bg" onclick="reviewSuggestion('${doc.id}')">Review</button>
                 </td>
             `;
             suggestionsTableBody.appendChild(tr);
@@ -746,67 +782,41 @@ async function loadSuggestions() {
     }
 }
 
-window.approveSuggestion = async (suggestionId) => {
-    if (!confirm('Approve this suggestion? This will create a new service listing and credit the user.')) return;
-
+window.reviewSuggestion = async (suggestionId) => {
     try {
         const suggestionDoc = await db.collection('suggested_services').doc(suggestionId).get();
         if (!suggestionDoc.exists) throw "Suggestion not found";
         
         const data = suggestionDoc.data();
         
-        // 1. Create payload for new service
-        const payload = {
+        approvingSuggestionId = suggestionId;
+        approvingSuggestionData = data;
+        
+        // Map to service format
+        const serviceData = {
+            id: '', // New service
             businessName: data.businessName,
             firstName: data.firstName,
             lastName: data.lastName,
             phone: data.phone,
             email: data.email,
             category: data.category,
-            recommendations: 1, // Start with 1 rec from the suggester
-            lastRecommended: firebase.firestore.FieldValue.serverTimestamp(),
-            recentRecommenders: [{
-                uid: data.suggestedBy,
-                timestamp: new Date()
-            }]
+            recommendations: 1,
+            sunnyApproved: false,
+            isTestProvider: false
         };
-
-        // Generate ID (Auto-ID)
-        const serviceRef = db.collection('services').doc();
         
-        // Batch write to ensure atomicity
-        const batch = db.batch();
-
-        // 2. Create Service
-        batch.set(serviceRef, payload);
-
-        // 3. Add Recommendation Subcollection
-        const recRef = serviceRef.collection('recommendations').doc(data.suggestedBy);
-        batch.set(recRef, {
-            uid: data.suggestedBy,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        // 4. Update User's Liked Services - REMOVED (deprecated)
-        // const userRef = db.collection('users').doc(data.suggestedBy);
-        // batch.set(userRef, {
-        //     likedServices: firebase.firestore.FieldValue.arrayUnion(serviceRef.id)
-        // }, { merge: true });
-
-        // 5. Update Suggestion Status
-        batch.update(suggestionDoc.ref, { status: 'approved' });
-
-        await batch.commit();
-
-        alert('Suggestion approved and service created!');
-        loadSuggestions();
-        loadServicesOnce(); // Refresh main list
+        fillFormFromDoc(serviceData);
+        serviceModalTitle.textContent = 'Review Suggestion';
         
     } catch (e) {
-        console.error("Approval failed:", e);
-        alert("Failed to approve: " + e.message);
+        console.error("Error preparing review:", e);
+        alert("Failed to open review modal: " + e.message);
     }
 };
+
+// Kept for backward compatibility if needed, but reviewSuggestion handles the flow now
+window.approveSuggestion = window.reviewSuggestion;
 
 window.rejectSuggestion = async (suggestionId) => {
     if (!confirm('Reject this suggestion?')) return;
@@ -1020,14 +1030,48 @@ window.deleteCategory = async (name) => {
 }
 
 function fillFormFromDoc(doc) {
-  serviceModalTitle.textContent = 'Edit Listing';
-  docIdEl.value = doc.id;
+  serviceModalTitle.textContent = doc.id ? 'Edit Listing' : 'Add New Listing';
+  docIdEl.value = doc.id || '';
   businessNameEl.value = doc.businessName || '';
   firstNameEl.value = doc.firstName || '';
   lastNameEl.value = doc.lastName || '';
   phoneEl.value = doc.phone || '';
   emailEl.value = doc.email || '';
-  categoryEl.value = doc.category || '';
+  
+  // Handle potential new category
+  // Clear any previous "New" options first (though populateCategorySelects should handle this on reset)
+  
+  const isNewCategory = doc.category && !Array.from(categoryEl.options).some(o => o.value === doc.category) && doc.category !== 'Other';
+  
+  if (isNewCategory) {
+      // If it's a new category, set to "Other" and fill the input
+      categoryEl.value = 'Other';
+      newCategoryContainer.classList.remove('hidden');
+      newCategoryInput.value = doc.category;
+      
+      // Add visual warning
+      newCategoryInput.classList.add('border-orange-500', 'bg-orange-50');
+      // Create or show warning message
+      let warning = document.getElementById('categoryWarning');
+      if (!warning) {
+          warning = document.createElement('p');
+          warning.id = 'categoryWarning';
+          warning.className = 'text-xs text-orange-600 mt-1 font-bold';
+          newCategoryContainer.appendChild(warning);
+      }
+      warning.textContent = '⚠️ This is a NEW category. Saving will add it to the official list.';
+      warning.classList.remove('hidden');
+  } else {
+      // Existing category
+      categoryEl.value = doc.category || '';
+      newCategoryContainer.classList.add('hidden');
+      
+      // Reset visual warning
+      newCategoryInput.classList.remove('border-orange-500', 'bg-orange-50');
+      const warning = document.getElementById('categoryWarning');
+      if (warning) warning.classList.add('hidden');
+  }
+  
   sunnyApprovedEl.checked = !!doc.sunnyApproved;
   isTestProviderEl.checked = !!doc.isTestProvider;
   
@@ -1042,16 +1086,38 @@ function fillFormFromDoc(doc) {
   
   recommendationsEl.value = Number(doc.recommendations || 0);
   
+  // UI Adjustments for Review Mode
+  if (approvingSuggestionId) {
+      saveServiceBtn.textContent = 'Approve';
+      rejectSuggestionBtn.classList.remove('hidden');
+  } else {
+      saveServiceBtn.textContent = 'Save';
+      rejectSuggestionBtn.classList.add('hidden');
+  }
+  
   openModal(serviceModal);
 }
 
 function resetFormToNew() {
+  approvingSuggestionId = null;
+  approvingSuggestionData = null;
   serviceModalTitle.textContent = 'Add New Listing';
   docIdEl.value = '';
   form.reset();
   sunnyApprovedEl.checked = false;
   isTestProviderEl.checked = false;
   recommendationsEl.value = 0;
+  
+  // Reset category options (remove temporary ones)
+  populateCategorySelects();
+  
+  // Reset visual warning and input
+  newCategoryContainer.classList.add('hidden');
+  newCategoryInput.value = '';
+  newCategoryInput.classList.remove('border-orange-500', 'bg-orange-50');
+  newCategoryGroupEl.value = '';
+  const warning = document.getElementById('categoryWarning');
+  if (warning) warning.classList.add('hidden');
 }
 
 function parseDateToTimestamp(s) {
@@ -1095,6 +1161,16 @@ function setupEventListeners() {
     // Category Search
     categorySearchEl.addEventListener('input', renderCategoryTable);
     
+    // Category Select Change (in Modal)
+    categoryEl.addEventListener('change', () => {
+        if (categoryEl.value === 'Other') {
+            newCategoryContainer.classList.remove('hidden');
+            newCategoryInput.value = ''; // Clear unless we are filling it
+        } else {
+            newCategoryContainer.classList.add('hidden');
+        }
+    });
+    
     // Group Search
     groupSearchEl.addEventListener('input', renderGroupTable);
     
@@ -1105,6 +1181,24 @@ function setupEventListeners() {
     });
     closeServiceModal.addEventListener('click', () => closeModal(serviceModal));
     cancelBtn.addEventListener('click', () => closeModal(serviceModal));
+    
+    // Reject Button Handler
+    rejectSuggestionBtn.addEventListener('click', async () => {
+        if (!approvingSuggestionId) return;
+        if (!confirm('Reject this suggestion? It will be marked as rejected.')) return;
+        
+        try {
+            await db.collection('suggested_services').doc(approvingSuggestionId).update({ status: 'rejected' });
+            closeModal(serviceModal);
+            loadSuggestions();
+            // Reset state
+            approvingSuggestionId = null;
+            approvingSuggestionData = null;
+        } catch (e) {
+            console.error("Rejection failed:", e);
+            alert("Failed to reject: " + e.message);
+        }
+    });
     
     // Category Modal
     addCategoryBtn.addEventListener('click', () => {
@@ -1163,13 +1257,22 @@ function setupEventListeners() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        let selectedCategory = categoryEl.value;
+        if (selectedCategory === 'Other') {
+            selectedCategory = newCategoryInput.value.trim();
+            if (!selectedCategory) {
+                alert('Please enter a name for the new category.');
+                return;
+            }
+        }
+
         const payload = {
             businessName: businessNameEl.value.trim() || null,
             firstName: firstNameEl.value.trim() || null,
             lastName: lastNameEl.value.trim() || null,
             phone: phoneEl.value.trim() || null,
             email: emailEl.value.trim() || null,
-            category: categoryEl.value || null,
+            category: selectedCategory || null,
             sunnyApproved: sunnyApprovedEl.checked,
             isTestProvider: isTestProviderEl.checked,
             recommendations: Number(recommendationsEl.value || 0),
@@ -1177,13 +1280,80 @@ function setupEventListeners() {
         const ts = parseDateToTimestamp(lastRecommendedEl.value.trim());
         if (ts) payload.lastRecommended = ts;
 
+        // Check for new category
+        if (payload.category && !categoriesList.includes(payload.category)) {
+            const newGroup = newCategoryGroupEl.value;
+            const confirmMsg = newGroup 
+                ? `Category "${payload.category}" is new. Add it to the official list and assign to group "${newGroup}"?`
+                : `Category "${payload.category}" is new. Add it to the official list (ungrouped)?`;
+
+            if (confirm(confirmMsg)) {
+                categoriesList.push(payload.category);
+                categoriesList.sort();
+                
+                const batch = db.batch();
+                
+                // Update categories list
+                const categoriesRef = db.collection('config').doc('categories');
+                batch.set(categoriesRef, { list: categoriesList });
+                
+                // Update group if selected
+                if (newGroup && categoryGroups) {
+                    if (!categoryGroups[newGroup]) categoryGroups[newGroup] = [];
+                    categoryGroups[newGroup].push(payload.category);
+                    categoryGroups[newGroup].sort();
+                    
+                    const groupsRef = db.collection('config').doc('categoryGroups');
+                    batch.set(groupsRef, { groups: categoryGroups });
+                }
+                
+                await batch.commit();
+                populateCategorySelects(); // Refresh dropdowns
+            }
+        }
+
         const existingId = docIdEl.value;
         try {
-            if (existingId) {
+            if (approvingSuggestionId) {
+                // APPROVING SUGGESTION logic
+                
+                // Add suggestion-specific fields
+                payload.lastRecommended = firebase.firestore.FieldValue.serverTimestamp();
+                payload.recentRecommenders = [{
+                    uid: approvingSuggestionData.suggestedBy,
+                    timestamp: new Date()
+                }];
+                
+                // Batch write
+                const serviceRef = db.collection('services').doc();
+                const batch = db.batch();
+                
+                batch.set(serviceRef, payload);
+                
+                // Add recommendation
+                const recRef = serviceRef.collection('recommendations').doc(approvingSuggestionData.suggestedBy);
+                batch.set(recRef, {
+                    uid: approvingSuggestionData.suggestedBy,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Update suggestion status
+                const suggestionRef = db.collection('suggested_services').doc(approvingSuggestionId);
+                batch.update(suggestionRef, { status: 'approved' });
+                
+                await batch.commit();
+                
+                // Reset state
+                approvingSuggestionId = null;
+                approvingSuggestionData = null;
+                loadSuggestions(); // Refresh suggestions list
+                
+            } else if (existingId) {
                 await db.collection('services').doc(existingId).set(payload, { merge: true });
             } else {
                 await db.collection('services').add(payload);
             }
+            
             closeModal(serviceModal);
             await loadServicesOnce();
             renderTable();

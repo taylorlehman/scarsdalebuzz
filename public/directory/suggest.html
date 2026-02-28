@@ -109,6 +109,13 @@
                 <select id="category" required class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors">
                     <option value="">Select a category...</option>
                 </select>
+                <p class="text-[10px] text-scandi-muted mt-1 italic">Can't find a category that fits your needs? Select "Other (Suggest New)" from the bottom of the list and suggest a new category!</p>
+            </div>
+
+            <!-- New Category Input (Hidden by default) -->
+            <div id="newCategoryContainer" class="hidden">
+                <label class="block text-xs font-medium text-scandi-text mb-2 uppercase tracking-wide">New Category Name *</label>
+                <input type="text" id="newCategory" class="w-full p-3 border border-scandi-line rounded-sm bg-scandi-bg/20 text-sm focus:outline-none focus:border-scandi-clay transition-colors" placeholder="e.g. Dog Walker">
             </div>
 
             <!-- Business Name -->
