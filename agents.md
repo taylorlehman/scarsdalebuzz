@@ -9,10 +9,9 @@
 ## Agent Responsibilities
 1. **Mandatory Test Evaluation:** As part of making *any* change to the codebase, you must evaluate the risk impact.
 2. **Mandatory Test Updates:** You must write or update the necessary tests to validate your specific feature changes.
-3. **Staging & Validation Lifecycle:** Before you conclude your task or notify the user of completion, you must automatically:
+3. **Staging & Validation Lifecycle:** Before you conclude your task or notify the user of completion, you must:
    - Complete your desired coding tasks.
-   - Deploy the application to the `staging` environment.
-   - Execute the appropriate unit tests and E2E integration tests against the deployed staging environment to validate your changes work in an integrated system.
+   - **ONLY IF EXPLICITLY REQUESTED BY THE USER:** Deploy the application to the `staging` environment and execute the appropriate unit tests and E2E integration tests. Do not run tests automatically after every change.
 
 ## Testing Frameworks
 ### Backend / Functions (Jest)

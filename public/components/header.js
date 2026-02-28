@@ -29,9 +29,11 @@ class SharedHeader {
         // Determine links
         const dirLink = `${rootPath}directory/index.html`;
         const sunnyLink = `${rootPath}sunny/index.html`;
+        const suggestLink = `${rootPath}directory/suggest.html`;
 
         const dirClass = activePage === 'directory' ? activeClass : inactiveClass;
         const sunnyClass = activePage === 'sunny' ? activeClass : inactiveClass;
+        const suggestClass = activePage === 'suggest' ? activeClass : inactiveClass;
 
         container.innerHTML = `
             <header class="shrink-0 h-20 bg-scandi-bg border-b border-scandi-line flex items-center justify-between px-4 md:px-8 z-[60] fixed w-full top-0">
@@ -40,6 +42,7 @@ class SharedHeader {
                 <nav class="hidden md:flex gap-8">
                     <a href="${dirLink}" class="${dirClass}">Directory</a>
                     <a href="${sunnyLink}" class="${sunnyClass} sunny-nav-link hidden">Sunny</a>
+                    <a href="${suggestLink}" class="${suggestClass}">Suggest New Business</a>
                 </nav>
 
                 <!-- Mobile Hamburger Button (Visible on Mobile) -->
@@ -76,6 +79,7 @@ class SharedHeader {
                 <div id="mobile-menu" class="hidden absolute left-0 top-20 w-full bg-scandi-bg border-b border-scandi-line shadow-soft z-[59] md:hidden flex flex-col">
                     <a href="${dirLink}" class="${mobileItemClass} ${activePage === 'directory' ? 'bg-scandi-surface text-scandi-clay' : ''}">Directory</a>
                     <a href="${sunnyLink}" class="${mobileItemClass} ${activePage === 'sunny' ? 'bg-scandi-surface text-scandi-clay' : ''} sunny-nav-link hidden">Sunny</a>
+                    <a href="${suggestLink}" class="${mobileItemClass} ${activePage === 'suggest' ? 'bg-scandi-surface text-scandi-clay' : ''}">Suggest New Business</a>
                 </div>
             </header>
         `;
