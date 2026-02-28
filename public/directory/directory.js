@@ -18,39 +18,7 @@ let recommendedByUserProfile = null;
 // Expect window.firebaseConfig to be defined in firebase-config.js
 let db;
 let analytics = null; // Analytics loaded lazily for performance
-try {
-    if (window.firebaseConfig && firebase?.apps?.length === 0) {
-        firebase.initializeApp(window.firebaseConfig);
-    } else if (window.firebaseConfig && !firebase?.apps?.length) {
-        firebase.initializeApp(window.firebaseConfig);
-    }
-    // Enable offline persistence (best effort)
-    if (firebase?.firestore) {
-        firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => { });
-        db = firebase.firestore();
-        // Try to load category group mapping from Firestore config early
-        loadCategoryGroupsConfig();
-        loadCategoriesConfig();
-        // Start auth check immediately
-        initAuthListener();
 
-        // Load Rolodex if recommendedBy is present
-        if (recommendedByUid) {
-            loadRolodex(recommendedByUid);
-        }
-    }
-    // Analytics is loaded lazily via index.html for better page performance
-    // Listen for the analyticsReady event to update the reference
-    window.addEventListener('analyticsReady', () => {
-        analytics = window.analytics;
-    });
-    // Check if already loaded (in case event fired before this listener)
-    if (window.analytics) {
-        analytics = window.analytics;
-    }
-} catch (_) {
-    // No-op if Firebase not available; page will still render but without data
-}
 
 // --- RUNTIME DATA (from Firestore) ---
 let serviceData = [];
@@ -1151,4 +1119,40 @@ function renderRolodexBanner() {
 checkPassword(); // Legacy placeholder
 
 // Removed password event listener
+
+
+// --- FIREBASE INIT EXECUTION ---
+try {
+    if (window.firebaseConfig && firebase?.apps?.length === 0) {
+        firebase.initializeApp(window.firebaseConfig);
+    } else if (window.firebaseConfig && !firebase?.apps?.length) {
+        firebase.initializeApp(window.firebaseConfig);
+    }
+    // Enable offline persistence (best effort)
+    if (firebase?.firestore) {
+        firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => { });
+        db = firebase.firestore();
+        // Try to load category group mapping from Firestore config early
+        loadCategoryGroupsConfig();
+        loadCategoriesConfig();
+        // Start auth check immediately
+        initAuthListener();
+
+        // Load Rolodex if recommendedBy is present
+        if (recommendedByUid) {
+            loadRolodex(recommendedByUid);
+        }
+    }
+    // Analytics is loaded lazily via index.html for better page performance
+    // Listen for the analyticsReady event to update the reference
+    window.addEventListener('analyticsReady', () => {
+        analytics = window.analytics;
+    });
+    // Check if already loaded (in case event fired before this listener)
+    if (window.analytics) {
+        analytics = window.analytics;
+    }
+} catch (_) {
+    // No-op if Firebase not available; page will still render but without data
+}
 
