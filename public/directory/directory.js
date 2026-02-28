@@ -33,6 +33,11 @@ try {
         loadCategoriesConfig();
         // Start auth check immediately
         initAuthListener();
+
+        // Load Rolodex if recommendedBy is present
+        if (recommendedByUid) {
+            loadRolodex(recommendedByUid);
+        }
     }
     // Analytics is loaded lazily via index.html for better page performance
     // Listen for the analyticsReady event to update the reference
@@ -1084,6 +1089,7 @@ async function loadRolodex(uid) {
         });
 
         renderRolodexBanner();
+        filterAndRender();
 
     } catch (e) {
         console.error("Error loading rolodex", e);
