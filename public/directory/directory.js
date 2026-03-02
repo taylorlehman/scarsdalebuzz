@@ -347,14 +347,6 @@ const renderServices = (services) => {
     if (services.length === 0) {
         noResults.classList.remove('hidden');
 
-        // Log no-results analytics event if there's an active search
-        const searchTerm = searchInput.value.trim();
-        if (searchTerm && analytics) {
-            analytics.logEvent('directory_search_no_results', {
-                search_term: searchTerm
-            });
-        }
-
         // Add "Suggest a Provider" button to No Results
         const existingBtn = noResults.querySelector('.suggest-btn-placeholder');
         if (!existingBtn) {
@@ -905,7 +897,7 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
 };
 
 // --- EVENT HANDLERS ---
-const filterAndRender = (options = { keepOrder: false }) => {
+const filterAndRender = (options = { keepOrder: false, render: true }) => {
     const searchTerm = searchInput.value.trim();
     let filteredServices = [];
 
@@ -964,41 +956,54 @@ const filterAndRender = (options = { keepOrder: false }) => {
         });
     }
 
-    renderServices(filteredServices);
+    if (options.render !== false) {
+        renderServices(filteredServices);
+    }
     return filteredServices;
 };
 
 let searchTimeout;
+let analyticsTimeout;
 searchInput.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     serviceList.style.opacity = '0.5';
     searchTimeout = setTimeout(() => {
         const searchTerm = searchInput.value.trim();
 
-        // Log search event if there's a query
-        if (searchTerm && analytics) {
-            analytics.logEvent('directory_search', {
-                search_term: searchTerm
-            });
-        }
-
         const filteredResults = filterAndRender();
-
-        // Log search results quality metrics
-        if (searchTerm && analytics && filteredResults.length > 0) {
-            const resultsWithoutContact = filteredResults.filter(
-                s => !s.phone && !s.email
-            ).length;
-
-            analytics.logEvent('directory_search_results', {
-                search_term: searchTerm,
-                total_results: filteredResults.length,
-                results_without_contact: resultsWithoutContact
-            });
-        }
 
         serviceList.style.opacity = '1';
     }, 250);
+
+    // Debounce analytics to capture completed strings
+    clearTimeout(analyticsTimeout);
+    analyticsTimeout = setTimeout(() => {
+        const searchTerm = searchInput.value.trim();
+        if (searchTerm && analytics) {
+            // Re-run filter to get stats without rendering
+            const results = filterAndRender({ render: false });
+
+            analytics.logEvent('directory_search', {
+                search_term: searchTerm
+            });
+
+            if (results.length === 0) {
+                analytics.logEvent('directory_search_no_results', {
+                    search_term: searchTerm
+                });
+            } else {
+                const resultsWithoutContact = results.filter(
+                    s => !s.phone && !s.email
+                ).length;
+
+                analytics.logEvent('directory_search_results', {
+                    search_term: searchTerm,
+                    total_results: results.length,
+                    results_without_contact: resultsWithoutContact
+                });
+            }
+        }
+    }, 1500);
 });
 
 categoryFilters.addEventListener('click', (e) => {
