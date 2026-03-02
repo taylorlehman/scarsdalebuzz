@@ -41,8 +41,10 @@ const views = {
 // Count Elements
 const counts = {
     users: document.getElementById('usersCount'),
+    navUsers: document.getElementById('navUsersCount'),
     services: document.getElementById('servicesCount'),
     suggestions: document.getElementById('suggestionsCount'),
+    navSuggestions: document.getElementById('navSuggestionsCount'),
     beta: document.getElementById('betaCount'),
     categories: document.getElementById('categoriesCount'),
     groups: document.getElementById('groupsCount')
@@ -223,7 +225,9 @@ async function initDashboard() {
     await Promise.all([
         loadCategoryGroups(),
         loadCategoriesList(),
-        loadServicesOnce()
+        loadServicesOnce(),
+        loadUsers(),
+        loadSuggestions()
     ]);
     
     populateCategorySelects();
@@ -270,6 +274,11 @@ function updateCounts() {
     if (allServices) counts.services.textContent = `(${allServices.length})`;
     if (allUsers) {
         counts.users.textContent = `(${allUsers.length})`;
+        
+        // Count pending users for nav
+        const pendingUsers = allUsers.filter(u => !u.directoryStatus || u.directoryStatus === 'pending').length;
+        if (counts.navUsers) counts.navUsers.textContent = pendingUsers > 0 ? `(${pendingUsers})` : '';
+
         // Count beta applicants (pending)
         const pendingCount = allUsers.filter(u => u.sunnyBetaStatus === 'pending').length;
         const approvedCount = allUsers.filter(u => u.sunnyBetaStatus === 'approved').length;
@@ -721,6 +730,7 @@ async function loadSuggestions() {
             .get();
         
         counts.suggestions.textContent = `(${snap.size})`;
+        if (counts.navSuggestions) counts.navSuggestions.textContent = snap.size > 0 ? `(${snap.size})` : '';
         
         if (snap.empty) {
             suggestionsTableBody.innerHTML = '';
