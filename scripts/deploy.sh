@@ -50,6 +50,16 @@ if [[ "$ENV" != "staging" && "$ENV" != "prod" ]]; then
     exit 1
 fi
 
+if [[ "$ENV" == "prod" ]]; then
+    echo "⚠️  WARNING: You are about to deploy to PRODUCTION! ⚠️"
+    echo "This will overwrite the running application."
+    read -p "Type 'yes' to confirm: " CONFIRM
+    if [[ "$CONFIRM" != "yes" ]]; then
+        echo "Deployment cancelled."
+        exit 1
+    fi
+fi
+
 echo "=== Deploying to $ENV environment ==="
 
 # 0. Backup Data (Production Only)
