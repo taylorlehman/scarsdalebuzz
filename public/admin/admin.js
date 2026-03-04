@@ -830,7 +830,8 @@ window.reviewSuggestion = async (suggestionId) => {
             category: data.category,
             recommendations: 1,
             sunnyApproved: false,
-            isTestProvider: false
+            isTestProvider: false,
+            lastRecommended: new Date()
         };
         
         fillFormFromDoc(serviceData);
@@ -1143,6 +1144,10 @@ function resetFormToNew() {
   serviceModalTitle.textContent = 'Add New Listing';
   docIdEl.value = '';
   form.reset();
+  
+  // Pre-populate today's date
+  lastRecommendedEl.value = new Date().toISOString().slice(0, 10);
+
   sunnyApprovedEl.checked = false;
   isTestProviderEl.checked = false;
   recommendationsEl.value = 0;

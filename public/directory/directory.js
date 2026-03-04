@@ -438,16 +438,17 @@ const renderServices = (services) => {
         };
 
         const newHTML = `
-            <div class="flex flex-col md:flex-row h-full min-h-[380px]">
+            <!-- DESKTOP LAYOUT (Hidden on Mobile) -->
+            <div class="hidden md:flex flex-row h-full min-h-[380px]">
                 <!-- Left Panel: Info -->
-                <div class="flex-1 p-8 md:p-10 flex flex-col justify-between bg-white relative">
+                <div class="flex-1 p-10 flex flex-col justify-between bg-white relative">
                     <div class="flex justify-between items-start mb-6">
                         <span class="text-[10px] font-mono text-scandi-muted tracking-[0.2em] opacity-60">${(index + 1).toString().padStart(2, '0')}</span>
                         <span class="service-category text-[9px] uppercase tracking-[0.2em] font-bold text-scandi-sage truncate ml-4" title="${service.category}">${service.category}</span>
                     </div>
                     
                     <div class="flex-grow flex flex-col justify-start py-2">
-                        <h3 class="service-title font-serif text-3xl md:text-4xl text-scandi-text leading-[1.3] pb-2 mb-1 line-clamp-3 hover:text-scandi-clay transition-colors cursor-pointer" title="${title}">${title}</h3>
+                        <h3 class="service-title font-serif text-4xl text-scandi-text leading-[1.3] pb-2 mb-1 line-clamp-3 hover:text-scandi-clay transition-colors cursor-pointer" title="${title}">${title}</h3>
                     </div>
 
                     <div class="mt-auto">
@@ -465,7 +466,7 @@ const renderServices = (services) => {
                 </div>
 
                 <!-- Right Panel: Stats/Recommendations -->
-                <div class="w-full md:w-[38%] bg-[#FDFCFB] p-8 md:p-10 flex flex-col justify-between border-t md:border-t-0 md:border-l border-scandi-line/25">
+                <div class="w-[38%] bg-[#FDFCFB] p-10 flex flex-col justify-between border-l border-scandi-line/25">
                     <div class="flex justify-between items-start">
                         <div class="flex flex-col">
                             <span class="text-6xl font-serif text-scandi-clay leading-none tracking-tighter tabular-nums">${service.recommendations}</span>
@@ -496,6 +497,67 @@ const renderServices = (services) => {
                     </div>
                 </div>
             </div>
+
+            <!-- MOBILE LAYOUT (Visible on Mobile) -->
+            <div class="flex flex-col md:hidden h-full bg-white relative justify-between">
+                 <div class="p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-[10px] font-mono text-scandi-muted tracking-[0.2em] opacity-60">${(index + 1).toString().padStart(2, '0')}</span>
+                        <span class="service-category text-[9px] uppercase tracking-[0.2em] font-bold text-scandi-sage truncate ml-4" title="${service.category}">${service.category}</span>
+                    </div>
+
+                    <h3 class="service-title font-serif text-2xl text-scandi-text leading-tight mb-3 hover:text-scandi-clay transition-colors cursor-pointer" title="${title}">${title}</h3>
+
+                    <!-- Compact Contact Info -->
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        ${subtitle ? `<span class="font-serif text-sm text-scandi-text italic opacity-90">${subtitle}</span>` : ''}
+                        ${subtitle ? `<span class="text-scandi-line text-xs">|</span>` : ''}
+                        ${service.phone ? `
+                            <a href="tel:${service.phone.replace(/[^\d+]/g, '')}" class="font-serif text-sm font-bold text-scandi-sage tracking-tight hover:text-scandi-clay transition-colors tabular-nums">${service.phone}</a>
+                        ` : `
+                            <a href="${generateGoogleSearchUrl(service)}" target="_blank" class="font-serif text-sm font-bold text-scandi-sage tracking-tight hover:text-scandi-clay transition-colors tabular-nums">Look up info</a>
+                        `}
+                    </div>
+                </div>
+
+                <div class="bg-[#FDFCFB] p-6 border-t border-scandi-line/25">
+                    <div class="flex justify-between items-end">
+                        <div class="flex items-start gap-5">
+                            <!-- Big Number -->
+                            <div class="flex flex-col">
+                                <span class="text-4xl font-serif text-scandi-clay leading-none tracking-tighter tabular-nums cursor-pointer hover:text-scandi-text transition-colors" onclick="${service.recentRecommenders?.length > 0 ? `openRecommendersModal('${safeId}')` : 'openLegacyModal()'}">${service.recommendations}</span>
+                                <span class="text-[8px] uppercase tracking-[0.15em] text-scandi-muted mt-1 font-bold opacity-70">Recs</span>
+                            </div>
+                            
+                            <!-- Middle Column: Recommended By + Date -->
+                            <div class="flex flex-col pl-5 border-l border-scandi-line/30 h-full justify-between py-0.5">
+                                <!-- Recommended By -->
+                                <div class="mb-2">
+                                    <div class="text-[8px] uppercase tracking-[0.15em] text-scandi-clay mb-1 font-bold opacity-70">Recommended By</div>
+                                    <div class="flex items-center gap-2 cursor-pointer group/rec" onclick="${service.recentRecommenders?.length > 0 ? `openRecommendersModal('${safeId}')` : 'openLegacyModal()'}">
+                                        ${formatRecommenders(service.recentRecommenders)}
+                                        <span class="text-[10px] font-bold text-scandi-text tracking-tight group-hover/rec:text-scandi-clay transition-colors">${service.recentRecommenders?.length > 0 ? '' : 'Scarsdale Buzz'}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Date -->
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-[8px] uppercase tracking-[0.15em] text-scandi-sage font-bold opacity-70">Updated</span>
+                                    <span class="text-[10px] text-scandi-muted font-medium tabular-nums">
+                                        ${service.lastRecommended ? new Date(service.lastRecommended).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' }) : 'May 17, 25'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Like Button -->
+                        <button onclick="toggleLike('${safeId}', this)" class="like-btn w-12 h-12 rounded-full border border-scandi-line/50 flex items-center justify-center bg-white shadow-soft ${likeBtnClass} hover:scale-105 hover:border-scandi-clay transition-all duration-300 group/like flex-shrink-0 mb-1" title="${isLiked ? 'Undo Recommendation' : 'Recommend this provider'}">
+                            <span class="transform scale-90 group-hover/like:scale-100 transition-transform">${likeIcon}</span>
+                        </button>
+                    </div>
+                    ${bookingButtonHTML ? `<div class="mt-4 transform scale-95 origin-left">${bookingButtonHTML}</div>` : ''}
+                </div>
+            </div>
         `;
 
         // Only update innerHTML if it has changed to avoid unnecessary repaints/flickering
@@ -522,7 +584,7 @@ const renderServices = (services) => {
 
     // Append "Suggest a Provider" card
     const suggestCard = document.createElement('div');
-    suggestCard.className = 'suggest-card-placeholder group bg-scandi-bg/30 rounded-sm border-2 border-dashed border-scandi-line/40 hover:border-scandi-clay hover:bg-white transition-all duration-500 flex flex-col items-center justify-center text-center h-full min-h-[380px] cursor-pointer p-8';
+    suggestCard.className = 'suggest-card-placeholder group bg-scandi-bg/30 rounded-sm border-2 border-dashed border-scandi-line/40 hover:border-scandi-clay hover:bg-white transition-all duration-500 flex flex-col items-center justify-center text-center h-full min-h-[200px] md:min-h-[380px] cursor-pointer p-6 md:p-8';
     suggestCard.innerHTML = `
         <div class="w-20 h-20 rounded-full bg-white border border-scandi-line/50 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:border-scandi-clay transition-all duration-500 shadow-sm">
             <svg class="w-10 h-10 text-scandi-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"></path></svg>
