@@ -435,19 +435,23 @@ function renderUserTable() {
         }
 
         tr.innerHTML = `
-            <td class="py-4 px-6 font-medium text-scandi-text flex items-center gap-3">
+            <td class="py-4 px-4 md:px-6 font-medium text-scandi-text flex items-center gap-3">
                 ${u.photoURL ? `<img src="${u.photoURL}" class="w-8 h-8 rounded-full bg-gray-200" />` : '<div class="w-8 h-8 rounded-full bg-scandi-line flex items-center justify-center text-xs">?</div>'}
                 <div>
                     <div>${u.displayName || 'Unknown'}</div>
                     <div class="text-[10px] text-scandi-muted font-mono">${u.uid}</div>
+                    <div class="md:hidden text-xs text-scandi-muted mt-1">
+                        <div>${u.email || '-'}</div>
+                        ${u.createdAt ? `<div class="text-[10px] opacity-70">Created: ${new Date(u.createdAt.toDate ? u.createdAt.toDate() : u.createdAt).toLocaleDateString()}</div>` : ''}
+                    </div>
                 </div>
             </td>
-            <td class="py-4 px-6 text-scandi-muted font-mono text-xs">
+            <td class="py-4 px-4 md:px-6 text-scandi-muted font-mono text-xs hidden md:table-cell">
                 <div>${u.email || '-'}</div>
                 ${u.createdAt ? `<div class="text-[10px] opacity-70 mt-1">Created: ${new Date(u.createdAt.toDate ? u.createdAt.toDate() : u.createdAt).toLocaleDateString()}</div>` : ''}
             </td>
-            <td class="py-4 px-6">${statusBadge}</td>
-            <td class="py-4 px-6 text-right">
+            <td class="py-4 px-4 md:px-6">${statusBadge}</td>
+            <td class="py-4 px-4 md:px-6 text-right">
                 ${actionButtons}
             </td>
         `;
@@ -616,13 +620,16 @@ function renderBetaTable() {
         }
 
         tr.innerHTML = `
-            <td class="py-4 px-6 font-medium text-scandi-text flex items-center gap-3">
+            <td class="py-4 px-4 md:px-6 font-medium text-scandi-text flex items-center gap-3">
                 ${u.photoURL ? `<img src="${u.photoURL}" class="w-8 h-8 rounded-full bg-gray-200" />` : '<div class="w-8 h-8 rounded-full bg-scandi-line flex items-center justify-center text-xs">?</div>'}
-                ${u.displayName || 'Unknown'}
+                <div class="min-w-0">
+                    <div class="truncate">${u.displayName || 'Unknown'}</div>
+                    <div class="md:hidden text-xs text-scandi-muted mt-1 truncate">${u.email || '-'}</div>
+                </div>
             </td>
-            <td class="py-4 px-6 text-scandi-muted font-mono text-xs">${u.email || '-'}</td>
-            <td class="py-4 px-6">${statusBadge}</td>
-            <td class="py-4 px-6 text-right">
+            <td class="py-4 px-4 md:px-6 text-scandi-muted font-mono text-xs hidden md:table-cell">${u.email || '-'}</td>
+            <td class="py-4 px-4 md:px-6">${statusBadge}</td>
+            <td class="py-4 px-4 md:px-6 text-right">
                 ${betaActions}
             </td>
         `;
@@ -767,10 +774,20 @@ async function loadSuggestions() {
             const contact = [data.phone, data.email].filter(Boolean).join('<br>');
 
             tr.innerHTML = `
-                <td class="py-4 px-6 font-medium text-scandi-text">${name || '-'}</td>
-                <td class="py-4 px-6 text-scandi-muted">${data.category || '-'}</td>
-                <td class="py-4 px-6 text-scandi-muted text-xs">${contact || '-'}</td>
-                <td class="py-4 px-6">
+                <td class="py-4 px-4 md:px-6 font-medium text-scandi-text">
+                    <div>${name || '-'}</div>
+                    <div class="md:hidden text-xs text-scandi-muted mt-1 space-y-0.5">
+                        <div>${data.category || '-'}</div>
+                        <div>${contact || '-'}</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <img src="${suggester.photoURL || 'https://www.gravatar.com/avatar?d=mp'}" alt="${suggester.name}" class="w-4 h-4 rounded-full bg-gray-100 object-cover border border-scandi-line">
+                            <span>${suggester.name}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${data.category || '-'}</td>
+                <td class="py-4 px-4 md:px-6 text-scandi-muted text-xs hidden md:table-cell">${contact || '-'}</td>
+                <td class="py-4 px-4 md:px-6 hidden md:table-cell">
                     <div class="flex items-center gap-3">
                         <img src="${suggester.photoURL || 'https://www.gravatar.com/avatar?d=mp'}" alt="${suggester.name}" class="w-8 h-8 rounded-full bg-gray-100 object-cover border border-scandi-line">
                         <div class="text-xs text-scandi-muted">
@@ -779,7 +796,7 @@ async function loadSuggestions() {
                         </div>
                     </div>
                 </td>
-                <td class="py-4 px-6 text-right space-x-2">
+                <td class="py-4 px-4 md:px-6 text-right space-x-2">
                     <button class="text-xs font-bold text-scandi-text hover:text-scandi-muted uppercase tracking-widest border border-scandi-line px-3 py-1 rounded hover:bg-scandi-bg" onclick="reviewSuggestion('${doc.id}')">Review</button>
                 </td>
             `;
@@ -862,14 +879,20 @@ function renderTable() {
     const name = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
     
     tr.innerHTML = `
-      <td class="py-4 px-6 font-medium text-scandi-text">
-        ${name || '-'}
-        ${s.sunnyApproved ? '<span title="Sunny Approved" class="ml-2">☀️</span>' : ''}
-        ${s.isTestProvider ? '<span title="Test Provider" class="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono uppercase tracking-wide">TEST</span>' : ''}
+      <td class="py-4 px-4 md:px-6 font-medium text-scandi-text">
+        <div>
+            ${name || '-'}
+            ${s.sunnyApproved ? '<span title="Sunny Approved" class="ml-2">☀️</span>' : ''}
+            ${s.isTestProvider ? '<span title="Test Provider" class="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono uppercase tracking-wide">TEST</span>' : ''}
+        </div>
+        <div class="md:hidden text-xs text-scandi-muted mt-1 flex flex-col gap-0.5">
+            <span>${s.category || '-'}</span>
+            <span>${s.recommendations ?? 0} Recs</span>
+        </div>
       </td>
-      <td class="py-4 px-6 text-scandi-muted">${s.category || '-'}</td>
-      <td class="py-4 px-6 text-scandi-muted">${s.recommendations ?? 0}</td>
-      <td class="py-4 px-6 text-right space-x-2">
+      <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${s.category || '-'}</td>
+      <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${s.recommendations ?? 0}</td>
+      <td class="py-4 px-4 md:px-6 text-right space-x-2">
         <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editService('${s.id}')">Edit</button>
         <button class="text-xs font-mono uppercase tracking-widest text-red-400 hover:text-red-600 border-b border-transparent hover:border-red-600 transition-all ml-2" onclick="deleteService('${s.id}')">Delete</button>
       </td>
@@ -894,9 +917,12 @@ function renderGroupTable() {
         const cats = categoryGroups[name] || [];
         
         tr.innerHTML = `
-            <td class="py-4 px-6 font-medium text-scandi-text">${name}</td>
-            <td class="py-4 px-6 text-scandi-muted text-xs">${cats.length} categories</td>
-            <td class="py-4 px-6 text-right space-x-2">
+            <td class="py-4 px-4 md:px-6 font-medium text-scandi-text">
+                ${name}
+                <div class="md:hidden text-xs text-scandi-muted mt-1">${cats.length} categories</div>
+            </td>
+            <td class="py-4 px-4 md:px-6 text-scandi-muted text-xs hidden md:table-cell">${cats.length} categories</td>
+            <td class="py-4 px-4 md:px-6 text-right space-x-2">
                 <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editGroup('${name}')">Edit</button>
                 <button class="text-xs font-mono uppercase tracking-widest text-red-400 hover:text-red-600 border-b border-transparent hover:border-red-600 transition-all ml-2" onclick="deleteGroup('${name}')">Delete</button>
             </td>
@@ -929,9 +955,12 @@ function renderCategoryTable() {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
         tr.innerHTML = `
-            <td class="py-4 px-6 font-medium text-scandi-text">${name}</td>
-            <td class="py-4 px-6 text-scandi-muted">${groupName}</td>
-            <td class="py-4 px-6 text-right space-x-2">
+            <td class="py-4 px-4 md:px-6 font-medium text-scandi-text">
+                ${name}
+                <div class="md:hidden text-xs text-scandi-muted mt-1">${groupName}</div>
+            </td>
+            <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${groupName}</td>
+            <td class="py-4 px-4 md:px-6 text-right space-x-2">
                 <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editCategory('${name}')">Edit</button>
                 <button class="text-xs font-mono uppercase tracking-widest text-red-400 hover:text-red-600 border-b border-transparent hover:border-red-600 transition-all ml-2" onclick="deleteCategory('${name}')">Delete</button>
             </td>
@@ -1157,6 +1186,60 @@ function closeModal(modal) {
 // -- Event Listeners --
 
 function setupEventListeners() {
+    // Mobile Sidebar Logic
+    // Hijack the main header mobile menu button
+    const headerMenuBtn = document.getElementById('mobile-menu-btn');
+    if (headerMenuBtn) {
+        // Clone to remove existing listeners (which toggle the default mobile menu)
+        const newBtn = headerMenuBtn.cloneNode(true);
+        headerMenuBtn.parentNode.replaceChild(newBtn, headerMenuBtn);
+        
+        newBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent bubbling
+            toggleSidebar(true);
+        });
+    }
+
+    const sidebar = document.getElementById('adminSidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+
+    function toggleSidebar(show) {
+        if (show) {
+            sidebar.classList.remove('-translate-x-full');
+            sidebarOverlay.classList.remove('hidden');
+            // slight delay for transition
+            requestAnimationFrame(() => {
+                sidebarOverlay.classList.remove('opacity-0');
+            });
+            document.body.style.overflow = 'hidden'; // Prevent background scroll
+        } else {
+            sidebar.classList.add('-translate-x-full');
+            sidebarOverlay.classList.add('opacity-0');
+            setTimeout(() => {
+                sidebarOverlay.classList.add('hidden');
+            }, 300);
+            document.body.style.overflow = '';
+        }
+    }
+    
+    if (closeSidebarBtn) {
+        closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+    }
+
+    // Close sidebar on nav item click (mobile)
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth < 1024) { // lg breakpoint
+                toggleSidebar(false);
+            }
+        });
+    });
+
     // User Search
     userSearchEl.addEventListener('input', renderUserTable);
 
@@ -1707,7 +1790,7 @@ function renderCleanupItem() {
     // Manual Trigger: Show button instead of auto-searching
     els.loading.classList.remove('hidden'); // Reusing loading container for the button state temporarily
     els.loading.innerHTML = `
-        <button id="startSearchBtn" class="bg-scandi-clay text-white px-6 py-3 rounded-sm text-sm font-mono uppercase tracking-widest hover:opacity-90 shadow-soft flex items-center gap-2">
+        <button id="startSearchBtn" class="bg-scandi-clay text-white px-4 md:px-6 py-3 rounded-sm text-sm font-mono uppercase tracking-widest hover:opacity-90 shadow-soft flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             Find Contact Info
         </button>
@@ -2015,11 +2098,11 @@ function updateMergePreview() {
             tr.className = 'hover:bg-scandi-bg/50';
             const name = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
             tr.innerHTML = `
-                <td class="py-3 px-6 text-scandi-text">
+                <td class="py-3 px-4 md:px-6 text-scandi-text">
                     ${name || '-'}
                     ${s.sunnyApproved ? '<span title="Sunny Approved" class="ml-2">☀️</span>' : ''}
                 </td>
-                <td class="py-3 px-6 text-scandi-muted">${s.recommendations ?? 0}</td>
+                <td class="py-3 px-4 md:px-6 text-scandi-muted">${s.recommendations ?? 0}</td>
             `;
             servicesTableBody.appendChild(tr);
         });
@@ -2027,7 +2110,7 @@ function updateMergePreview() {
         servicesPreview.classList.remove('hidden');
         servicesTableBody.innerHTML = `
             <tr>
-                <td colspan="2" class="py-8 px-6 text-center text-scandi-muted italic">
+                <td colspan="2" class="py-8 px-4 md:px-6 text-center text-scandi-muted italic">
                     No services in this category. You can delete it directly from the Categories page.
                 </td>
             </tr>
