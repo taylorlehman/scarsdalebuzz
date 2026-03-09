@@ -2,6 +2,8 @@ const functions = require("firebase-functions");
 const functionsV1 = require("firebase-functions/v1");
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const fs = require('fs');
+const path = require('path');
 admin.initializeApp();
 const logger = require("firebase-functions/logger");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -1349,4 +1351,63 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
             res.status(500).json({ error: 'Failed to find contact info: ' + error.message });
         }
     });
+});
+
+exports.serveCategoryPage = functions.https.onRequest(async (req, res) => {
+    // 1. Get category from URL path
+    const pathParts = req.path.split('/');
+    const categoryName = pathParts[pathParts.length - 1]; // Last part is the category
+
+    if (!categoryName) {
+        res.status(400).send('Category name is required');
+        return;
+    }
+
+    const decodedCategory = decodeURIComponent(categoryName);
+    const title = `Top Rated ${decodedCategory} in Scarsdale | Scarsdale Buzz`;
+    const description = `Find the best ${decodedCategory} providers recommended by your neighbors in Scarsdale. Verified reviews and direct contact info.`;
+    const url = `https://${req.headers.host}/directory/category/${categoryName}`;
+    const image = `https://${req.headers.host}/images/logos/logo_primary_white_bg.png`; // Default image
+
+    try {
+        // 2. Read the template
+        // We will read from a local file that we will ensure exists
+        const templatePath = path.join(__dirname, 'directory_template.html');
+        
+        if (!fs.existsSync(templatePath)) {
+             logger.error("Template file not found at " + templatePath);
+             res.status(500).send("Server Error: Template missing");
+             return;
+        }
+
+        let html = fs.readFileSync(templatePath, 'utf8');
+
+        // 3. Inject Meta Tags
+        const metaTags = `
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="${image}">
+    <meta property="og:url" content="${url}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title}">
+    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:image" content="${image}">
+        `;
+
+        // Inject before </head>
+        html = html.replace('</head>', `${metaTags}\n</head>`);
+        
+        // Also update <title> if possible
+        html = html.replace(/<title>.*<\/title>/, `<title>${title}</title>`);
+
+        // 4. Send response
+        // Cache for 1 hour on CDN, 0 seconds on client (so they always get fresh meta if it changes)
+        res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+        res.send(html);
+
+    } catch (error) {
+        logger.error("Error serving category page:", error);
+        res.status(500).send("Internal Server Error");
+    }
 });

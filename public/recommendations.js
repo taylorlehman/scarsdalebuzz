@@ -198,7 +198,8 @@ window.removeRecommendation = async (serviceId) => {
 };
 
 window.shareCategory = (uid, cat) => {
-    const url = `${window.location.origin}/directory/index.html?recommendedBy=${uid}&category=${encodeURIComponent(cat)}`;
+    // Use new path-based URL for better previews
+    const url = `${window.location.origin}/directory/category/${encodeURIComponent(cat)}?recommendedBy=${uid}`;
     if (shareModal) {
         shareModal.show(url, `Share ${cat} Picks`);
     } else {

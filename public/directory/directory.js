@@ -7,9 +7,20 @@ const searchInput = document.getElementById('searchInput');
 const categoryFilters = document.getElementById('categoryFilters');
 const noResults = document.getElementById('noResults');
 
-// Initialize activeCategory from URL parameter if present
+// Initialize activeCategory from URL parameter or Path
 const urlParams = new URLSearchParams(window.location.search);
 let activeCategory = urlParams.get('category') || 'All';
+
+// Check for path-based category (/directory/category/Name)
+const pathParts = window.location.pathname.split('/');
+const categoryIndex = pathParts.indexOf('category');
+if (categoryIndex !== -1 && categoryIndex < pathParts.length - 1) {
+    const catFromPath = pathParts[categoryIndex + 1];
+    if (catFromPath) {
+        activeCategory = decodeURIComponent(catFromPath);
+    }
+}
+
 let recommendedByUid = urlParams.get('recommendedBy');
 let recommendedServiceIds = null; // Set<string> | null
 let recommendedByUserProfile = null;
@@ -946,9 +957,16 @@ const showOverflowDialog = (overflowCategories, providerCounts) => {
                 searchInput.value = '';
 
                 // Update URL
-                const url = new URL(window.location);
-                url.searchParams.set('category', cat);
-                window.history.replaceState({}, '', url);
+                if (cat === 'All') {
+                    const url = new URL(window.location.origin + '/directory/index.html');
+                    if (recommendedByUid) url.searchParams.set('recommendedBy', recommendedByUid);
+                    window.history.pushState({}, '', url);
+                } else {
+                    const newPath = `/directory/category/${encodeURIComponent(cat)}`;
+                    const url = new URL(window.location.origin + newPath);
+                    if (recommendedByUid) url.searchParams.set('recommendedBy', recommendedByUid);
+                    window.history.pushState({}, '', url);
+                }
 
                 renderCategoryButtons();
                 filterAndRender();
@@ -1105,13 +1123,18 @@ categoryFilters.addEventListener('click', (e) => {
     searchInput.value = '';
 
     // Update URL
-    const url = new URL(window.location);
     if (newCategory === 'All') {
-        url.searchParams.delete('category');
+        const url = new URL(window.location.origin + '/directory/index.html');
+        // Preserve other params like recommendedBy
+        if (recommendedByUid) url.searchParams.set('recommendedBy', recommendedByUid);
+        window.history.pushState({}, '', url);
     } else {
-        url.searchParams.set('category', newCategory);
+        // Use new path format
+        const newPath = `/directory/category/${encodeURIComponent(newCategory)}`;
+        const url = new URL(window.location.origin + newPath);
+        if (recommendedByUid) url.searchParams.set('recommendedBy', recommendedByUid);
+        window.history.pushState({}, '', url);
     }
-    window.history.replaceState({}, '', url);
 
     renderCategoryButtons();
     filterAndRender();
