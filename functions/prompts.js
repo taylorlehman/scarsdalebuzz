@@ -157,10 +157,12 @@ Analyze the user's latest message and decide the appropriate action.
 - You SHOULD message the provider if the user's input materially changes the job (scope, urgency) or if the user is explicitly asking for a status update that requires a nudge.
 `;
 
-const FIND_CONTACT_INFO_PROMPT = (businessName, category, address) => `You are a research assistant tasked with finding official contact information for a local business in Scarsdale or Westchester County, NY.
+const FIND_CONTACT_INFO_PROMPT = (businessName, categories, address) => {
+    const catStr = Array.isArray(categories) ? categories.join(', ') : categories;
+    return `You are a research assistant tasked with finding official contact information for a local business in Scarsdale or Westchester County, NY.
 
 Business: "${businessName}"
-Category: "${category}"
+Categories: "${catStr}"
 Location: "${address || 'Scarsdale area'}"
 
 GOAL:
@@ -190,6 +192,7 @@ RULES:
 - If you cannot find a reliable value, return null for that field.
 - **Verification Text:** Provide the exact text snippet from the page that lists the contact info to help the user trust the result.
 `;
+};
 
 module.exports = {
     TITLE_PROMPT,

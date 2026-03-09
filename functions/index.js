@@ -497,7 +497,7 @@ const findAndContactProvider = async (requestRef, userContext, chatHistory, scop
     try {
         const servicesRef = admin.firestore().collection('services');
         const snapshot = await servicesRef
-            .where('category', '==', 'Plumbing')
+            .where('categories', 'array-contains', 'Plumbing')
             .where('sunnyApproved', '==', true)
             .limit(5) // Fetch more to allow for filtering
             .get();
@@ -1295,14 +1295,17 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
         // but 'onCall' clients wrap it in { data: ... }.
         // Our updated admin.js sends { data: ... } explicitly.
         const bodyData = req.body.data || req.body;
-        const { businessName, category, address } = bodyData;
+        const { businessName, category, categories, address } = bodyData;
 
         if (!businessName) {
             res.status(400).json({ error: 'Business Name is required' });
             return;
         }
 
-        logger.info(`Searching contact info for: ${businessName} (${category}) in ${address}`);
+        // Use categories array if available, otherwise fallback to category string
+        const cats = categories || category;
+
+        logger.info(`Searching contact info for: ${businessName} (${cats}) in ${address}`);
 
         const apiKey = GEMINI_API_KEY.value();
         if (!apiKey) {
@@ -1321,7 +1324,7 @@ exports.findBusinessContactInfo = functions.https.onRequest(async (req, res) => 
                 }]
             });
 
-            const prompt = PROMPTS.FIND_CONTACT_INFO_PROMPT(businessName, category, address);
+            const prompt = PROMPTS.FIND_CONTACT_INFO_PROMPT(businessName, cats, address);
 
             const result = await model.generateContent(prompt);
             const response = result.response;

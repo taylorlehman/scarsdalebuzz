@@ -291,7 +291,11 @@ const startServicesSubscription = () => {
                         last = new Date(last);
                     }
                     const iso = last instanceof Date && !isNaN(last) ? last.toISOString().slice(0, 10) : '';
-                    return { id: doc.id, ...d, lastRecommended: iso };
+                    
+                    // Normalize categories: ensure array
+                    const categories = d.categories || (d.category ? [d.category] : []);
+                    
+                    return { id: doc.id, ...d, categories, lastRecommended: iso };
                 });
 
                 // Initialize Fuse.js for robust search
@@ -299,7 +303,7 @@ const startServicesSubscription = () => {
                     includeScore: true, // Agent: Enable scoring for debug
                     keys: [
                         { name: 'businessName', weight: 0.7 },
-                        { name: 'category', weight: 0.6 },
+                        { name: 'categories', weight: 0.6 },
                         { name: 'firstName', weight: 0.3 },
                         { name: 'lastName', weight: 0.3 }
                     ],
@@ -331,7 +335,11 @@ const generateGoogleSearchUrl = (service) => {
         const fullName = `${service.firstName || ''} ${service.lastName || ''}`.trim();
         if (fullName) searchTerms.push(fullName);
     }
-    if (service.category) searchTerms.push(service.category);
+    if (service.categories && service.categories.length > 0) {
+        searchTerms.push(service.categories.join(' '));
+    } else if (service.category) {
+        searchTerms.push(service.category);
+    }
     searchTerms.push('in Scarsdale NY');
     const query = searchTerms.join(' ');
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
@@ -437,6 +445,12 @@ const renderServices = (services) => {
             `;
         };
 
+        // Render categories as tags
+        const cats = service.categories || (service.category ? [service.category] : []);
+        const categoriesHTML = cats.map(c => 
+            `<span class="text-[9px] uppercase tracking-[0.1em] font-bold text-scandi-sage bg-scandi-bg/80 px-2 py-1 rounded-sm truncate" title="${c}">${c}</span>`
+        ).join('');
+
         const newHTML = `
             <!-- DESKTOP LAYOUT (Hidden on Mobile) -->
             <div class="hidden md:flex flex-row h-full min-h-[380px]">
@@ -444,7 +458,9 @@ const renderServices = (services) => {
                 <div class="flex-1 p-10 flex flex-col justify-between bg-white relative">
                     <div class="flex justify-between items-start mb-6">
                         <span class="text-[10px] font-mono text-scandi-muted tracking-[0.2em] opacity-60">${(index + 1).toString().padStart(2, '0')}</span>
-                        <span class="service-category text-[9px] uppercase tracking-[0.2em] font-bold text-scandi-sage truncate ml-4" title="${service.category}">${service.category}</span>
+                        <div class="flex flex-wrap gap-1 ml-4 justify-end max-w-[70%]">
+                            ${categoriesHTML}
+                        </div>
                     </div>
                     
                     <div class="flex-grow flex flex-col justify-start py-2">
@@ -503,7 +519,9 @@ const renderServices = (services) => {
                  <div class="p-6">
                     <div class="flex justify-between items-start mb-3">
                         <span class="text-[10px] font-mono text-scandi-muted tracking-[0.2em] opacity-60">${(index + 1).toString().padStart(2, '0')}</span>
-                        <span class="service-category text-[9px] uppercase tracking-[0.2em] font-bold text-scandi-sage truncate ml-4" title="${service.category}">${service.category}</span>
+                        <div class="flex flex-wrap gap-1 ml-4 justify-end max-w-[70%]">
+                            ${categoriesHTML}
+                        </div>
                     </div>
 
                     <h3 class="service-title font-serif text-2xl text-scandi-text leading-tight mb-3 hover:text-scandi-clay transition-colors cursor-pointer" title="${title}">${title}</h3>
@@ -796,11 +814,14 @@ const renderCategoryButtons = () => {
     const providerCounts = {};
 
     serviceData.forEach(service => {
-        if (!categoryTotals[service.category]) categoryTotals[service.category] = 0;
-        categoryTotals[service.category] += service.recommendations;
+        const cats = service.categories || [];
+        cats.forEach(cat => {
+            if (!categoryTotals[cat]) categoryTotals[cat] = 0;
+            categoryTotals[cat] += service.recommendations;
 
-        if (!providerCounts[service.category]) providerCounts[service.category] = 0;
-        providerCounts[service.category] += 1;
+            if (!providerCounts[cat]) providerCounts[cat] = 0;
+            providerCounts[cat] += 1;
+        });
     });
 
     if (Array.isArray(categoriesList) && categoriesList.length) {
@@ -978,7 +999,10 @@ const filterAndRender = (options = { keepOrder: false, render: true }) => {
 
     // 2. Category Filter
     if (activeCategory !== 'All') {
-        filteredServices = filteredServices.filter(service => service.category === activeCategory);
+        filteredServices = filteredServices.filter(service => {
+            const cats = service.categories || (service.category ? [service.category] : []);
+            return cats.includes(activeCategory);
+        });
     }
 
     // 2b. Recommended By Filter (Recommendations)
@@ -1150,10 +1174,10 @@ function renderRolodexBanner() {
         if (activeCategory === 'All') {
             count = recommendedServiceIds.size;
         } else {
-            count = serviceData.filter(s =>
-                s.category === activeCategory &&
-                recommendedServiceIds.has(s.id)
-            ).length;
+            count = serviceData.filter(s => {
+                const cats = s.categories || (s.category ? [s.category] : []);
+                return cats.includes(activeCategory) && recommendedServiceIds.has(s.id);
+            }).length;
         }
     }
 

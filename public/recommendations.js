@@ -112,18 +112,22 @@ function renderRecommendations(services, uid) {
     const content = document.getElementById('rolodex-content');
     content.innerHTML = '';
 
-    // Group by Category
+    // Group by Category (One service can be in multiple groups)
     const grouped = {};
     services.forEach(s => {
-        const cat = s.category || 'Uncategorized';
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(s);
+        const cats = s.categories || (s.category ? [s.category] : ['Uncategorized']);
+        if (cats.length === 0) cats.push('Uncategorized');
+        
+        cats.forEach(cat => {
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(s);
+        });
     });
 
     // Render Groups
     Object.keys(grouped).sort().forEach(category => {
         const section = document.createElement('div');
-        section.className = 'fade-in';
+        section.className = 'fade-in mb-8';
         
         const headerContainer = document.createElement('div');
         headerContainer.className = 'flex justify-between items-center mb-4 border-b border-dashed border-scandi-line/50 pb-2';

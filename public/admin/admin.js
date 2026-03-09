@@ -700,6 +700,199 @@ window.handleDeleteUser = async (uid) => {
 };
 
 
+// -- Tag Input Logic --
+const TagInput = {
+    selected: new Set(),
+    allCategories: [],
+    container: null,
+    input: null,
+    dropdown: null,
+    
+    init(containerId, initialCategories = []) {
+        this.container = document.getElementById(containerId);
+        if (!this.container) return;
+        
+        this.selected = new Set(initialCategories);
+        this.allCategories = getAllCategories(); // Use global helper
+        this.render();
+        
+        // Global click to close dropdown
+        document.addEventListener('click', (e) => {
+            if (this.dropdown && !this.container.contains(e.target)) {
+                this.closeDropdown();
+            }
+        });
+    },
+    
+    render() {
+        this.container.innerHTML = '';
+        this.container.className = 'relative'; // Wrapper for positioning
+        
+        // 1. Input Area (Tags + Input)
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-wrap gap-2 p-3 border border-scandi-line rounded-sm bg-white min-h-[48px] focus-within:border-scandi-clay transition-colors';
+        
+        // Render Selected Tags
+        this.selected.forEach(cat => {
+            const tag = document.createElement('span');
+            tag.className = 'bg-scandi-bg text-scandi-text text-xs font-medium px-2 py-1 rounded-sm flex items-center gap-1 border border-scandi-line/50';
+            tag.innerHTML = `
+                ${cat}
+                <button type="button" class="hover:text-red-500 font-bold ml-1 px-1 text-scandi-muted hover:text-red-500" data-remove="${cat}">&times;</button>
+            `;
+            tag.querySelector('button').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeCategory(cat);
+            });
+            wrapper.appendChild(tag);
+        });
+        
+        // Input Field
+        this.input = document.createElement('input');
+        this.input.type = 'text';
+        this.input.className = 'flex-grow min-w-[120px] outline-none text-sm bg-transparent placeholder-scandi-muted/70';
+        this.input.placeholder = this.selected.size === 0 ? 'Select or type category...' : '';
+        
+        // Input Events
+        this.input.addEventListener('input', () => this.filterDropdown());
+        this.input.addEventListener('focus', () => this.filterDropdown());
+        this.input.addEventListener('click', () => {
+            if (this.dropdown.classList.contains('hidden')) {
+                this.filterDropdown();
+            }
+        });
+        this.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.addCurrentInput();
+            } else if (e.key === 'Backspace' && this.input.value === '' && this.selected.size > 0) {
+                // Remove last tag on backspace if input empty
+                const last = Array.from(this.selected).pop();
+                this.removeCategory(last);
+            }
+        });
+        
+        wrapper.appendChild(this.input);
+        this.container.appendChild(wrapper);
+        
+        // 2. Dropdown Menu
+        this.dropdown = document.createElement('div');
+        this.dropdown.className = 'absolute top-full left-0 right-0 mt-1 bg-white border border-scandi-line rounded-sm shadow-lg max-h-60 overflow-y-auto z-50 hidden';
+        this.container.appendChild(this.dropdown);
+    },
+    
+    filterDropdown() {
+        const query = this.input.value.toLowerCase().trim();
+        this.dropdown.innerHTML = '';
+        
+        // Filter matches
+        let matches = this.allCategories.filter(c => 
+            c.toLowerCase().includes(query) && !this.selected.has(c)
+        );
+        
+        // If query is empty, show all (or top) remaining options
+        if (!query) {
+            matches = this.allCategories.filter(c => !this.selected.has(c));
+        }
+
+        // "Add new" option if query exists and no exact match
+        const exactMatch = matches.some(c => c.toLowerCase() === query);
+        if (query && !exactMatch) {
+            const addOption = document.createElement('div');
+            addOption.className = 'p-3 text-sm text-scandi-clay font-medium hover:bg-scandi-bg cursor-pointer border-b border-scandi-line/30 flex items-center gap-2';
+            addOption.innerHTML = `<span>+ Add "${this.input.value}"</span>`;
+            addOption.addEventListener('click', () => this.addCurrentInput());
+            this.dropdown.appendChild(addOption);
+        }
+        
+        if (matches.length === 0 && !query) {
+             this.closeDropdown();
+             return;
+        }
+        
+        matches.forEach(cat => {
+            const option = document.createElement('div');
+            option.className = 'p-3 text-sm text-scandi-text hover:bg-scandi-bg cursor-pointer';
+            option.textContent = cat;
+            option.addEventListener('click', () => {
+                this.selectCategory(cat);
+            });
+            this.dropdown.appendChild(option);
+        });
+        
+        if (this.dropdown.children.length > 0) {
+            this.dropdown.classList.remove('hidden');
+        } else {
+            this.dropdown.classList.add('hidden');
+        }
+    },
+    
+    addCurrentInput() {
+        const val = this.input.value.trim();
+        if (val) {
+            // Capitalize first letter for consistency
+            const formatted = val.charAt(0).toUpperCase() + val.slice(1);
+            this.selectCategory(formatted);
+        }
+    },
+    
+    selectCategory(cat) {
+        this.selected.add(cat);
+        this.input.value = '';
+        this.render();
+        this.input.focus(); // Keep focus
+        this.closeDropdown();
+    },
+    
+    removeCategory(cat) {
+        this.selected.delete(cat);
+        this.render();
+    },
+    
+    closeDropdown() {
+        if (this.dropdown) this.dropdown.classList.add('hidden');
+    },
+    
+    getValues() {
+        return Array.from(this.selected);
+    }
+};
+
+// -- Migration Script (Manual Run Only) --
+window.migrateData = async () => {
+    if (!confirm('Run migration? This will convert "category" string to "categories" array for all services.')) return;
+    
+    console.log('Starting migration...');
+    const batch = db.batch();
+    const snap = await db.collection('services').get();
+    let count = 0;
+    
+    snap.forEach(doc => {
+        const data = doc.data();
+        // Idempotency check: Only migrate if 'categories' is missing AND 'category' exists
+        if (data.category && !data.categories) {
+            batch.update(doc.ref, {
+                categories: [data.category],
+                category: firebase.firestore.FieldValue.delete()
+            });
+            count++;
+        } else if (!data.category && !data.categories) {
+             // Handle truly empty case if needed, or init as []
+             batch.update(doc.ref, { categories: [] });
+             count++;
+        }
+    });
+    
+    if (count > 0) {
+        await batch.commit();
+        console.log(`Migrated ${count} documents.`);
+        alert(`Migrated ${count} documents.`);
+    } else {
+        console.log("No documents needed migration.");
+        alert("No documents needed migration.");
+    }
+};
+
 // -- UI Helpers --
 
 function getAllCategories() {
@@ -712,9 +905,14 @@ function populateCategorySelects() {
   const categories = getAllCategories();
   filterEl.innerHTML = '<option value="">All Categories</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
   
-  let catOptions = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-  catOptions += '<option value="Other">Other (New Category)</option>';
-  categoryEl.innerHTML = catOptions;
+  // Update Datalist for TagInput
+  let datalist = document.getElementById('category-datalist');
+  if (!datalist) {
+      datalist = document.createElement('datalist');
+      datalist.id = 'category-datalist';
+      document.body.appendChild(datalist);
+  }
+  datalist.innerHTML = categories.map(c => `<option value="${c}">`).join('');
   
   // Populate new category group dropdown
   if (categoryGroups) {
@@ -864,10 +1062,13 @@ function renderTable() {
   const cat = filterEl.value || '';
   
   const filtered = allServices.filter(s => {
-    if (cat && s.category !== cat) return false;
+    const cats = s.categories || (s.category ? [s.category] : []);
+    if (cat && !cats.includes(cat)) return false;
     if (!q) return true;
     const title = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`;
-    return [title, s.category, s.phone, s.email, s.firstName, s.lastName]
+    // Also search in categories array
+    const catStr = cats.join(' ');
+    return [title, catStr, s.phone, s.email, s.firstName, s.lastName]
       .filter(Boolean)
       .some(v => String(v).toLowerCase().includes(q));
   });
@@ -878,6 +1079,8 @@ function renderTable() {
     tr.className = 'hover:bg-scandi-bg/50 transition-colors group';
     
     const name = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
+    const cats = s.categories || (s.category ? [s.category] : []);
+    const catDisplay = cats.join(', ');
     
     tr.innerHTML = `
       <td class="py-4 px-4 md:px-6 font-medium text-scandi-text">
@@ -887,11 +1090,11 @@ function renderTable() {
             ${s.isTestProvider ? '<span title="Test Provider" class="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono uppercase tracking-wide">TEST</span>' : ''}
         </div>
         <div class="md:hidden text-xs text-scandi-muted mt-1 flex flex-col gap-0.5">
-            <span>${s.category || '-'}</span>
+            <span>${catDisplay || '-'}</span>
             <span>${s.recommendations ?? 0} Recs</span>
         </div>
       </td>
-      <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${s.category || '-'}</td>
+      <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${catDisplay || '-'}</td>
       <td class="py-4 px-4 md:px-6 text-scandi-muted hidden md:table-cell">${s.recommendations ?? 0}</td>
       <td class="py-4 px-4 md:px-6 text-right space-x-2">
         <button class="text-xs font-mono uppercase tracking-widest text-scandi-muted hover:text-scandi-text border-b border-transparent hover:border-scandi-text transition-all" onclick="editService('${s.id}')">Edit</button>
@@ -1045,13 +1248,34 @@ window.editCategory = (name) => {
 }
 
 window.deleteCategory = async (name) => {
-    const snap = await db.collection('services').where('category', '==', name).limit(1).get();
+    const snap = await db.collection('services').where('categories', 'array-contains', name).limit(1).get();
+    
+    // If services exist, we can now proceed but warn user that we will remove the tag from them
     if (!snap.empty) {
-        alert('Cannot delete: there are services associated with this category.');
-        return;
+        if (!confirm(`Category "${name}" is used by services. Deleting it will remove this tag from those services. Continue?`)) return;
+    } else {
+        if (!confirm(`Delete category "${name}"?`)) return;
     }
     
-    if (!confirm(`Delete category "${name}"?`)) return;
+    // Remove from services
+    if (!snap.empty) {
+        const fullSnap = await db.collection('services').where('categories', 'array-contains', name).get();
+        const batchSize = 400;
+        let pending = db.batch();
+        let i = 0;
+        
+        fullSnap.forEach(doc => {
+            pending.update(doc.ref, {
+                categories: firebase.firestore.FieldValue.arrayRemove(name)
+            });
+            i++;
+            if (i % batchSize === 0) {
+                pending.commit();
+                pending = db.batch();
+            }
+        });
+        await pending.commit();
+    }
     
     categoriesList = categoriesList.filter(c => c !== name);
     await db.collection('config').doc('categories').set({ list: categoriesList });
@@ -1067,6 +1291,10 @@ window.deleteCategory = async (name) => {
     renderCategoryTable();
     renderGroupTable();
     updateCounts();
+    
+    // Reload services to reflect changes
+    await loadServicesOnce();
+    renderTable();
 }
 
 function fillFormFromDoc(doc) {
@@ -1078,39 +1306,22 @@ function fillFormFromDoc(doc) {
   phoneEl.value = doc.phone || '';
   emailEl.value = doc.email || '';
   
-  // Handle potential new category
-  // Clear any previous "New" options first (though populateCategorySelects should handle this on reset)
+  // Handle Categories (Tag Input)
+  // Hide original select if visible
+  categoryEl.classList.add('hidden');
+  newCategoryContainer.classList.add('hidden'); // Hide old new-cat input
   
-  const isNewCategory = doc.category && !Array.from(categoryEl.options).some(o => o.value === doc.category) && doc.category !== 'Other';
-  
-  if (isNewCategory) {
-      // If it's a new category, set to "Other" and fill the input
-      categoryEl.value = 'Other';
-      newCategoryContainer.classList.remove('hidden');
-      newCategoryInput.value = doc.category;
-      
-      // Add visual warning
-      newCategoryInput.classList.add('border-orange-500', 'bg-orange-50');
-      // Create or show warning message
-      let warning = document.getElementById('categoryWarning');
-      if (!warning) {
-          warning = document.createElement('p');
-          warning.id = 'categoryWarning';
-          warning.className = 'text-xs text-orange-600 mt-1 font-bold';
-          newCategoryContainer.appendChild(warning);
-      }
-      warning.textContent = '⚠️ This is a NEW category. Saving will add it to the official list.';
-      warning.classList.remove('hidden');
-  } else {
-      // Existing category
-      categoryEl.value = doc.category || '';
-      newCategoryContainer.classList.add('hidden');
-      
-      // Reset visual warning
-      newCategoryInput.classList.remove('border-orange-500', 'bg-orange-50');
-      const warning = document.getElementById('categoryWarning');
-      if (warning) warning.classList.add('hidden');
+  // Create Tag Input Container if needed
+  let tagContainer = document.getElementById('tag-input-container');
+  if (!tagContainer) {
+      tagContainer = document.createElement('div');
+      tagContainer.id = 'tag-input-container';
+      categoryEl.parentNode.insertBefore(tagContainer, categoryEl);
   }
+  
+  // Normalize categories
+  const cats = doc.categories || (doc.category ? [doc.category] : []);
+  TagInput.init('tag-input-container', cats);
   
   sunnyApprovedEl.checked = !!doc.sunnyApproved;
   isTestProviderEl.checked = !!doc.isTestProvider;
@@ -1152,13 +1363,20 @@ function resetFormToNew() {
   isTestProviderEl.checked = false;
   recommendationsEl.value = 0;
   
+  // Reset Tag Input
+  categoryEl.classList.add('hidden');
+  newCategoryContainer.classList.add('hidden');
+  let tagContainer = document.getElementById('tag-input-container');
+  if (!tagContainer) {
+      tagContainer = document.createElement('div');
+      tagContainer.id = 'tag-input-container';
+      categoryEl.parentNode.insertBefore(tagContainer, categoryEl);
+  }
+  TagInput.init('tag-input-container', []);
+  
   // Reset category options (remove temporary ones)
   populateCategorySelects();
   
-  // Reset visual warning and input
-  newCategoryContainer.classList.add('hidden');
-  newCategoryInput.value = '';
-  newCategoryInput.classList.remove('border-orange-500', 'bg-orange-50');
   newCategoryGroupEl.value = '';
   const warning = document.getElementById('categoryWarning');
   if (warning) warning.classList.add('hidden');
@@ -1355,13 +1573,11 @@ function setupEventListeners() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        let selectedCategory = categoryEl.value;
-        if (selectedCategory === 'Other') {
-            selectedCategory = newCategoryInput.value.trim();
-            if (!selectedCategory) {
-                alert('Please enter a name for the new category.');
-                return;
-            }
+        const selectedCategories = TagInput.getValues();
+        
+        if (selectedCategories.length === 0) {
+            alert('Please select at least one category.');
+            return;
         }
 
         const payload = {
@@ -1370,7 +1586,8 @@ function setupEventListeners() {
             lastName: lastNameEl.value.trim() || null,
             phone: phoneEl.value.trim() || null,
             email: emailEl.value.trim() || null,
-            category: selectedCategory || null,
+            categories: selectedCategories,
+            category: selectedCategories[0], // Backward compatibility
             sunnyApproved: sunnyApprovedEl.checked,
             isTestProvider: isTestProviderEl.checked,
             recommendations: Number(recommendationsEl.value || 0),
@@ -1378,15 +1595,17 @@ function setupEventListeners() {
         const ts = parseDateToTimestamp(lastRecommendedEl.value.trim());
         if (ts) payload.lastRecommended = ts;
 
-        // Check for new category
-        if (payload.category && !categoriesList.includes(payload.category)) {
+        // Check for new categories
+        const newCats = selectedCategories.filter(c => !categoriesList.includes(c));
+        
+        if (newCats.length > 0) {
             const newGroup = newCategoryGroupEl.value;
             const confirmMsg = newGroup 
-                ? `Category "${payload.category}" is new. Add it to the official list and assign to group "${newGroup}"?`
-                : `Category "${payload.category}" is new. Add it to the official list (ungrouped)?`;
+                ? `New categories found: ${newCats.join(', ')}. Add to official list and assign to group "${newGroup}"?`
+                : `New categories found: ${newCats.join(', ')}. Add to official list (ungrouped)?`;
 
             if (confirm(confirmMsg)) {
-                categoriesList.push(payload.category);
+                categoriesList.push(...newCats);
                 categoriesList.sort();
                 
                 const batch = db.batch();
@@ -1398,7 +1617,7 @@ function setupEventListeners() {
                 // Update group if selected
                 if (newGroup && categoryGroups) {
                     if (!categoryGroups[newGroup]) categoryGroups[newGroup] = [];
-                    categoryGroups[newGroup].push(payload.category);
+                    categoryGroups[newGroup].push(...newCats);
                     categoryGroups[newGroup].sort();
                     
                     const groupsRef = db.collection('config').doc('categoryGroups');
@@ -1531,12 +1750,33 @@ function setupEventListeners() {
             }
             
             // Batch update services
-            const snap = await db.collection('services').where('category', '==', orig).get();
+            const snap = await db.collection('services').where('categories', 'array-contains', orig).get();
             const batchSize = 400;
             let pending = db.batch();
             let i = 0;
             snap.forEach(doc => {
-                pending.update(doc.ref, { category: newName });
+                pending.update(doc.ref, { 
+                    categories: firebase.firestore.FieldValue.arrayRemove(orig)
+                });
+                pending.update(doc.ref, {
+                    categories: firebase.firestore.FieldValue.arrayUnion(newName)
+                });
+                // Note: Firestore allows multiple updates to same doc in batch, but arrayRemove/Union on same field might conflict in one op?
+                // Actually, standard practice is to read, modify array, write back if complex.
+                // But let's try two ops or just one set.
+                // Safer:
+                // const cats = doc.data().categories || [];
+                // const newCats = cats.map(c => c === orig ? newName : c);
+                // pending.update(doc.ref, { categories: newCats });
+                // But we don't have data() here unless we read it. 'snap' has it.
+                const data = doc.data();
+                const cats = data.categories || (data.category ? [data.category] : []);
+                const newCats = cats.map(c => c === orig ? newName : c);
+                // Dedupe just in case
+                const uniqueCats = [...new Set(newCats)];
+                
+                pending.update(doc.ref, { categories: uniqueCats });
+                
                 i++;
                 if (i % batchSize === 0) {
                     pending.commit();
