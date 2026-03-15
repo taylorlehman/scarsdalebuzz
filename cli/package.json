@@ -1,0 +1,23 @@
+{
+  "name": "@scarsdalebuzz/sbadmin",
+  "version": "1.0.0",
+  "description": "CLI for Scarsdale Buzz admin operations",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "sbadmin": "./bin/sbadmin.js"
+  },
+  "scripts": {
+    "start": "node bin/sbadmin.js",
+    "test": "node bin/sbadmin.js --help"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "firebase-admin": "^13.6.1",
+    "@google/generative-ai": "^0.24.1",
+    "chalk": "^5.3.0"
+  }
+}
