@@ -23,6 +23,7 @@ This skill enables an agent (Claude coworker/OpenClaw-style) to safely install a
 ## High-level contract
 
 - **Preferred execution mode (agent)**: always pass `--json` and parse stdout as JSON.
+- **If gRPC is blocked** (common in agent sandboxes): use `--transport rest` (HTTPS-only Firestore).
 - **Exit codes**:
   - **0**: success
   - **1**: user error (bad args, not found)
@@ -133,6 +134,12 @@ For each action, log:
 
 ```bash
 cd "$REPO_ROOT/cli" && node bin/sbadmin.js <command> <subcommand> [args...] --json
+```
+
+If running inside a restricted VM where Firestore gRPC is blocked, add REST transport:
+
+```bash
+cd "$REPO_ROOT/cli" && node bin/sbadmin.js <command> <subcommand> [args...] --json --transport rest
 ```
 
 If `sbadmin` is globally installed, you may use:

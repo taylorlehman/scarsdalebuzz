@@ -1,6 +1,8 @@
 import { initFirebase } from '../auth.js';
 import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc, FieldValue } from '../lib/firestore.js';
+import { getDb, fromDoc } from '../lib/db.js';
+import crypto from 'crypto';
 
 /**
  * @param {import('commander').Command} program
@@ -14,10 +16,17 @@ export function registerServicesCommands(program) {
     .option('-q, --search <query>', 'Search by name, category, phone, email')
     .option('-c, --category <name>', 'Filter by category')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
-      const { db } = initFirebase();
-      const snap = await db.collection('services').get();
-      let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    .action(async function (opts) {
+      const { mode, db } = getDb(this);
+      let list;
+      if (mode === 'rest') {
+        const docs = await db.runQuery({ from: [{ collectionId: 'services' }] });
+        list = docs.map((d) => fromDoc(d));
+      } else {
+        const { db: g } = initFirebase();
+        const snap = await g.collection('services').get();
+        list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
 
       if (opts.search) {
         const q = opts.search.toLowerCase();
@@ -64,22 +73,33 @@ export function registerServicesCommands(program) {
     .command('get <id>')
     .description('Get a single service by ID')
     .option('--json', 'Output as JSON')
-    .action(async (id, opts) => {
+    .action(async function (id, opts) {
       if (!id) {
         printError('Service ID is required');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      const doc = await db.collection('services').doc(id).get();
-      if (!doc.exists) {
-        printError('Service not found');
-        process.exit(1);
+      const { mode, db } = getDb(this);
+      let d;
+      if (mode === 'rest') {
+        const doc = await db.getDoc(`services/${id}`);
+        if (!doc) {
+          printError('Service not found');
+          process.exit(1);
+        }
+        d = fromDoc(doc);
+      } else {
+        const { db: g } = initFirebase();
+        const doc = await g.collection('services').doc(id).get();
+        if (!doc.exists) {
+          printError('Service not found');
+          process.exit(1);
+        }
+        d = { id: doc.id, ...doc.data() };
       }
       if (opts.json) {
-        print(serializeDoc({ id: doc.id, ...doc.data() }), true);
+        print(serializeDoc(d), true);
         return;
       }
-      const d = doc.data();
       const lines = [
         `Name:       ${d.businessName || [d.firstName, d.lastName].filter(Boolean).join(' ') || '—'}`,
         `Phone:      ${d.phone || '—'}`,
@@ -105,8 +125,8 @@ export function registerServicesCommands(program) {
     .option('--test-provider', 'Mark as test provider')
     .option('--recs <n>', 'Recommendation count', '0')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
-      const { db } = initFirebase();
+    .action(async function (opts) {
+      const { mode, db } = getDb(this);
       const categories = opts.categories.split(',').map((c) => c.trim()).filter(Boolean);
       if (categories.length === 0) {
         printError('At least one category is required');
@@ -124,7 +144,14 @@ export function registerServicesCommands(program) {
         isTestProvider: !!opts.testProvider,
         recommendations: parseInt(opts.recs, 10) || 0,
       };
-      const ref = await db.collection('services').add(payload);
+      if (mode === 'rest') {
+        const id = crypto.randomUUID();
+        await db.setDoc(`services/${id}`, payload, { merge: false });
+        print(opts.json ? { success: true, id } : `Created service ${id}`, opts.json);
+        return;
+      }
+      const { db: g } = initFirebase();
+      const ref = await g.collection('services').add(payload);
       print(opts.json ? { success: true, id: ref.id } : `Created service ${ref.id}`, opts.json);
     });
 
@@ -143,17 +170,26 @@ export function registerServicesCommands(program) {
     .option('--no-test-provider', 'Unmark test provider')
     .option('--recs <n>', 'Recommendation count')
     .option('--json', 'Output as JSON')
-    .action(async (id, opts) => {
+    .action(async function (id, opts) {
       if (!id) {
         printError('Service ID is required');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      const ref = db.collection('services').doc(id);
-      const doc = await ref.get();
-      if (!doc.exists) {
-        printError('Service not found');
-        process.exit(1);
+      const { mode, db } = getDb(this);
+      if (mode === 'rest') {
+        const existing = await db.getDoc(`services/${id}`);
+        if (!existing) {
+          printError('Service not found');
+          process.exit(1);
+        }
+      } else {
+        const { db: g } = initFirebase();
+        const ref = g.collection('services').doc(id);
+        const doc = await ref.get();
+        if (!doc.exists) {
+          printError('Service not found');
+          process.exit(1);
+        }
       }
       const updates = {};
       if (opts.name !== undefined) updates.businessName = opts.name || null;
@@ -174,7 +210,12 @@ export function registerServicesCommands(program) {
         printError('No updates specified');
         process.exit(1);
       }
-      await ref.update(updates);
+      if (mode === 'rest') {
+        await db.updateDoc(`services/${id}`, updates);
+      } else {
+        const { db: g } = initFirebase();
+        await g.collection('services').doc(id).update(updates);
+      }
       print(opts.json ? { success: true, id } : `Updated service ${id}`, opts.json);
     });
 
@@ -183,18 +224,39 @@ export function registerServicesCommands(program) {
     .description('Delete a service')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (id, opts) => {
+    .action(async function (id, opts) {
       if (!id) {
         printError('Service ID is required');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      const ref = db.collection('services').doc(id);
-      const recsSnap = await ref.collection('recommendations').get();
-      const batch = db.batch();
-      recsSnap.docs.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-      await ref.delete();
+      const { mode, db } = getDb(this);
+      if (mode === 'rest') {
+        // Delete recommendations subcollection docs (best-effort) then service doc.
+        const recDocs = await db.runQuery({
+          from: [{ collectionId: 'recommendations', allDescendants: true }],
+          where: {
+            compositeFilter: {
+              op: 'AND',
+              filters: [
+                { fieldFilter: { field: { fieldPath: '__name__' }, op: 'GREATER_THAN_OR_EQUAL', value: { referenceValue: `projects/${db.projectId}/databases/(default)/documents/services/${id}/recommendations/` } } },
+              ],
+            },
+          },
+        }).catch(() => []);
+        for (const r of recDocs) {
+          const name = r.name.split('/documents/')[1];
+          if (name) await db.deleteDoc(name).catch(() => {});
+        }
+        await db.deleteDoc(`services/${id}`);
+      } else {
+        const { db: g } = initFirebase();
+        const ref = g.collection('services').doc(id);
+        const recsSnap = await ref.collection('recommendations').get();
+        const batch = g.batch();
+        recsSnap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+        await ref.delete();
+      }
       print(opts.json ? { success: true, id } : `Deleted service ${id}`, opts.json);
     });
 }

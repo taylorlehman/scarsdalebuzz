@@ -1,6 +1,7 @@
 import { initFirebase } from '../auth.js';
 import { print, printError } from '../lib/output.js';
 import { getCategoriesList } from '../lib/firestore.js';
+import { getDb, fromDoc } from '../lib/db.js';
 
 /**
  * @param {import('commander').Command} program
@@ -12,13 +13,24 @@ export function registerQualityCommands(program) {
     .command('dashboard')
     .description('Show data quality overview')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
-      const { db } = initFirebase();
-      const [servicesSnap, categoriesList] = await Promise.all([
-        db.collection('services').get(),
-        getCategoriesList(db),
-      ]);
-      const allServices = servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    .action(async function (opts) {
+      const { mode, db } = getDb(this);
+      let allServices;
+      let categoriesList;
+      if (mode === 'rest') {
+        const docs = await db.runQuery({ from: [{ collectionId: 'services' }] });
+        allServices = docs.map((d) => fromDoc(d));
+        const catDoc = await db.getDoc('config/categories');
+        categoriesList = ((fromDoc(catDoc || {})?.list) || []).slice().sort();
+      } else {
+        const { db: g } = initFirebase();
+        const [servicesSnap, cats] = await Promise.all([
+          g.collection('services').get(),
+          getCategoriesList(g),
+        ]);
+        allServices = servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        categoriesList = cats;
+      }
 
       const total = allServices.length;
       const missingContact = allServices.filter((s) => !s.phone && !s.email);

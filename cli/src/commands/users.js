@@ -2,6 +2,7 @@ import { initFirebase } from '../auth.js';
 import { print, printError } from '../lib/output.js';
 import { serializeDoc } from '../lib/firestore.js';
 import admin from 'firebase-admin';
+import { getDb, fromDoc } from '../lib/db.js';
 
 const { FieldValue } = admin.firestore;
 
@@ -58,11 +59,23 @@ export function registerUsersCommands(program) {
     .option('-q, --search <query>', 'Search by name, email, or uid')
     .option('-s, --status <status>', 'Filter by directoryStatus: pending, approved')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
-      const { db } = initFirebase();
-      let snap = db.collection('users').orderBy('displayName');
-      const docs = (await snap.get()).docs.map((d) => ({ uid: d.id, ...d.data() }));
-      let list = docs;
+    .action(async function (opts) {
+      const { mode, db } = getDb(this);
+      let list;
+      if (mode === 'rest') {
+        const docs = await db.runQuery({
+          from: [{ collectionId: 'users' }],
+          orderBy: [{ field: { fieldPath: 'displayName' }, direction: 'ASCENDING' }],
+        });
+        list = docs.map((d) => {
+          const parsed = fromDoc(d);
+          return { uid: parsed.id, ...parsed };
+        });
+      } else {
+        const { db: g } = initFirebase();
+        const snap = g.collection('users').orderBy('displayName');
+        list = (await snap.get()).docs.map((d) => ({ uid: d.id, ...d.data() }));
+      }
 
       if (opts.search) {
         const q = opts.search.toLowerCase();
@@ -100,22 +113,35 @@ export function registerUsersCommands(program) {
     .description('Approve a pending user')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (uid, opts) => {
+    .action(async function (uid, opts) {
       if (!uid) {
         printError('UID is required');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      const ref = db.collection('users').doc(uid);
-      const doc = await ref.get();
-      if (!doc.exists) {
-        printError('User not found');
-        process.exit(1);
+      const { mode, db } = getDb(this);
+      if (mode === 'rest') {
+        const existing = await db.getDoc(`users/${uid}`);
+        if (!existing) {
+          printError('User not found');
+          process.exit(1);
+        }
+        await db.updateDoc(`users/${uid}`, {
+          directoryStatus: 'approved',
+          joinedDate: new Date(),
+        });
+      } else {
+        const { db: g } = initFirebase();
+        const ref = g.collection('users').doc(uid);
+        const doc = await ref.get();
+        if (!doc.exists) {
+          printError('User not found');
+          process.exit(1);
+        }
+        await ref.update({
+          directoryStatus: 'approved',
+          joinedDate: FieldValue.serverTimestamp(),
+        });
       }
-      await ref.update({
-        directoryStatus: 'approved',
-        joinedDate: FieldValue.serverTimestamp(),
-      });
       print(opts.json ? { success: true, uid } : `Approved user ${uid}`, opts.json);
     });
 
@@ -124,28 +150,45 @@ export function registerUsersCommands(program) {
     .description('Reject and delete a pending user')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (uid, opts) => {
+    .action(async function (uid, opts) {
       if (!uid) {
         printError('UID is required');
         process.exit(1);
       }
-      const { db, auth } = initFirebase();
-      const recsSnap = await db.collectionGroup('recommendations').where('uid', '==', uid).get();
-      for (const doc of recsSnap.docs) {
-        await doc.ref.delete();
-        const serviceRef = doc.ref.parent.parent;
-        if (serviceRef) {
-          const sDoc = await serviceRef.get();
-          if (sDoc.exists) {
-            const data = sDoc.data();
-            const newRecs = Math.max(0, (data.recommendations || 0) - 1);
-            const newRecent = (data.recentRecommenders || []).filter((r) => r.uid !== uid);
-            await serviceRef.update({ recommendations: newRecs, recentRecommenders: newRecent });
+      const { mode, db } = getDb(this);
+      // Firestore cleanup (recommendations) best-effort; auth delete uses firebase-admin Auth.
+      if (mode === 'rest') {
+        const recDocs = await db.runQuery({
+          from: [{ collectionId: 'recommendations', allDescendants: true }],
+          where: { fieldFilter: { field: { fieldPath: 'uid' }, op: 'EQUAL', value: { stringValue: uid } } },
+        }).catch(() => []);
+        for (const r of recDocs) {
+          const name = r.name.split('/documents/')[1];
+          if (name) await db.deleteDoc(name).catch(() => {});
+        }
+        await db.deleteDoc(`users/${uid}`);
+      } else {
+        const { db: g } = initFirebase();
+        const recsSnap = await g.collectionGroup('recommendations').where('uid', '==', uid).get();
+        for (const doc of recsSnap.docs) {
+          await doc.ref.delete();
+          const serviceRef = doc.ref.parent.parent;
+          if (serviceRef) {
+            const sDoc = await serviceRef.get();
+            if (sDoc.exists) {
+              const data = sDoc.data();
+              const newRecs = Math.max(0, (data.recommendations || 0) - 1);
+              const newRecent = (data.recentRecommenders || []).filter((r) => r.uid !== uid);
+              await serviceRef.update({ recommendations: newRecs, recentRecommenders: newRecent });
+            }
           }
         }
+        await g.collection('users').doc(uid).delete();
       }
-      await db.collection('users').doc(uid).delete();
+
+      // Auth deletion (still uses firebase-admin)
       try {
+        const { auth } = initFirebase();
         await auth.deleteUser(uid);
       } catch (e) {
         if (e.code !== 'auth/user-not-found') throw e;
@@ -158,29 +201,42 @@ export function registerUsersCommands(program) {
     .description('Delete a user (and their recommendations)')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (uid, opts) => {
+    .action(async function (uid, opts) {
       if (!uid) {
         printError('UID is required');
         process.exit(1);
       }
-      const { db, auth } = initFirebase();
-
-      const recsSnap = await db.collectionGroup('recommendations').where('uid', '==', uid).get();
-      for (const doc of recsSnap.docs) {
-        await doc.ref.delete();
-        const serviceRef = doc.ref.parent.parent;
-        if (serviceRef) {
-          const sDoc = await serviceRef.get();
-          if (sDoc.exists) {
-            const data = sDoc.data();
-            const newRecs = Math.max(0, (data.recommendations || 0) - 1);
-            const newRecent = (data.recentRecommenders || []).filter((r) => r.uid !== uid);
-            await serviceRef.update({ recommendations: newRecs, recentRecommenders: newRecent });
+      const { mode, db } = getDb(this);
+      if (mode === 'rest') {
+        const recDocs = await db.runQuery({
+          from: [{ collectionId: 'recommendations', allDescendants: true }],
+          where: { fieldFilter: { field: { fieldPath: 'uid' }, op: 'EQUAL', value: { stringValue: uid } } },
+        }).catch(() => []);
+        for (const r of recDocs) {
+          const name = r.name.split('/documents/')[1];
+          if (name) await db.deleteDoc(name).catch(() => {});
+        }
+        await db.deleteDoc(`users/${uid}`);
+      } else {
+        const { db: g } = initFirebase();
+        const recsSnap = await g.collectionGroup('recommendations').where('uid', '==', uid).get();
+        for (const doc of recsSnap.docs) {
+          await doc.ref.delete();
+          const serviceRef = doc.ref.parent.parent;
+          if (serviceRef) {
+            const sDoc = await serviceRef.get();
+            if (sDoc.exists) {
+              const data = sDoc.data();
+              const newRecs = Math.max(0, (data.recommendations || 0) - 1);
+              const newRecent = (data.recentRecommenders || []).filter((r) => r.uid !== uid);
+              await serviceRef.update({ recommendations: newRecs, recentRecommenders: newRecent });
+            }
           }
         }
+        await g.collection('users').doc(uid).delete();
       }
-      await db.collection('users').doc(uid).delete();
       try {
+        const { auth } = initFirebase();
         await auth.deleteUser(uid);
       } catch (e) {
         if (e.code !== 'auth/user-not-found') throw e;
@@ -193,14 +249,20 @@ export function registerUsersCommands(program) {
     .description('Grant admin role to a user')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (uid, opts) => {
+    .action(async function (uid, opts) {
       if (!uid) {
         printError('UID is required');
         process.exit(1);
       }
-      const { auth, db } = initFirebase();
+      const { mode, db } = getDb(this);
+      const { auth } = initFirebase();
       await auth.setCustomUserClaims(uid, { admin: true });
-      await db.collection('users').doc(uid).set({ isAdmin: true }, { merge: true });
+      if (mode === 'rest') {
+        await db.updateDoc(`users/${uid}`, { isAdmin: true });
+      } else {
+        const { db: g } = initFirebase();
+        await g.collection('users').doc(uid).set({ isAdmin: true }, { merge: true });
+      }
       print(opts.json ? { success: true, uid } : `Admin role granted to ${uid}`, opts.json);
     });
 }

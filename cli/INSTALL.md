@@ -130,6 +130,15 @@ sbadmin auth status
 - **Success**: Prints `Connected to Firebase` or JSON `{"ok":true,"message":"Connected"}` with exit code 0.
 - **Auth error**: Exit code 2 and message about Project Id or credentials.
 
+### If Firestore gRPC is blocked (agent VM / proxy environments)
+
+Some sandboxed environments block gRPC to `firestore.googleapis.com`. In that case, use HTTPS-only REST transport:
+
+```bash
+sbadmin --transport rest auth status --json
+sbadmin --transport rest users list --json
+```
+
 ---
 
 ## Agent-Friendly Notes

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { initFirebase } from '../auth.js';
 import { print, printError } from '../lib/output.js';
+import { getDb } from '../lib/db.js';
 
 /**
  * @param {import('commander').Command} program
@@ -11,10 +12,15 @@ export function registerAuthCommands(program) {
     .command('status')
     .description('Verify Firebase Admin connection')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
+    .action(async function (opts) {
       try {
-        const { db } = initFirebase();
-        await db.collection('config').doc('categories').get();
+        const { mode, db } = getDb(this);
+        if (mode === 'rest') {
+          await db.getDoc('config/categories');
+        } else {
+          const { db: g } = initFirebase();
+          await g.collection('config').doc('categories').get();
+        }
         const out = { ok: true, message: 'Connected' };
         print(opts.json ? out : 'Connected to Firebase', opts.json);
       } catch (e) {

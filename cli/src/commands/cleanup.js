@@ -1,6 +1,7 @@
 import { initFirebase } from '../auth.js';
 import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc } from '../lib/firestore.js';
+import { getDb, fromDoc } from '../lib/db.js';
 
 const FIND_CONTACT_PROMPT = (businessName, categories, address) => {
   const catStr = Array.isArray(categories) ? categories.join(', ') : categories || '';
@@ -69,12 +70,19 @@ export function registerCleanupCommands(program) {
     .command('list')
     .description('List services missing phone number')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
-      const { db } = initFirebase();
-      const snap = await db.collection('services').get();
-      const list = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((s) => !s.phone);
+    .action(async function (opts) {
+      const { mode, db } = getDb(this);
+      let list;
+      if (mode === 'rest') {
+        const docs = await db.runQuery({ from: [{ collectionId: 'services' }] });
+        list = docs.map((d) => fromDoc(d)).filter((s) => !s.phone);
+      } else {
+        const { db: g } = initFirebase();
+        const snap = await g.collection('services').get();
+        list = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((s) => !s.phone);
+      }
 
       if (opts.json) {
         const out = list.map((s) => serializeDoc(s));
@@ -98,19 +106,30 @@ export function registerCleanupCommands(program) {
     .command('search-contact <serviceId>')
     .description('Search for contact info for a service (requires GEMINI_API_KEY)')
     .option('--json', 'Output as JSON')
-    .action(async (serviceId, opts) => {
+    .action(async function (serviceId, opts) {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         printError('GEMINI_API_KEY is required for search-contact');
         process.exit(2);
       }
-      const { db } = initFirebase();
-      const doc = await db.collection('services').doc(serviceId).get();
-      if (!doc.exists) {
-        printError('Service not found');
-        process.exit(1);
+      const { mode, db } = getDb(this);
+      let s;
+      if (mode === 'rest') {
+        const doc = await db.getDoc(`services/${serviceId}`);
+        if (!doc) {
+          printError('Service not found');
+          process.exit(1);
+        }
+        s = fromDoc(doc);
+      } else {
+        const { db: g } = initFirebase();
+        const doc = await g.collection('services').doc(serviceId).get();
+        if (!doc.exists) {
+          printError('Service not found');
+          process.exit(1);
+        }
+        s = doc.data();
       }
-      const s = doc.data();
       const name = s.businessName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
       const cats = s.categories || s.category;
 
@@ -155,19 +174,29 @@ export function registerCleanupCommands(program) {
     .description('Save phone or email to a service (field: phone or email)')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (serviceId, field, value, opts) => {
+    .action(async function (serviceId, field, value, opts) {
       if (!['phone', 'email'].includes(field)) {
         printError('Field must be phone or email');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      const ref = db.collection('services').doc(serviceId);
-      const doc = await ref.get();
-      if (!doc.exists) {
-        printError('Service not found');
-        process.exit(1);
+      const { mode, db } = getDb(this);
+      if (mode === 'rest') {
+        const existing = await db.getDoc(`services/${serviceId}`);
+        if (!existing) {
+          printError('Service not found');
+          process.exit(1);
+        }
+        await db.updateDoc(`services/${serviceId}`, { [field]: value });
+      } else {
+        const { db: g } = initFirebase();
+        const ref = g.collection('services').doc(serviceId);
+        const doc = await ref.get();
+        if (!doc.exists) {
+          printError('Service not found');
+          process.exit(1);
+        }
+        await ref.update({ [field]: value });
       }
-      await ref.update({ [field]: value });
       print(opts.json ? { success: true, serviceId, [field]: value } : `Updated ${field} for ${serviceId}`, opts.json);
     });
 }

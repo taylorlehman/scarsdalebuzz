@@ -26,3 +26,12 @@ cd "$REPO_ROOT/cli" && node bin/sbadmin.js auth status --json
 ```bash
 cd "$REPO_ROOT/cli" && node bin/sbadmin.js users list --json
 ```
+
+## If Firestore gRPC is blocked (restricted VM)
+
+Use REST transport:
+
+```bash
+cd "$REPO_ROOT/cli" && node bin/sbadmin.js auth status --json --transport rest
+cd "$REPO_ROOT/cli" && node bin/sbadmin.js users list --json --transport rest
+```

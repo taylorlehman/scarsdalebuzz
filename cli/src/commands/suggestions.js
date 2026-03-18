@@ -1,6 +1,8 @@
 import { initFirebase } from '../auth.js';
 import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc, FieldValue } from '../lib/firestore.js';
+import { getDb, fromDoc } from '../lib/db.js';
+import crypto from 'crypto';
 
 /**
  * @param {import('commander').Command} program
@@ -12,14 +14,25 @@ export function registerSuggestionsCommands(program) {
     .command('list')
     .description('List pending suggestions')
     .option('--json', 'Output as JSON')
-    .action(async (opts) => {
-      const { db } = initFirebase();
-      const snap = await db
-        .collection('suggested_services')
-        .where('status', '==', 'pending')
-        .orderBy('suggestedAt', 'desc')
-        .get();
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    .action(async function (opts) {
+      const { mode, db } = getDb(this);
+      let list;
+      if (mode === 'rest') {
+        const docs = await db.runQuery({
+          from: [{ collectionId: 'suggested_services' }],
+          where: { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'pending' } } },
+          orderBy: [{ field: { fieldPath: 'suggestedAt' }, direction: 'DESCENDING' }],
+        });
+        list = docs.map((d) => fromDoc(d));
+      } else {
+        const { db: g } = initFirebase();
+        const snap = await g
+          .collection('suggested_services')
+          .where('status', '==', 'pending')
+          .orderBy('suggestedAt', 'desc')
+          .get();
+        list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
 
       if (opts.json) {
         const out = list.map((s) => serializeDoc(s));
@@ -46,19 +59,30 @@ export function registerSuggestionsCommands(program) {
     .option('-y, --yes', 'Skip confirmation')
     .option('--sunny-approved', 'Mark as Sunny approved')
     .option('--json', 'Output as JSON')
-    .action(async (id, opts) => {
+    .action(async function (id, opts) {
       if (!id) {
         printError('Suggestion ID is required');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      const suggRef = db.collection('suggested_services').doc(id);
-      const suggDoc = await suggRef.get();
-      if (!suggDoc.exists) {
-        printError('Suggestion not found');
-        process.exit(1);
+      const { mode, db } = getDb(this);
+      let data;
+      if (mode === 'rest') {
+        const doc = await db.getDoc(`suggested_services/${id}`);
+        if (!doc) {
+          printError('Suggestion not found');
+          process.exit(1);
+        }
+        data = fromDoc(doc);
+      } else {
+        const { db: g } = initFirebase();
+        const suggRef = g.collection('suggested_services').doc(id);
+        const suggDoc = await suggRef.get();
+        if (!suggDoc.exists) {
+          printError('Suggestion not found');
+          process.exit(1);
+        }
+        data = suggDoc.data();
       }
-      const data = suggDoc.data();
       const categories = data.categories || (data.category ? [data.category] : []);
       const cats = Array.isArray(categories) ? categories : [categories];
 
@@ -73,19 +97,31 @@ export function registerSuggestionsCommands(program) {
         recommendations: 1,
         sunnyApproved: !!opts.sunnyApproved,
         isTestProvider: false,
-        lastRecommended: FieldValue.serverTimestamp(),
+        lastRecommended: mode === 'rest' ? new Date() : FieldValue.serverTimestamp(),
         recentRecommenders: [{ uid: data.suggestedBy, timestamp: new Date() }],
       };
 
-      const batch = db.batch();
-      const serviceRef = db.collection('services').doc();
-      batch.set(serviceRef, payload);
-      const recRef = serviceRef.collection('recommendations').doc(data.suggestedBy);
-      batch.set(recRef, { uid: data.suggestedBy, timestamp: FieldValue.serverTimestamp() });
-      batch.update(suggRef, { status: 'approved' });
-      await batch.commit();
+      let serviceId;
+      if (mode === 'rest') {
+        serviceId = crypto.randomUUID();
+        await db.setDoc(`services/${serviceId}`, payload, { merge: false });
+        // recommendation doc
+        await db.setDoc(`services/${serviceId}/recommendations/${data.suggestedBy}`, { uid: data.suggestedBy, timestamp: new Date() }, { merge: false });
+        await db.updateDoc(`suggested_services/${id}`, { status: 'approved' });
+      } else {
+        const { db: g } = initFirebase();
+        const batch = g.batch();
+        const serviceRef = g.collection('services').doc();
+        serviceId = serviceRef.id;
+        batch.set(serviceRef, payload);
+        const recRef = serviceRef.collection('recommendations').doc(data.suggestedBy);
+        batch.set(recRef, { uid: data.suggestedBy, timestamp: FieldValue.serverTimestamp() });
+        const suggRef = g.collection('suggested_services').doc(id);
+        batch.update(suggRef, { status: 'approved' });
+        await batch.commit();
+      }
 
-      print(opts.json ? { success: true, suggestionId: id, serviceId: serviceRef.id } : `Approved suggestion ${id} as service ${serviceRef.id}`, opts.json);
+      print(opts.json ? { success: true, suggestionId: id, serviceId } : `Approved suggestion ${id} as service ${serviceId}`, opts.json);
     });
 
   sugg
@@ -93,13 +129,18 @@ export function registerSuggestionsCommands(program) {
     .description('Reject a suggestion')
     .option('-y, --yes', 'Skip confirmation')
     .option('--json', 'Output as JSON')
-    .action(async (id, opts) => {
+    .action(async function (id, opts) {
       if (!id) {
         printError('Suggestion ID is required');
         process.exit(1);
       }
-      const { db } = initFirebase();
-      await db.collection('suggested_services').doc(id).update({ status: 'rejected' });
+      const { mode, db } = getDb(this);
+      if (mode === 'rest') {
+        await db.updateDoc(`suggested_services/${id}`, { status: 'rejected' });
+      } else {
+        const { db: g } = initFirebase();
+        await g.collection('suggested_services').doc(id).update({ status: 'rejected' });
+      }
       print(opts.json ? { success: true, id } : `Rejected suggestion ${id}`, opts.json);
     });
 }

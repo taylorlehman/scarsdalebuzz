@@ -21,7 +21,12 @@ export async function runCli(argv) {
     .description('Scarsdale Buzz admin CLI - manage users, services, categories, and more')
     .version('1.0.0')
     .option('--json', 'Output as JSON (global)')
-    .option('-y, --yes', 'Skip confirmations (global)');
+    .option('-y, --yes', 'Skip confirmations (global)')
+    .option(
+      '--transport <mode>',
+      'Firestore transport: grpc (default) or rest (HTTPS-only). Can also set SBADMIN_TRANSPORT.',
+      process.env.SBADMIN_TRANSPORT || 'grpc'
+    );
 
   registerAuthCommands(program);
   registerUsersCommands(program);
