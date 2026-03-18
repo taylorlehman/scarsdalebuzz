@@ -1,3 +1,21 @@
+---
+name: sbadmin
+description: Use the Scarsdale Buzz admin CLI safely and deterministically.
+version: 1.0.0
+entrypoint: cli/bin/sbadmin.js
+requires:
+  - node>=18
+  - GOOGLE_APPLICATION_CREDENTIALS
+recommended:
+  - jq
+output:
+  mode: json_preferred
+  exit_codes:
+    "0": success
+    "1": user_error
+    "2": auth_or_config_error
+---
+
 # Skill: sbadmin (Scarsdale Buzz Admin CLI)
 
 This skill enables an agent (Claude coworker/OpenClaw-style) to safely install and operate `sbadmin` for all admin actions supported by the Scarsdale Buzz admin dashboard.
