@@ -3,6 +3,7 @@ import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc, FieldValue } from '../lib/firestore.js';
 import { getDb, fromDoc } from '../lib/db.js';
 import crypto from 'crypto';
+import { getJsonFlag } from '../lib/flags.js';
 
 /**
  * @param {import('commander').Command} program
@@ -16,6 +17,7 @@ export function registerSuggestionsCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       const { mode, db } = getDb(this);
+      const useJson = getJsonFlag(this, opts);
       let list;
       if (mode === 'rest') {
         const docs = await db.runQuery({
@@ -34,7 +36,7 @@ export function registerSuggestionsCommands(program) {
         list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       }
 
-      if (opts.json) {
+      if (useJson) {
         const out = list.map((s) => serializeDoc(s));
         print({ suggestions: out, count: out.length }, true);
         return;
@@ -64,6 +66,7 @@ export function registerSuggestionsCommands(program) {
         printError('Suggestion ID is required');
         process.exit(1);
       }
+      const useJson = getJsonFlag(this, opts);
       const { mode, db } = getDb(this);
       let data;
       if (mode === 'rest') {
@@ -121,7 +124,7 @@ export function registerSuggestionsCommands(program) {
         await batch.commit();
       }
 
-      print(opts.json ? { success: true, suggestionId: id, serviceId } : `Approved suggestion ${id} as service ${serviceId}`, opts.json);
+      print(useJson ? { success: true, suggestionId: id, serviceId } : `Approved suggestion ${id} as service ${serviceId}`, useJson);
     });
 
   sugg

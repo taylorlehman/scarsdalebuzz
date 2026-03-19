@@ -3,6 +3,7 @@ import { print, printError } from '../lib/output.js';
 import { serializeDoc } from '../lib/firestore.js';
 import admin from 'firebase-admin';
 import { getDb, fromDoc } from '../lib/db.js';
+import { getJsonFlag } from '../lib/flags.js';
 
 const { FieldValue } = admin.firestore;
 
@@ -61,6 +62,7 @@ export function registerUsersCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       const { mode, db } = getDb(this);
+      const useJson = getJsonFlag(this, opts);
       let list;
       if (mode === 'rest') {
         const docs = await db.runQuery({
@@ -99,7 +101,7 @@ export function registerUsersCommands(program) {
         return dateB - dateA;
       });
 
-      if (opts.json) {
+      if (useJson) {
         const out = list.map((u) => serializeDoc(u));
         print({ users: out, count: out.length }, true);
         return;
@@ -118,6 +120,7 @@ export function registerUsersCommands(program) {
         printError('UID is required');
         process.exit(1);
       }
+      const useJson = getJsonFlag(this, opts);
       const { mode, db } = getDb(this);
       if (mode === 'rest') {
         const existing = await db.getDoc(`users/${uid}`);
@@ -142,7 +145,7 @@ export function registerUsersCommands(program) {
           joinedDate: FieldValue.serverTimestamp(),
         });
       }
-      print(opts.json ? { success: true, uid } : `Approved user ${uid}`, opts.json);
+      print(useJson ? { success: true, uid } : `Approved user ${uid}`, useJson);
     });
 
   users

@@ -2,6 +2,7 @@ import { initFirebase } from '../auth.js';
 import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc } from '../lib/firestore.js';
 import { getDb, fromDoc } from '../lib/db.js';
+import { getJsonFlag } from '../lib/flags.js';
 
 /**
  * @param {import('commander').Command} program
@@ -17,6 +18,7 @@ export function registerBetaCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       const { mode, db } = getDb(this);
+      const useJson = getJsonFlag(this, opts);
       let list;
       if (mode === 'rest') {
         const docs = await db.runQuery({
@@ -46,7 +48,7 @@ export function registerBetaCommands(program) {
         list = list.filter((u) => (u.sunnyBetaStatus || 'none') === opts.status);
       }
 
-      if (opts.json) {
+      if (useJson) {
         const out = list.map((u) => serializeDoc(u));
         print({ applicants: out, count: out.length }, true);
         return;

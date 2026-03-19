@@ -2,6 +2,7 @@ import { initFirebase } from '../auth.js';
 import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc } from '../lib/firestore.js';
 import { getDb, fromDoc } from '../lib/db.js';
+import { getJsonFlag } from '../lib/flags.js';
 
 const FIND_CONTACT_PROMPT = (businessName, categories, address) => {
   const catStr = Array.isArray(categories) ? categories.join(', ') : categories || '';
@@ -72,6 +73,7 @@ export function registerCleanupCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       const { mode, db } = getDb(this);
+      const useJson = getJsonFlag(this, opts);
       let list;
       if (mode === 'rest') {
         const docs = await db.runQuery({ from: [{ collectionId: 'services' }] });
@@ -84,7 +86,7 @@ export function registerCleanupCommands(program) {
           .filter((s) => !s.phone);
       }
 
-      if (opts.json) {
+      if (useJson) {
         const out = list.map((s) => serializeDoc(s));
         print({ services: out, count: out.length }, true);
         return;

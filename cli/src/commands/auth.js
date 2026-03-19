@@ -14,6 +14,8 @@ export function registerAuthCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       try {
+        const getJson = (cmd) => Boolean(cmd?.opts?.().json);
+        const useJson = getJson(this) || getJson(this.parent) || getJson(this.parent?.parent) || Boolean(opts.json);
         const { mode, db } = getDb(this);
         if (mode === 'rest') {
           await db.getDoc('config/categories');
@@ -22,10 +24,12 @@ export function registerAuthCommands(program) {
           await g.collection('config').doc('categories').get();
         }
         const out = { ok: true, message: 'Connected' };
-        print(opts.json ? out : 'Connected to Firebase', opts.json);
+        print(useJson ? out : 'Connected to Firebase', useJson);
       } catch (e) {
         printError(e.message || 'Connection failed');
-        if (opts.json) print({ ok: false, error: e.message }, true);
+        const getJson = (cmd) => Boolean(cmd?.opts?.().json);
+        const useJson = getJson(this) || getJson(this.parent) || getJson(this.parent?.parent) || Boolean(opts.json);
+        if (useJson) print({ ok: false, error: e.message }, true);
         process.exit(2);
       }
     });

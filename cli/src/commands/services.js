@@ -3,6 +3,7 @@ import { print, printError, formatTable } from '../lib/output.js';
 import { serializeDoc, FieldValue } from '../lib/firestore.js';
 import { getDb, fromDoc } from '../lib/db.js';
 import crypto from 'crypto';
+import { getJsonFlag } from '../lib/flags.js';
 
 /**
  * @param {import('commander').Command} program
@@ -18,6 +19,7 @@ export function registerServicesCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       const { mode, db } = getDb(this);
+      const useJson = getJsonFlag(this, opts);
       let list;
       if (mode === 'rest') {
         const docs = await db.runQuery({ from: [{ collectionId: 'services' }] });
@@ -46,7 +48,7 @@ export function registerServicesCommands(program) {
         });
       }
 
-      if (opts.json) {
+      if (useJson) {
         const out = list.map((s) => serializeDoc(s));
         print({ services: out, count: out.length }, true);
         return;

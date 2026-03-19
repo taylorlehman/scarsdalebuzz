@@ -2,6 +2,7 @@ import { initFirebase } from '../auth.js';
 import { print, printError, formatTable } from '../lib/output.js';
 import { getCategoryGroups, getCategoriesList } from '../lib/firestore.js';
 import { getDb, fromDoc } from '../lib/db.js';
+import { getJsonFlag } from '../lib/flags.js';
 
 /**
  * @param {import('commander').Command} program
@@ -16,6 +17,7 @@ export function registerGroupsCommands(program) {
     .option('--json', 'Output as JSON')
     .action(async function (opts) {
       const { mode, db } = getDb(this);
+      const useJson = getJsonFlag(this, opts);
       let groups;
       if (mode === 'rest') {
         const grpDoc = await db.getDoc('config/categoryGroups');
@@ -30,7 +32,7 @@ export function registerGroupsCommands(program) {
         list = list.filter((g) => g.name.toLowerCase().includes(q));
       }
 
-      if (opts.json) {
+      if (useJson) {
         print({ groups: list, count: list.length }, true);
         return;
       }
