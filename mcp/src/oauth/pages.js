@@ -73,7 +73,8 @@ function layout({ title, nonce, body, scripts = '' }) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
   <title>${escapeHtml(title)} | Scarsdale Buzz</title>
-  <link rel="icon" type="image/png" href="/images/logos/bee_favicon.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@500&family=JetBrains+Mono&display=swap">
   <style nonce="${nonce}">${STYLES}</style>

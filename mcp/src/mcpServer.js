@@ -77,7 +77,15 @@ function withErrors(handler, onError) {
  */
 export function createMcpServer({ directory, onError = () => {} }) {
   const server = new McpServer(
-    { ...SERVER_INFO, websiteUrl: directory.origin },
+    {
+      ...SERVER_INFO,
+      websiteUrl: directory.origin,
+      // Shown by clients (e.g. Claude's connector list) instead of a guessed favicon.
+      icons: [
+        { src: `${directory.origin}/images/logos/bee-icon-192.png`, mimeType: 'image/png', sizes: ['192x192'] },
+        { src: `${directory.origin}/images/logos/bee-icon-512.png`, mimeType: 'image/png', sizes: ['512x512'] },
+      ],
+    },
     {
       instructions: INSTRUCTIONS,
       // Tool definitions only change on deploy.
