@@ -142,8 +142,7 @@ export function renderConsentPage({ request, requestId, nonce, devSignIn = false
       ${
         devSignIn
           ? '<button id="dev-signin" class="primary">Continue as local dev user</button>'
-          : `<button id="facebook-signin" class="facebook">Continue with Facebook</button>
-             <button id="google-signin">Continue with Google</button>`
+          : '<button id="facebook-signin" class="facebook">Continue with Facebook</button>'
       }
     </section>
 
@@ -266,9 +265,7 @@ const CONSENT_SCRIPT = `
   var facebook = new firebase.auth.FacebookAuthProvider();
   facebook.addScope('email');
   facebook.addScope('public_profile');
-  $('facebook-signin').addEventListener('click', function () { signIn(facebook); });
-  $('google-signin').addEventListener('click', function () { signIn(new firebase.auth.GoogleAuthProvider()); });
-  $('switch').addEventListener('click', function () { auth.signOut(); });
+  $('facebook-signin').addEventListener('click', function () { signIn(facebook); });  $('switch').addEventListener('click', function () { auth.signOut(); });
 
   auth.getRedirectResult().catch(function (err) { showError('Sign-in failed: ' + err.message); });
   auth.onAuthStateChanged(function (user) {

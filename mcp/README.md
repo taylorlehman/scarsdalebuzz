@@ -4,7 +4,7 @@ A remote [Model Context Protocol](https://modelcontextprotocol.io) server that l
 
 - **Endpoint:** `https://scarsdalebuzz.com/mcp` (staging: `https://scarsdale-buzz-staging.web.app/mcp`)
 - **Transport:** Streamable HTTP, stateless. Serves the 2026-07-28 protocol and falls back to 2025-era clients automatically.
-- **Auth:** OAuth 2.1. Members sign in with the same Facebook/Google login as the website, and only accounts approved for the directory can connect.
+- **Auth:** OAuth 2.1. Members sign in with the same Facebook login as the website, and only accounts approved for the directory can connect.
 - **SDK:** `@modelcontextprotocol/server` v2 + `@modelcontextprotocol/express`
 
 ## Tools
@@ -37,7 +37,7 @@ MCP client ──(7) POST /oauth/token (code + PKCE verifier + resource) ─▶ 
 
 The MCP server is the OAuth **resource server**. It also hosts a small **authorization server** in front of Firebase Auth, because Firebase Auth can't issue audience-bound OAuth tokens to third-party clients by itself:
 
-- The consent page (`/oauth/consent`) signs the member in with the Firebase Web SDK, using the same providers and config as `public/login.html`. It sends the Firebase ID token back over a same-origin POST.
+- The consent page (`/oauth/consent`) signs the member in with Facebook through the Firebase Web SDK, using the same config as `public/login.html`. It sends the Firebase ID token back over a same-origin POST.
 - The server verifies that ID token (with revocation checks) and requires `users/{uid}.directoryStatus == "approved"`. That's the same gate the directory page uses. It then issues its **own** opaque tokens. Firebase ID tokens are never accepted at `/mcp` and never given to clients.
 - Access tokens last 1 hour and are bound to the `https://…/mcp` resource (RFC 8707). Refresh tokens last 30 days, rotate on every use, and a replayed refresh token or code revokes the whole grant.
 - Tokens, codes and client secrets are stored only as SHA-256 hashes in Firestore (`mcp_oauth_*` collections, reachable only via the Admin SDK). Firestore TTL policies delete expired records.
@@ -104,6 +104,6 @@ Configuration (optional environment variables, e.g. in `mcp/.env.<project>`):
 
 ## Connecting a client
 
-Give the client the URL `https://scarsdalebuzz.com/mcp`. It discovers everything else. For example, in Claude go to **Settings → Connectors → Add custom connector** and paste the URL. When the client opens the browser, sign in with Facebook or Google and click **Allow access**.
+Give the client the URL `https://scarsdalebuzz.com/mcp`. It discovers everything else. For example, in Claude go to **Settings → Connectors → Add custom connector** and paste the URL. When the client opens the browser, sign in with Facebook and click **Allow access**.
 
 Redirect URIs must be `https://` or loopback `http://` (MCP spec requirement), so clients that register custom-scheme redirect URIs are refused.
