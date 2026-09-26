@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Your AI Agent | Scarsdale Buzz</title>
+    <meta name="description" content="Connect Scarsdale Buzz to Claude, Codex, Grok or any MCP-compatible AI agent.">
+    <meta property="og:title" content="Connect Your AI Agent | Scarsdale Buzz">
+    <meta property="og:description" content="Ask your AI assistant for the providers your Scarsdale neighbors recommend.">
+    <meta property="og:image" content="https://scarsdalebuzz.com/images/logos/logo_primary_white_bg.png">
+    <meta property="og:url" content="https://scarsdalebuzz.com/connect.html">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/png" href="images/logos/bee_favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::selection { background-color: #D4D2CD; color: black; }
+        .agent-card[aria-selected="true"] { border-color: #1A1A1A; box-shadow: 0 10px 30px -12px rgba(0,0,0,0.15); }
+        .agent-card[aria-selected="true"] .agent-check { opacity: 1; }
+        .steps { counter-reset: step; }
+        .steps > li { counter-increment: step; position: relative; padding-left: 2.75rem; }
+        .steps > li::before {
+            content: counter(step);
+            position: absolute; left: 0; top: 0;
+            width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+            border: 1px solid #D4D2CD; color: #555; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#F9F8F4] text-[#2C2C2C] overflow-x-hidden">
+
+    <!-- Navigation -->
+    <nav class="w-full px-6 md:px-12 py-4 flex justify-center items-center border-b border-[#E8E6E1]">
+        <a href="index.html" class="font-serif text-2xl tracking-tight hover:opacity-80 transition-opacity">
+            Scarsdale<span class="italic text-[#666]">Buzz</span>
+        </a>
+    </nav>
+
+    <main class="px-6 md:px-12 pt-16 pb-24 max-w-4xl mx-auto">
+
+        <!-- Intro -->
+        <span class="inline-block py-1 px-3 border border-[#E0E0E0] rounded-full text-xs font-medium tracking-wide mb-6 text-[#666]">
+            CONNECT YOUR AGENT
+        </span>
+        <h1 class="font-serif text-4xl md:text-6xl leading-[1.1] mb-6 text-[#1A1A1A]">
+            Bring Scarsdale Buzz <br/> <span class="italic text-[#555]">to your AI assistant.</span>
+        </h1>
+        <p class="text-lg text-[#555] leading-relaxed max-w-2xl mb-10 font-light">
+            Once connected, your assistant can search the directory, browse categories, and pull up the providers you've saved. You'll sign in with Facebook the first time. Access is read-only, and only approved members can connect.
+        </p>
+
+        <!-- Connection URL -->
+        <div class="bg-white border border-[#E8E6E1] rounded-sm p-5 md:p-6 mb-14">
+            <div class="text-[10px] tracking-widest text-[#AAA] uppercase mb-3">Your connection URL</div>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <code class="mcp-url font-mono text-sm md:text-base text-[#1A1A1A] bg-[#F5F4F0] px-3 py-2 rounded-sm break-all flex-1">https://scarsdalebuzz.com/mcp</code>
+                <button type="button" data-copy-url class="copy-btn border border-[#2C2C2C] text-[#2C2C2C] px-5 py-2 text-sm font-medium rounded-sm hover:bg-[#2C2C2C] hover:text-white transition-all cursor-pointer whitespace-nowrap">
+                    Copy URL
+                </button>
+            </div>
+        </div>
+
+        <!-- Agent Picker -->
+        <h2 class="font-serif text-2xl md:text-3xl mb-6 text-[#1A1A1A]">Choose your agent</h2>
+        <div role="tablist" aria-label="AI agents" class="grid grid-cols-3 gap-3 md:gap-4 mb-10">
+            <button type="button" role="tab" id="tab-claude" data-agent="claude" aria-controls="panel-claude" aria-selected="true"
+                class="agent-card relative bg-white border border-[#E8E6E1] rounded-sm p-4 md:p-6 flex flex-col items-center gap-3 hover:border-[#999] transition-all cursor-pointer">
+                <span class="agent-check absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1A1A1A] opacity-0 transition-opacity"></span>
+                <img src="images/agents/claude.svg" alt="" class="w-8 h-8 md:w-10 md:h-10">
+                <span class="font-medium text-sm md:text-base">Claude</span>
+            </button>
+            <button type="button" role="tab" id="tab-codex" data-agent="codex" aria-controls="panel-codex" aria-selected="false"
+                class="agent-card relative bg-white border border-[#E8E6E1] rounded-sm p-4 md:p-6 flex flex-col items-center gap-3 hover:border-[#999] transition-all cursor-pointer">
+                <span class="agent-check absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1A1A1A] opacity-0 transition-opacity"></span>
+                <img src="images/agents/openai.svg" alt="" class="w-8 h-8 md:w-10 md:h-10">
+                <span class="font-medium text-sm md:text-base">Codex</span>
+            </button>
+            <button type="button" role="tab" id="tab-grok" data-agent="grok" aria-controls="panel-grok" aria-selected="false"
+                class="agent-card relative bg-white border border-[#E8E6E1] rounded-sm p-4 md:p-6 flex flex-col items-center gap-3 hover:border-[#999] transition-all cursor-pointer">
+                <span class="agent-check absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1A1A1A] opacity-0 transition-opacity"></span>
+                <span class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#2C2C2C] text-[#F9F8F4] font-serif text-base md:text-lg flex items-center justify-center" aria-hidden="true">G</span>
+                <span class="font-medium text-sm md:text-base">Grok</span>
+            </button>
+        </div>
+
+        <!-- Claude -->
+        <section id="panel-claude" role="tabpanel" aria-labelledby="tab-claude" class="agent-panel bg-white border border-[#E8E6E1] rounded-sm p-6 md:p-10">
+            <h3 class="font-serif text-2xl mb-2 text-[#1A1A1A]">Claude app</h3>
+            <p class="text-sm text-[#888] mb-6">Claude on the web, desktop, or mobile.</p>
+            <ol class="steps space-y-5 text-[#444] leading-relaxed mb-10">
+                <li>Open Claude and go to <strong class="font-medium">Settings → Connectors</strong>.</li>
+                <li>Click <strong class="font-medium">Add custom connector</strong>.</li>
+                <li>Name it <strong class="font-medium">Scarsdale Buzz</strong>, paste your connection URL <code class="mcp-url font-mono text-xs bg-[#F5F4F0] px-1.5 py-0.5 rounded-sm break-all">https://scarsdalebuzz.com/mcp</code>, and click <strong class="font-medium">Add</strong>.</li>
+                <li>Click <strong class="font-medium">Connect</strong>, sign in with Facebook, and choose <strong class="font-medium">Allow access</strong>.</li>
+                <li>In a new chat, make sure Scarsdale Buzz is turned on in the tools menu, then ask away.</li>
+            </ol>
+            <p class="text-xs text-[#888] -mt-4 mb-10">Don't see "Add custom connector"? Your Claude plan or organization may not allow custom connectors. On Team and Enterprise plans, an owner adds it for the organization first.</p>
+
+            <div class="h-px bg-[#F0F0F0] mb-10"></div>
+
+            <h3 class="font-serif text-2xl mb-2 text-[#1A1A1A]">Claude Code</h3>
+            <p class="text-sm text-[#888] mb-6">In your terminal.</p>
+            <ol class="steps space-y-5 text-[#444] leading-relaxed">
+                <li>
+                    Add the server:
+                    <div class="code-block mt-3"><pre class="font-mono text-sm">claude mcp add --transport http scarsdale-buzz <span class="mcp-url">https://scarsdalebuzz.com/mcp</span></pre></div>
+                </li>
+                <li>Start Claude Code, run <code class="font-mono text-xs bg-[#F5F4F0] px-1.5 py-0.5 rounded-sm">/mcp</code>, select <strong class="font-medium">scarsdale-buzz</strong>, and choose <strong class="font-medium">Authenticate</strong>. Sign in with Facebook in the browser window that opens.</li>
+            </ol>
+        </section>
+
+        <!-- Codex -->
+        <section id="panel-codex" role="tabpanel" aria-labelledby="tab-codex" class="agent-panel hidden bg-white border border-[#E8E6E1] rounded-sm p-6 md:p-10">
+            <h3 class="font-serif text-2xl mb-2 text-[#1A1A1A]">Codex</h3>
+            <p class="text-sm text-[#888] mb-6">One setup covers the Codex app, CLI, and IDE extension. They share the same configuration.</p>
+            <ol class="steps space-y-5 text-[#444] leading-relaxed mb-10">
+                <li>
+                    Add the server:
+                    <div class="code-block mt-3"><pre class="font-mono text-sm">codex mcp add scarsdale-buzz --url <span class="mcp-url">https://scarsdalebuzz.com/mcp</span></pre></div>
+                </li>
+                <li>
+                    Sign in. A browser window opens. Sign in with Facebook and choose <strong class="font-medium">Allow access</strong>:
+                    <div class="code-block mt-3"><pre class="font-mono text-sm">codex mcp login scarsdale-buzz</pre></div>
+                </li>
+                <li>In Codex, run <code class="font-mono text-xs bg-[#F5F4F0] px-1.5 py-0.5 rounded-sm">/mcp</code> to confirm Scarsdale Buzz is connected.</li>
+            </ol>
+
+            <div class="h-px bg-[#F0F0F0] mb-8"></div>
+
+            <p class="text-sm text-[#555] mb-3">Prefer editing config? Add this to <code class="font-mono text-xs bg-[#F5F4F0] px-1.5 py-0.5 rounded-sm">~/.codex/config.toml</code>, then run the login command above:</p>
+            <div class="code-block"><pre class="font-mono text-sm">[mcp_servers.scarsdale-buzz]
+url = "<span class="mcp-url">https://scarsdalebuzz.com/mcp</span>"</pre></div>
+        </section>
+
+        <!-- Grok -->
+        <section id="panel-grok" role="tabpanel" aria-labelledby="tab-grok" class="agent-panel hidden bg-white border border-[#E8E6E1] rounded-sm p-6 md:p-10">
+            <h3 class="font-serif text-2xl mb-2 text-[#1A1A1A]">Grok</h3>
+            <p class="text-sm text-[#888] mb-6">On grok.com.</p>
+            <ol class="steps space-y-5 text-[#444] leading-relaxed mb-8">
+                <li>Go to <a href="https://grok.com/connectors" target="_blank" rel="noopener" class="text-[#1A1A1A] border-b border-[#1A1A1A] hover:opacity-70 transition-opacity">grok.com/connectors</a>.</li>
+                <li>Click <strong class="font-medium">New Connector</strong>, then choose <strong class="font-medium">Custom</strong>.</li>
+                <li>Paste your connection URL <code class="mcp-url font-mono text-xs bg-[#F5F4F0] px-1.5 py-0.5 rounded-sm break-all">https://scarsdalebuzz.com/mcp</code> and click <strong class="font-medium">Save &amp; Connect</strong>.</li>
+                <li>Sign in with Facebook and choose <strong class="font-medium">Allow access</strong>.</li>
+            </ol>
+            <p class="text-xs text-[#888]">Custom connectors may depend on your Grok plan. On Grok Business and Enterprise, a workspace admin may need to add the connector first.</p>
+        </section>
+
+        <!-- Other agents -->
+        <div class="mt-14">
+            <h2 class="font-serif text-2xl mb-3 text-[#1A1A1A]">Using a different agent?</h2>
+            <p class="text-[#555] leading-relaxed">
+                Scarsdale Buzz works with any app that supports remote MCP servers, including OpenClaw, Cursor, VS Code, and Gemini CLI. Add a new MCP server with your connection URL above, and the app will open a Facebook sign-in when it connects.
+            </p>
+        </div>
+
+        <!-- Example prompts -->
+        <div class="mt-14 border-t border-[#E8E6E1] pt-12">
+            <div class="text-[10px] tracking-widest text-[#AAA] uppercase mb-6">Things to try</div>
+            <ul class="grid md:grid-cols-2 gap-4">
+                <li class="bg-white border border-[#F0F0F0] rounded-sm p-5 font-serif text-lg italic text-[#1A1A1A]">“Who do my neighbors recommend for gutter cleaning?”</li>
+                <li class="bg-white border border-[#F0F0F0] rounded-sm p-5 font-serif text-lg italic text-[#1A1A1A]">“Find the phone number for Washing Westchester.”</li>
+                <li class="bg-white border border-[#F0F0F0] rounded-sm p-5 font-serif text-lg italic text-[#1A1A1A]">“List the top three electricians and their contact info.”</li>
+                <li class="bg-white border border-[#F0F0F0] rounded-sm p-5 font-serif text-lg italic text-[#1A1A1A]">“Which providers have I saved to my Recommendations?”</li>
+            </ul>
+        </div>
+
+        <p class="text-xs text-[#888] mt-12">
+            Contact details are shared with members for personal use. Please don't republish them.
+            Trouble connecting? <a href="mailto:taylor@tl-labs.com?subject=Connecting my AI agent" class="text-[#2C2C2C] border-b border-[#2C2C2C] hover:opacity-70 transition-opacity font-medium">Email Taylor</a>.
+        </p>
+    </main>
+
+    <footer class="px-6 md:px-12 py-8 border-t border-[#E8E6E1] text-xs text-[#888]">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <p>&copy; <span id="year"></span> Scarsdale Buzz. All rights reserved.</p>
+            <div class="flex gap-6">
+                <a href="index.html" class="hover:text-black transition-colors">Home</a>
+                <a href="terms.html" class="hover:text-black transition-colors">Terms</a>
+                <a href="privacy.html" class="hover:text-black transition-colors">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="connect.js"></script>
+</body>
+</html>
