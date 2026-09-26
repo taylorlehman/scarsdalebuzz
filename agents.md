@@ -18,6 +18,10 @@
 - **Location:** `functions/tests/`
 - **Command:** `./scripts/run_tests.sh --type unit` (or append `--category <name>`) from the root directory.
 
+### MCP Server (node:test)
+- **Location:** `mcp/test/`
+- **Command:** `./scripts/run_tests.sh --type unit --category mcp` (or `cd mcp && npm test`). Runs locally; no deploy needed.
+
 ### Web Application E2E (Playwright)
 - **Location:** `tests/`
 - **Command:** `./scripts/run_tests.sh --type e2e` (or append `--category <name>`) from the root directory.

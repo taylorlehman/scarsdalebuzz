@@ -22,7 +22,8 @@ Categories:
     - admin       (Admin Role Management)
     - core        (Business Logic & Request Submission)
     - destructive (User / Service Deletion)
-    
+    - mcp         (MCP server: OAuth flows, token checks, tools; use with --type unit)
+
   Frontend E2E Tests (Playwright):
     - auth               (Google/FB Sign in flows)
     - account            (Profile address/phone updates)
@@ -66,18 +67,30 @@ else
 fi
 
 if [[ "$TEST_TYPE" == "both" || "$TEST_TYPE" == "unit" ]]; then
-    echo ">>> Running Backend Unit Tests (Jest) <<<"
-    cd functions
-    
-    JEST_CMD="npm test"
-    if [ -n "$CATEGORY" ]; then
-        JEST_CMD="$JEST_CMD -- tests/${CATEGORY}.test.js"
+    UNIT_EXIT_CODE=0
+
+    if [[ "$CATEGORY" != "mcp" ]]; then
+        echo ">>> Running Backend Unit Tests (Jest) <<<"
+        cd functions
+
+        JEST_CMD="npm test"
+        if [ -n "$CATEGORY" ]; then
+            JEST_CMD="$JEST_CMD -- tests/${CATEGORY}.test.js"
+        fi
+
+        $JEST_CMD
+        UNIT_EXIT_CODE=$?
+        cd ..
     fi
-    
-    $JEST_CMD
-    UNIT_EXIT_CODE=$?
-    cd ..
-    
+
+    # MCP server tests (node:test) run locally against in-memory stores.
+    if [[ -z "$CATEGORY" || "$CATEGORY" == "mcp" ]]; then
+        echo ">>> Running MCP Server Tests (node:test) <<<"
+        (cd mcp && npm test)
+        MCP_EXIT_CODE=$?
+        if [ $MCP_EXIT_CODE -ne 0 ]; then UNIT_EXIT_CODE=$MCP_EXIT_CODE; fi
+    fi
+
     if [ $UNIT_EXIT_CODE -eq 0 ]; then
         SUMMARY_UNIT="Backend Unit Tests: PASSED ✅"
     else

@@ -8,6 +8,41 @@
     ],
     "rewrites": [
       {
+        "source": "/mcp",
+        "function": {
+          "functionId": "mcp",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/oauth/**",
+        "function": {
+          "functionId": "mcp",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/.well-known/oauth-protected-resource",
+        "function": {
+          "functionId": "mcp",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/.well-known/oauth-protected-resource/**",
+        "function": {
+          "functionId": "mcp",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/.well-known/oauth-authorization-server",
+        "function": {
+          "functionId": "mcp",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/directory/category/**",
         "function": "serveCategoryPage"
       }
@@ -30,6 +65,23 @@
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
+      ]
+    },
+    {
+      "source": "mcp",
+      "codebase": "mcp",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "test",
+        "scripts",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" ci"
       ]
     }
   ],
