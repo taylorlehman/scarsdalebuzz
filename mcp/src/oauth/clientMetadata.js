@@ -16,6 +16,7 @@ export class ClientMetadataError extends Error {
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const MAX_REDIRECT_URIS = 10;
 const MAX_URI_LENGTH = 2048;
+const SUPPORTED_GRANT_TYPES = ['authorization_code', 'refresh_token'];
 
 export function isLoopbackRedirect(uri) {
   const url = new URL(uri);
@@ -107,17 +108,14 @@ export function validateClientMetadata(meta, { allowedAuthMethods, defaultAuthMe
     );
   }
 
-  const grantTypes = meta.grant_types ?? ['authorization_code'];
-  if (
-    !Array.isArray(grantTypes) ||
-    !grantTypes.includes('authorization_code') ||
-    grantTypes.some((g) => g !== 'authorization_code' && g !== 'refresh_token')
-  ) {
-    throw new ClientMetadataError(
-      'invalid_client_metadata',
-      'grant_types must include authorization_code and may only add refresh_token',
-    );
+  // Clients may list grant types we don't support (Claude's metadata document
+  // adds jwt-bearer, for example). RFC 7591 §2 lets the server ignore those, so
+  // keep only the ones we support; the token endpoint enforces the rest.
+  const requestedGrants = meta.grant_types ?? ['authorization_code'];
+  if (!Array.isArray(requestedGrants) || !requestedGrants.includes('authorization_code')) {
+    throw new ClientMetadataError('invalid_client_metadata', 'grant_types must include authorization_code');
   }
+  const grantTypes = SUPPORTED_GRANT_TYPES.filter((g) => requestedGrants.includes(g));
 
   const responseTypes = meta.response_types ?? ['code'];
   if (!Array.isArray(responseTypes) || responseTypes.length !== 1 || responseTypes[0] !== 'code') {

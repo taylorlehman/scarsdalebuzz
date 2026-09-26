@@ -277,6 +277,10 @@ describe('Scopes and legacy (2025-era) clients', () => {
     assert.equal(init.status, 200);
     const initBody = await readJsonRpc(init);
     assert.equal(initBody.result.serverInfo.name, 'scarsdale-buzz');
+    assert.deepEqual(
+      initBody.result.serverInfo.icons.map((i) => i.src),
+      [`${srv.base}/images/logos/bee-icon-192.png`, `${srv.base}/images/logos/bee-icon-512.png`],
+    );
     assert.ok(initBody.result.instructions);
 
     const res = await legacyCall(tokens.access_token, 'search_providers', { query: 'tutor' });

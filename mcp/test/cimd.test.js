@@ -57,6 +57,24 @@ test('metadata documents must be well-formed and cannot carry secrets', async ()
   }
 });
 
+test("accepts Claude's metadata document, ignoring grant types we don't support", async () => {
+  // Verbatim from https://claude.ai/oauth/mcp-oauth-client-metadata (2026-09-26).
+  const url = 'https://claude.ai/oauth/mcp-oauth-client-metadata';
+  const doc = {
+    client_id: url,
+    client_name: 'Claude',
+    client_uri: 'https://claude.ai',
+    redirect_uris: ['https://claude.ai/api/mcp/auth_callback'],
+    grant_types: ['authorization_code', 'refresh_token', 'urn:ietf:params:oauth:grant-type:jwt-bearer'],
+    response_types: ['code'],
+    token_endpoint_auth_method: 'none',
+  };
+  const resolve = createCimdResolver({ fetchDocument: async () => ({ body: JSON.stringify(doc) }) });
+  const client = await resolve(url);
+  assert.deepEqual(client.grant_types, ['authorization_code', 'refresh_token']);
+  assert.deepEqual(client.redirect_uris, ['https://claude.ai/api/mcp/auth_callback']);
+});
+
 test('documents are cached per Cache-Control', async () => {
   const url = 'https://app.example.com/client.json';
   let fetches = 0;
