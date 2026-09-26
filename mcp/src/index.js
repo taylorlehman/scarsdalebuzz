@@ -34,8 +34,11 @@ function getApp() {
 
 export const mcp = onRequest(
   {
+    // No `invoker` option: the org's Domain Restricted Sharing policy blocks
+    // granting allUsers, so (like the other functions in these projects) the
+    // Cloud Run service is made public with `--no-invoker-iam-check` instead.
+    // Authorization is enforced by OAuth. See mcp/README.md → Deployment.
     region: 'us-central1',
-    invoker: 'public', // authorization is enforced by OAuth, not IAM
     memory: '256MiB',
     timeoutSeconds: 60,
     concurrency: 80,

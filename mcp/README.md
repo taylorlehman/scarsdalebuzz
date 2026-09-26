@@ -95,6 +95,14 @@ firebase deploy -P staging --only functions:mcp,hosting,firestore:indexes
 
 A `predeploy` hook runs `npm ci` in this folder, because the Firebase CLI loads the code locally to find the function.
 
+**First deploy to each project:** the Google Cloud organization enforces Domain Restricted Sharing, which blocks granting `allUsers` access. Firebase can't make the function public itself; the first deploy reports "Unable to set the invoker for the IAM policy" and the function returns 403. Make it public the same way as the site's other functions, by turning off Cloud Run's invoker IAM check (a one-time step per project):
+
+```bash
+gcloud run services update mcp --no-invoker-iam-check --region us-central1 --project scarsdale-buzz-staging
+```
+
+This setting survives later deploys. OAuth still protects `/mcp`; only the discovery documents and the sign-in pages are open to anyone.
+
 Deploy the function before (or together with) Hosting so the rewrites have a target. `firestore:indexes` creates the TTL policies on `expireAt`.
 
 Configuration (optional environment variables, e.g. in `mcp/.env.<project>`):
